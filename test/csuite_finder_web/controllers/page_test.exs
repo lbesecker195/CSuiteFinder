@@ -165,6 +165,32 @@ defmodule CsuiteFinderWeb.PageTest do
       end
     end
 
+    test "the deliverability column is binary, and never says maybe", %{conn: conn} do
+      # An amber "accept-all" tier is a question mark next to an address, and a
+      # reader who has to ask what it means stops reading. The column answers
+      # the only question they have — will this bounce — and the two that would
+      # stay marked as such.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ "<td>Deliverable</td>"
+      refute html =~ "Accept-all"
+
+      for row <- CsuiteFinderWeb.SampleSheet.rows() do
+        assert row.status in [:deliverable, :undeliverable]
+      end
+
+      assert Enum.count(CsuiteFinderWeb.SampleSheet.rows(), &(&1.status == :undeliverable)) == 2
+    end
+
+    test "the sheet keeps what the mailbox check actually returned", %{conn: _conn} do
+      # The page draws two states; the data behind it still knows that six of
+      # these are accept-all domains rather than confirmed mailboxes. Collapsing
+      # that in the source as well as the view would lose it for good.
+      raws = CsuiteFinderWeb.SampleSheet.rows() |> Enum.map(& &1.raw) |> Enum.frequencies()
+
+      assert raws == %{accept_all: 6, confirmed: 2, rejected: 2}
+    end
+
     test "the sheet publishes no working address", %{conn: conn} do
       # These are real people. The masking is the only thing standing between a
       # marketing page and ten inboxes, so it is worth a test of its own.

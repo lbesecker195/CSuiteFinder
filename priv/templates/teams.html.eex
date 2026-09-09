@@ -49,7 +49,7 @@
             <td>Name</td>
             <td>Email</td>
             <td>Phone</td>
-            <td>Verified</td>
+            <td>Deliverable</td>
           </tr>
           <%= for {row, index} <- Enum.with_index(@sheet) do %>
           <tr>
@@ -79,9 +79,8 @@
   Real lookups, run on <%= @sheet_date %>: a name and a company domain in, a work
   address out — and no two of these companies build their addresses the same way.
   Contact details are masked here because these are real people.
-  <strong>Verified</strong> is the live mailbox check, shown exactly as it came
-  back: a domain that accepts all mail cannot be confirmed either way, and an
-  address that fails is one you did not bounce.
+  <strong>Deliverable</strong> is the live mailbox check: the two marked
+  otherwise are addresses you would have bounced, found before you sent.
 </p>
 
 <!-- ── pricing ─────────────────────────────────────────────────────────────

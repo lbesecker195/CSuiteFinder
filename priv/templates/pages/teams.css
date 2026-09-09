@@ -104,11 +104,9 @@
 
   .sheet .st { font-weight: 600; }
   .sheet .st.ok { color: #1a7f37; }
-  .sheet .st.warn { color: #9a6700; }
   .sheet .st.bad { color: #b42318; }
   @media (prefers-color-scheme: dark) {
     .sheet .st.ok { color: #57ab5a; }
-    .sheet .st.warn { color: #d4a72c; }
     .sheet .st.bad { color: #e5534b; }
   }
 
