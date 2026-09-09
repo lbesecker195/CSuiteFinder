@@ -323,9 +323,20 @@ ok "health check passed"
 # ------------------------------------------------------------------- nginx
 
 step "nginx"
-sed "s/api.example.com/$DOMAIN/g" "$APP_DIR/deploy/nginx-$SERVICE.conf" \
-  > "/etc/nginx/sites-available/$SERVICE"
-ln -sf "/etc/nginx/sites-available/$SERVICE" "/etc/nginx/sites-enabled/$SERVICE"
+NGINX_SITE="/etc/nginx/sites-available/$SERVICE"
+
+# Certbot edits this file in place to add the TLS server block. Rewriting it
+# from the template on every run deletes that block, and nginx then serves
+# whatever other site owns the default :443 — a valid certificate for the wrong
+# domain, which browsers reject outright. So the template is written only when
+# certbot has not yet claimed the file.
+if [[ -f "$NGINX_SITE" ]] && grep -qE 'ssl_certificate|listen[[:space:]]+443' "$NGINX_SITE"; then
+  ok "keeping existing nginx site (it carries certbot's TLS block)"
+else
+  sed "s/api.example.com/$DOMAIN/g" "$APP_DIR/deploy/nginx-$SERVICE.conf" > "$NGINX_SITE"
+  ok "wrote nginx site from template"
+fi
+ln -sf "$NGINX_SITE" "/etc/nginx/sites-enabled/$SERVICE"
 rm -f /etc/nginx/sites-enabled/default
 mkdir -p /var/www/html
 nginx -t >/dev/null 2>&1 || { nginx -t; die "nginx config rejected"; }
@@ -338,13 +349,8 @@ if [[ $DO_SSL -eq 1 ]]; then
   step "TLS certificate"
   apt-get install -y -qq certbot python3-certbot-nginx >/dev/null
   if [[ -s "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]]; then
-    ok "certificate already present; renewal is handled by the certbot timer"
-    DO_SSL=1
-    SKIP_CERTBOT=1
+    ok "certificate already on disk; certbot will reinstall the nginx block"
   fi
-  if [[ "${SKIP_CERTBOT:-0}" == "1" ]]; then
-    resolved=""; public_ip=""
-  else
   resolved="$(getent hosts "$DOMAIN" | awk '{print $1}' | head -1 || true)"
   public_ip="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || true)"
   if [[ -n "$resolved" && -n "$public_ip" && "$resolved" != "$public_ip" ]]; then
@@ -352,14 +358,42 @@ if [[ $DO_SSL -eq 1 ]]; then
     warn "certbot will fail — fix DNS then run: certbot --nginx -d $DOMAIN"
   else
     if certbot --nginx -d "$DOMAIN" --agree-tos -m "$LE_EMAIL" \
-         --redirect --non-interactive >/dev/null 2>&1; then
-      ok "certificate issued; renewal timer installed"
+         --redirect --keep-until-expiring --non-interactive >/dev/null 2>&1; then
+      ok "TLS configured; renewal timer installed"
     else
       warn "certbot failed — the app is live over HTTP; retry with:"
       warn "  certbot --nginx -d $DOMAIN --agree-tos -m $LE_EMAIL --redirect"
       DO_SSL=0
     fi
   fi
+fi
+
+# ------------------------------------------------------------ verify public
+
+if [[ $DO_SSL -eq 1 ]]; then
+  step "Verifying HTTPS"
+  # Check the certificate actually MATCHES this domain. When a box hosts more
+  # than one site and our :443 server block is missing, nginx quietly falls
+  # through to another site's block and serves a perfectly valid certificate
+  # for the wrong name — the connection fails in the browser while every
+  # server-side check still looks healthy.
+  served_cn="$(echo | openssl s_client -connect "127.0.0.1:443" -servername "$DOMAIN" 2>/dev/null \
+    | openssl x509 -noout -subject 2>/dev/null | sed -n 's/.*CN[[:space:]]*=[[:space:]]*//p' | xargs || true)"
+
+  if [[ -z "$served_cn" ]]; then
+    warn "no certificate served on :443 — run: certbot --nginx -d $DOMAIN --redirect"
+  elif [[ "$served_cn" == "$DOMAIN" || "$served_cn" == "*.${DOMAIN#*.}" ]]; then
+    ok "serving the certificate for $served_cn"
+  else
+    warn "port 443 is serving a certificate for '$served_cn', not '$DOMAIN'."
+    warn "Our TLS server block is missing, so nginx fell through to another site."
+    warn "Fix: certbot --nginx -d $DOMAIN --keep-until-expiring --redirect"
+  fi
+
+  if curl -fsS --max-time 15 "https://$DOMAIN/csuitefinder/health" >/dev/null 2>&1; then
+    ok "https://$DOMAIN answers"
+  else
+    warn "https://$DOMAIN did not answer — check: nginx -t && systemctl status nginx"
   fi
 fi
 
