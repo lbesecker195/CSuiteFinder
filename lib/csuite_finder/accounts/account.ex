@@ -7,7 +7,7 @@ defmodule CsuiteFinder.Accounts.Account do
   schema "accounts" do
     field :email, :string
     field :name, :string
-    field :token_balance, :integer, default: 0
+    field :balance_micro, :integer, default: 0
     field :trial_granted_at, :utc_datetime_usec
     field :status, :string, default: "active"
 
@@ -18,7 +18,7 @@ defmodule CsuiteFinder.Accounts.Account do
 
   def changeset(struct, attrs) do
     struct
-    |> cast(attrs, [:email, :name, :token_balance, :trial_granted_at, :status])
+    |> cast(attrs, [:email, :name, :balance_micro, :trial_granted_at, :status])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
     |> update_change(:email, &String.downcase/1)

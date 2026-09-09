@@ -16,17 +16,17 @@ defmodule CsuiteFinder.Budgets do
     # A page of ten people. The provider charges ceil(limit/10) credits, so a
     # 50-row sweep needs headroom for five.
     company_people: 0.05,
-    # The cheap provider wants a name and a domain ($0.0048). The one that takes
-    # a bare email is $0.0445 — above this ceiling on purpose, so a careless
-    # email-only request is refused rather than costing ten times as much.
+    # The cheap provider wants a name and a domain ($0.0048). The one taking a
+    # bare email is $0.0445 — reachable on the email path below, but never on
+    # this one, so a name-and-domain request cannot silently cost ten times what
+    # it should.
     phone_find: 0.04,
-    # The email path is allowed more than the name path because it costs two
-    # calls, not one: an enrichment to learn the name, then the find itself
-    # (~$0.0097 together). Deliberately subsidised — the result is an email and
-    # a phone attributed to the same person, which is what makes /phone/who work
-    # later. No provider sells a bare-email phone lookup under $0.0445, so this
-    # ceiling buys the two-step route rather than a one-step one.
-    phone_find_from_email: 0.02,
+    # $0.06 for an email-input lookup: the $0.04 above plus $0.02 of subsidy.
+    # It buys two routes, tried cheap-first — resolve the name and ask by name
+    # (~$0.0097), and if that yields nothing, go direct with the email at
+    # $0.0445. Worth the subsidy because the result is an email and a phone
+    # attributed to the same person, which is what makes /phone/who answerable.
+    phone_find_from_email: 0.06,
     phone_verify: 0.01
   }
 

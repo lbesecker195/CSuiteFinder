@@ -8,9 +8,12 @@ defmodule CsuiteFinder.Fixtures do
     {:ok, account} = Accounts.create_account(%{email: email})
 
     account =
-      case Keyword.get(opts, :tokens, 4_000) do
-        0 -> account
-        tokens -> elem(Billing.credit(account, tokens), 1)
+      case Keyword.get(opts, :usd, 10.0) do
+        usd when usd > 0 ->
+          elem(Billing.credit(account, CsuiteFinder.Billing.Pricing.micro(usd)), 1)
+
+        _ ->
+          account
       end
 
     {:ok, key, _} = Accounts.create_api_key(account)

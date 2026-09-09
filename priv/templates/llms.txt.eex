@@ -2,7 +2,7 @@
 
 > Turn a person's name and their company's domain into their work email address,
 > then verify it, identify who is behind an address, and look up the company.
-> Self-serve: one POST gets you a key and <%= @trial_tokens %> free lookups.
+> Self-serve: one POST gets you a key and <%= @trial_usd %> of free credit.
 
 This file is for AI agents. It is generated from the live service, so the prices
 below are the prices you will be charged. Everything here is callable now.
@@ -30,7 +30,7 @@ curl -X POST <%= @base_url %>/csuitefinder/register \
 ```
 
 Returns `api_key` once and never again — only a hash is stored, so it cannot be
-resent. New accounts get <%= @trial_tokens %> tokens (<%= @trial_usd %>) free.
+resent. New accounts get <%= @trial_usd %> of free credit.
 
 Send it on every request:
 
@@ -42,19 +42,26 @@ Authorization: Bearer <key>
 
 ## Pricing
 
-One token = $<%= @token_price %>. **Only `/email/find` spends tokens** — 1 token per
-address resolved, and nothing when it resolves nothing. Every other endpoint is
-included, but still needs a positive balance (an empty account gets HTTP 402).
+Priced in **US dollars**, charged per answer:
 
-<%= for b <- @bundles do %>- $<%= b.usd %> → <%= b.tokens %> tokens ($<%= b.rate %>/token)
+- **$<%= @email_price %>** per email address found (`/email/find`,
+  `/email/company/people`)
+- **$<%= @phone_price %>** per phone number found (`/phone/find`,
+  `/company/people`)
+
+Everything else is **included** — deliverability, enrichment, patterns, names,
+company data, phone validation — but still needs a positive balance (an empty
+account gets HTTP 402). A lookup that finds nothing is free.
+
+<%= for b <- @bundles do %>- Pay $<%= b.usd %> → $<%= b.credit %> of credit<%= if b.bonus?, do: " (+$#{b.bonus} free)" %>
 <% end %>
-Bundles start at $<%= @min_bundle %>, paid through PayPal. Tokens do not expire.
+Purchases start at $<%= @min_bundle %>, paid through PayPal. Credit does not expire.
 
 ## Endpoints
 
 All accept GET (query string) or POST (JSON body).
 
-### POST /csuitefinder/email/find — 1 token
+### POST /csuitefinder/email/find — $<%= @email_price %>
 
 Resolve a name + company domain to a work email. **The only billable endpoint.**
 
@@ -76,7 +83,7 @@ curl -H "Authorization: Bearer $KEY" \
 
 `found: false` means no address was resolved — and you were not charged.
 
-### POST /csuitefinder/company/people — 5 tokens per person returned
+### POST /csuitefinder/company/people — $<%= @phone_price %> per person returned
 
 Who works at a company, **with a phone number for each**. The discovery
 endpoint — use it when you have a domain but no names. For addresses only at a
@@ -88,8 +95,8 @@ carries no numbers, so each one here costs a lookup of its own.
   marketing, legal, support, operations, communication. `executive` is the
   C-suite.
 - `limit` (optional) — 1..50, default 10. **This is the price dial**: you are
-  billed per person returned, so ask for what you will use. It is also
-  clamped to your balance, so it can never overdraw you.
+  billed per person returned, so ask for what you will use. It is also clamped
+  to your balance, so it can never overdraw you.
 - `type` (optional) — `personal` for named humans, `generic` for role mailboxes
   like sales@
 
@@ -104,22 +111,22 @@ department, seniority, linkedin_url, kind, confidence}]}`.
 A sweep is stored per person, so a later narrower query — the engineers at a
 domain you already swept — is answered from what the first one paid for.
 
-### POST /csuitefinder/email/company/people — 1 token per person
+### POST /csuitefinder/email/company/people — $<%= @email_price %> per person
 
 The same sweep as `/company/people`, returning **email addresses only**. Cheaper
 because no phone lookup is made. Same parameters.
 
-### POST /csuitefinder/phone/find — 5 tokens
+### POST /csuitefinder/phone/find — $<%= @phone_price %>
 
 A person's direct phone number.
 
 - `full_name` + `domain` (**cheapest — prefer this**), or `email`, or `linkedin_url`
 
-No provider sells a bare-email phone lookup for less than $0.0445, so an
-email-only request resolves the name first and then asks by name — two cheap
-calls instead of one expensive one. It works, and costs you the same 5 tokens;
-send the name as well if you have it and it saves a step. An address we cannot
-put a real name to is refused rather than guessed at.
+An email-only request tries two routes, cheapest first: it resolves the name and
+asks by name, and only if that finds nothing does it fall back to the dearer
+provider that takes a bare email. Either way you pay the same
+$<%= @phone_price %>. Sending `full_name` and `domain` skips straight to the
+cheap route.
 
 Returns `{phone, line_type, belongs_to: {full_name, email, domain}}`.
 
@@ -196,12 +203,12 @@ company domain" rather than returning the mail provider as the employer.
 
 ## Account
 
-- `GET /csuitefinder/billing/balance` — token balance and price list (free; also
+- `GET /csuitefinder/billing/balance` — your balance and price list (free; also
   the endpoint to probe a key with — 200 valid, 401 invalid)
-- `GET /csuitefinder/billing/usage?days=30` — calls and tokens spent per endpoint
+- `GET /csuitefinder/billing/usage?days=30` — calls and spend per endpoint
 - `GET /csuitefinder/keys` — list your keys; `POST` mints another, `DELETE /:id`
   revokes one. Mint a spare: a lost key cannot be recovered.
-- `POST /csuitefinder/billing/topup` — buy a bundle, returns a PayPal approval URL
+- `POST /csuitefinder/billing/topup` — buy credit, returns a PayPal approval URL
 - `GET /csuitefinder/health` — service status
 - `GET /csuitefinder/pricing` — the live rate card, no key required
 
@@ -215,7 +222,7 @@ company domain" rather than returning the mail provider as the employer.
 4. Only send to `deliverable`. Treat `undeliverable` as dead and `risky` as a
    judgement call — `risky` usually means a catch-all domain that accepts
    everything, so a delivery there proves nothing.
-5. `GET /billing/balance` to watch your spend; top up before you hit 0.
+5. `GET /billing/balance` to watch your spend; top up before you hit $0.
 
 Looking up several people at one company is much cheaper than one each: resolve
 the first, then pass that address as `email` on subsequent finds.
@@ -226,7 +233,7 @@ the first, then pass that address as `email` on subsequent finds.
 |---|---|
 | 400 | A required parameter is missing or malformed |
 | 401 | Missing or invalid API key |
-| 402 | Out of tokens — buy a bundle |
+| 402 | Out of credit — buy more |
 | 404 | No such route |
 | 500 | The lookup failed. Nothing was charged. Retry. |
 

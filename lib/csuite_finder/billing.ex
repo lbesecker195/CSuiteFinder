@@ -25,22 +25,22 @@ defmodule CsuiteFinder.Billing do
       the enrichment calls behind them cost us real money per request. A balance
       is what makes someone a customer; the token price is a separate question.
 
-  Returns `:ok`, or `{:error, :insufficient_tokens, details}` where `details`
+  Returns `:ok`, or `{:error, :insufficient_credit, details}` where `details`
   says which of the two rules was not met.
   """
   @spec ensure_funds(Account.t() | nil, String.t()) ::
-          :ok | {:error, :insufficient_tokens, map()}
+          :ok | {:error, :insufficient_credit, map()}
   def ensure_funds(nil, _endpoint), do: :ok
 
   def ensure_funds(%Account{} = account, endpoint) do
     price = Pricing.charge_for(endpoint)
 
     cond do
-      account.token_balance <= 0 ->
-        {:error, :insufficient_tokens, refusal(account, price, :no_balance)}
+      account.balance_micro <= 0 ->
+        {:error, :insufficient_credit, refusal(account, price, :no_balance)}
 
-      account.token_balance < price ->
-        {:error, :insufficient_tokens, refusal(account, price, :cannot_afford)}
+      account.balance_micro < price ->
+        {:error, :insufficient_credit, refusal(account, price, :cannot_afford)}
 
       true ->
         :ok
@@ -49,11 +49,11 @@ defmodule CsuiteFinder.Billing do
 
   defp refusal(account, price, reason) do
     %{
-      token_balance: account.token_balance,
-      tokens_required: max(price, 1),
+      balance_usd: Pricing.usd(account.balance_micro),
+      required_usd: Pricing.usd(price),
       metered: price > 0,
       reason: to_string(reason),
-      minimum_bundle_usd: Pricing.min_bundle_usd()
+      minimum_purchase_usd: Pricing.min_bundle_usd()
     }
   end
 
@@ -92,7 +92,7 @@ defmodule CsuiteFinder.Billing do
         cache_hit: Map.get(params, :cached, false),
         outcome: if(found?, do: "found", else: "not_found"),
         provider_cost_micro: Map.get(params, :provider_cost_micro, 0),
-        charged_tokens: charged,
+        charged_micro: charged,
         duration_ms: Map.get(params, :duration_ms),
         request: Map.get(params, :request, %{})
       })
@@ -101,20 +101,20 @@ defmodule CsuiteFinder.Billing do
     {:ok, event}
   end
 
-  defp debit(%Account{id: id}, tokens) do
+  defp debit(%Account{id: id}, micro) do
     {count, _} =
-      from(a in Account, where: a.id == ^id and a.token_balance >= ^tokens)
-      |> Repo.update_all(inc: [token_balance: -tokens])
+      from(a in Account, where: a.id == ^id and a.balance_micro >= ^micro)
+      |> Repo.update_all(inc: [balance_micro: -micro])
 
-    if count == 1, do: tokens, else: 0
+    if count == 1, do: micro, else: 0
   end
 
-  @doc "Credit an account with tokens (a captured PayPal bundle, or the trial)."
+  @doc "Credit an account (a captured purchase, or the trial), in micro-USD."
   @spec credit(Account.t(), integer()) :: {:ok, Account.t()}
-  def credit(%Account{id: id}, tokens) when tokens > 0 do
+  def credit(%Account{id: id}, micro) when micro > 0 do
     {1, [account]} =
       from(a in Account, where: a.id == ^id, select: a)
-      |> Repo.update_all(inc: [token_balance: tokens])
+      |> Repo.update_all(inc: [balance_micro: micro])
 
     {:ok, account}
   end
@@ -134,12 +134,12 @@ defmodule CsuiteFinder.Billing do
           cache_hits: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", e.cache_hit)),
           found: sum(fragment("CASE WHEN ? = 'found' THEN 1 ELSE 0 END", e.outcome)),
           provider_cost_micro: sum(e.provider_cost_micro),
-          charged_tokens: sum(e.charged_tokens)
+          charged_micro: sum(e.charged_micro)
         }
       )
       |> Repo.all()
 
-    tokens_spent = rows |> Enum.map(&(&1.charged_tokens || 0)) |> Enum.sum()
+    charged = rows |> Enum.map(&(&1.charged_micro || 0)) |> Enum.sum()
 
     %{
       since: since,
@@ -148,8 +148,7 @@ defmodule CsuiteFinder.Billing do
         calls: Enum.sum(Enum.map(rows, & &1.calls)),
         provider_cost_usd:
           rows |> Enum.map(&(&1.provider_cost_micro || 0)) |> Enum.sum() |> to_usd(),
-        tokens_spent: tokens_spent,
-        tokens_spent_usd: Pricing.usd_for_tokens(tokens_spent)
+        charged_usd: to_usd(charged)
       }
     }
   end

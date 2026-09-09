@@ -22,11 +22,10 @@ defmodule CsuiteFinderWeb.BillingController do
         json(conn, %{
           account_id: account.id,
           email: account.email,
-          token_balance: account.token_balance,
-          token_balance_usd: Pricing.usd_for_tokens(account.token_balance),
-          on_free_trial: not is_nil(account.trial_granted_at) and account.token_balance > 0,
+          balance_usd: Pricing.usd(account.balance_micro),
+          on_free_trial: not is_nil(account.trial_granted_at) and account.balance_micro > 0,
           status: account.status,
-          prices_in_tokens: Pricing.list(),
+          prices_usd: Pricing.list_usd(),
           terms: Pricing.terms()
         })
     end
@@ -57,7 +56,7 @@ defmodule CsuiteFinderWeb.BillingController do
         payment_id: payment.id,
         paypal_order_id: payment.paypal_order_id,
         amount_usd: amount,
-        tokens: payment.tokens,
+        credit_usd: Pricing.usd(payment.credit_micro),
         status: payment.status,
         # The link the customer opens to approve the payment.
         approve_url: approve_link(response)
@@ -68,8 +67,8 @@ defmodule CsuiteFinderWeb.BillingController do
         |> put_status(:bad_request)
         |> json(
           Map.merge(details, %{
-            error: "below_minimum_bundle",
-            message: "Token bundles start at $#{Pricing.min_bundle_usd()}."
+            error: "below_minimum_purchase",
+            message: "Purchases start at $#{Pricing.min_bundle_usd()}."
           })
         )
 
@@ -98,8 +97,8 @@ defmodule CsuiteFinderWeb.BillingController do
         json(conn, %{
           paypal_order_id: payment.paypal_order_id,
           status: payment.status,
-          tokens_credited: payment.tokens,
-          credited_usd: Float.round(payment.amount_micro / 1_000_000, 2)
+          credited_usd: Pricing.usd(payment.credit_micro),
+          paid_usd: Float.round(payment.amount_micro / 1_000_000, 2)
         })
 
       {:error, :unknown_order} ->

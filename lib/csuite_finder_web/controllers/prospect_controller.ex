@@ -97,7 +97,7 @@ defmodule CsuiteFinderWeb.ProspectController do
         # the phone-included route and 1 on the email-only one, so a balance of
         # 20 buys four of the former and twenty of the latter.
         per_row = max(Pricing.charge_for(conn.assigns[:endpoint_name]), 1)
-        max(min(asked, div(account.token_balance, per_row)), 1)
+        max(min(asked, div(account.balance_micro, per_row)), 1)
     end
   end
 

@@ -55,7 +55,7 @@
           padding:18px;text-align:left;color:var(--text);cursor:pointer;transition:.12s}
   .bundle:hover{border-color:var(--accent);transform:translateY(-1px)}
   .bundle .price{font-size:25px;font-weight:700;letter-spacing:-.02em;display:block}
-  .bundle .tokens{font-size:13px;color:var(--muted);margin-top:3px;display:block}
+  .bundle .credit{font-size:13px;color:var(--muted);margin-top:3px;display:block}
   .bundle .finds{font-size:12px;color:var(--faint);margin-top:7px;display:block}
   code,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px}
   .keybox{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;
@@ -91,13 +91,13 @@
 <!-- ── signed out ──────────────────────────────────────────────────────── -->
 <section id="signedout" hidden>
   <h1>Your account</h1>
-  <p class="lede">Get an API key, check your balance and buy tokens — no headers required.</p>
+  <p class="lede">Get an API key, check your balance and buy credit — no headers required.</p>
 
   <div class="card">
     <h3 style="margin:0 0 4px;font-size:17px">New here?</h3>
     <p class="muted" style="margin-bottom:16px">
-      Registering is instant and gives you <strong><%= @trial_tokens %> free tokens</strong>
-      — enough for <%= @trial_tokens %> email lookups. No card.
+      Registering is instant and gives you <strong>$<%= @trial_usd %> of free credit</strong>
+      — real lookups, no card.
     </p>
     <div class="row">
       <div>
@@ -110,7 +110,7 @@
 
   <div class="card">
     <h3 style="margin:0 0 4px;font-size:17px">Already have a key?</h3>
-    <p class="muted" style="margin-bottom:16px">Paste it to see your balance and buy tokens.</p>
+    <p class="muted" style="margin-bottom:16px">Paste it to see your balance and buy credit.</p>
     <div class="row">
       <div>
         <label for="key">API key</label>
@@ -145,7 +145,7 @@
   <p class="lede" id="whoami"></p>
 
   <div class="card">
-    <label>Token balance</label>
+    <label>Balance</label>
     <div class="balance">
       <span class="big" id="balance">—</span>
       <span class="unit" id="balanceusd"></span>
@@ -153,19 +153,18 @@
     <p class="muted" id="findsleft" style="margin:12px 0 0"></p>
   </div>
 
-  <h2>Buy tokens</h2>
+  <h2>Buy credit</h2>
   <p class="muted" style="margin-top:-6px">
-    Tokens never expire, and larger bundles carry a better rate. Bundles start at
-    $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then straight back here.
+    Credit never expires, and buying more than the minimum credits you more than you pay.
+    Purchases start at $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then
+    straight back here.
   </p>
   <div class="bundles" id="bundles">
     <%= for b <- @bundles do %>
     <button class="bundle" data-usd="<%= b.usd %>">
       <span class="price">$<%= b.usd_label %></span>
-      <span class="tokens"><%= b.tokens_label %> tokens</span>
-      <span class="finds">
-        $<%= b.rate_label %> per token<%= if b.best_value, do: " · better rate" %>
-      </span>
+      <span class="credit">$<%= b.credit_label %> of credit<%= if b.bonus?, do: " (+$#{b.bonus_label} free)" %></span>
+      <span class="finds"><%= b.emails_label %> emails, or <%= b.phones_label %> phone numbers</span>
     </button>
     <% end %>
   </div>
@@ -174,7 +173,7 @@
   <div class="card">
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Endpoint</th><th class="num">Calls</th><th class="num">Found</th><th class="num">Tokens</th></tr></thead>
+        <thead><tr><th>Endpoint</th><th class="num">Calls</th><th class="num">Found</th><th class="num">Spend</th></tr></thead>
         <tbody id="usage"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -193,7 +192,7 @@
     </div>
     <p class="muted" style="margin:14px 0 0">
       <strong>Create a spare and keep it somewhere safe.</strong> A key cannot be recovered if
-      it is lost — but a second one lets you revoke the first and carry on, and your token
+      it is lost — but a second one lets you revoke the first and carry on, and your
       balance is never affected either way. The key you are signed in with lives in this
       browser only, never goes anywhere but this API, and is cleared when you sign out. Send it
       as <code>Authorization: Bearer &lt;key&gt;</code> from your own code.
@@ -259,13 +258,15 @@
   function commas(n) { return (n || 0).toLocaleString("en-US"); }
 
   function renderBalance(b) {
-    $("balance").textContent = commas(b.token_balance);
-    $("balanceusd").textContent = "tokens · $" + (b.token_balance_usd || 0).toFixed(2) + " of credit";
-    var perFind = (b.prices_in_tokens && b.prices_in_tokens["email.find"]) || 1;
-    var finds = Math.floor(b.token_balance / perFind);
-    $("findsleft").textContent = finds > 0
-      ? commas(finds) + " more email lookups. Everything else is included."
-      : "Out of tokens — buy a bundle below to carry on.";
+    var usd = b.balance_usd || 0;
+    $("balance").textContent = "$" + usd.toFixed(2);
+    $("balanceusd").textContent = "of credit";
+    var perEmail = (b.prices_usd && b.prices_usd["email.find"]) || 0.0025;
+    var perPhone = (b.prices_usd && b.prices_usd["phone.find"]) || 0.025;
+    $("findsleft").textContent = usd > 0
+      ? commas(Math.floor(usd / perEmail)) + " more email addresses, or " +
+        commas(Math.floor(usd / perPhone)) + " phone numbers. Everything else is included."
+      : "Out of credit — buy more below to carry on.";
     $("whoami").textContent = b.email || "";
   }
 
@@ -280,7 +281,7 @@
       return "<tr><td><code>" + r.endpoint + "</code></td>" +
              '<td class="num">' + commas(r.calls) + "</td>" +
              '<td class="num">' + commas(r.found) + "</td>" +
-             '<td class="num">' + commas(r.charged_tokens) + "</td></tr>";
+             '<td class="num">$' + ((r.charged_micro || 0) / 1e6).toFixed(4) + "</td></tr>";
     }).join("");
   }
 
@@ -317,7 +318,7 @@
       key = res.body.api_key; save(key);
       $("newkeyvalue").textContent = key;
       show("newkey");
-      say("Account created — " + commas(res.body.tokens_granted) + " free tokens added.", "ok");
+      say("Account created — $" + (res.body.credit_granted_usd || 0).toFixed(2) + " of free credit added.", "ok");
     });
   });
 
@@ -416,8 +417,8 @@
         }
         if (res.body && res.body.error === "paypal_not_configured") {
           say("Payments are not switched on yet. Please try again later.", "err");
-        } else if (res.body && res.body.error === "below_minimum_bundle") {
-          say("Bundles start at $" + commas(res.body.minimum_usd) + ".", "err");
+        } else if (res.body && res.body.error === "below_minimum_purchase") {
+          say("Purchases start at $" + commas(res.body.minimum_usd) + ".", "err");
         } else {
           say("Could not start that payment. Nothing was charged.", "err");
         }
@@ -445,9 +446,9 @@
       .then(function (res) {
         clean();
         if (res.ok && res.body.status === "credited") {
-          say("Payment complete — " + commas(res.body.tokens_credited) + " tokens added.", "ok");
+          say("Payment complete — $" + (res.body.credited_usd || 0).toFixed(2) + " of credit added.", "ok");
         } else {
-          say("We could not confirm that payment yet. If you approved it, your tokens will " +
+          say("We could not confirm that payment yet. If you approved it, your credit will " +
               "appear shortly — PayPal notifies us separately.", "err");
         }
         refresh();

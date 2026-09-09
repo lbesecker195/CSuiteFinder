@@ -143,7 +143,7 @@
   <div class="card">
     <div class="label">Revenue</div>
     <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@headline.revenue_usd) %></div>
-    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@headline.tokens) %> tokens spent</div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@headline.requests) %> requests</div>
   </div>
   <div class="card">
     <div class="label">Provider cost</div>
@@ -167,7 +167,7 @@
 <h2>Find economics</h2>
 
 <div class="panel">
-  <h3>Every find sells for <%= CsuiteFinderWeb.AdminController.micro_usd(@find_price_micro) %></h3>
+  <h3>Every email found sells for <%= CsuiteFinderWeb.AdminController.micro_usd(@find_price_micro) %></h3>
   <p class="hint">
     A cached find costs us nothing. A fresh one falls through to a paid provider
     and can cost more than it earns — so the mix, not the average, is what
@@ -276,7 +276,7 @@
         <%= for row <- @by_endpoint do %>
         <tr>
           <td><code><%= CsuiteFinderWeb.AdminController.esc(row.endpoint) %></code></td>
-          <td><span class="tag <%= unless row.metered, do: "free" %>"><%= if row.metered, do: "1 token", else: "included" %></span></td>
+          <td><span class="tag <%= unless row.metered, do: "free" %>"><%= if row.metered, do: "$" <> :erlang.float_to_binary(CsuiteFinder.Billing.Pricing.price_usd(row.endpoint), [:compact, decimals: 4]), else: "included" %></span></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.num(row.calls) %></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.pct(row.found_rate) %></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.pct(row.cache_hit_rate) %></td>
@@ -308,14 +308,14 @@
     <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@accounts.on_trial) %> still on trial</div>
   </div>
   <div class="card">
-    <div class="label">Bundles sold</div>
+    <div class="label">Purchases</div>
     <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@payments.amount_usd) %></div>
     <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@payments.count) %> captured</div>
   </div>
   <div class="card">
     <div class="label">Deferred revenue</div>
     <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@accounts.deferred_revenue_usd) %></div>
-    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@accounts.tokens_outstanding) %> tokens unspent</div>
+    <div class="sub">credit sold, not yet spent</div>
   </div>
 </div>
 
@@ -410,7 +410,7 @@
 
 <footer>
   <a href="<%= CsuiteFinderWeb.AdminController.esc(@base_path) %>/metrics.json<%= if @token, do: "?token=" <> CsuiteFinderWeb.AdminController.esc(URI.encode_www_form(@token)) %>">metrics.json</a>
-  · tokens at <%= CsuiteFinderWeb.AdminController.micro_usd(round(@token_price_usd * 1_000_000)) %> each
+  · $<%= :erlang.float_to_binary(CsuiteFinder.Billing.Pricing.price_usd("email.find"), [:compact, decimals: 4]) %> an email, $<%= :erlang.float_to_binary(CsuiteFinder.Billing.Pricing.price_usd("phone.find"), [:compact, decimals: 4]) %> a phone
 </footer>
 
 </div>

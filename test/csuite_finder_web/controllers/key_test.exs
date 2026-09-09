@@ -9,7 +9,7 @@ defmodule CsuiteFinderWeb.KeyTest do
   alias CsuiteFinder.{Accounts, Fixtures}
 
   setup %{conn: conn} do
-    {account, key} = Fixtures.account_with_key(tokens: 400)
+    {account, key} = Fixtures.account_with_key(usd: 1.0)
 
     {:ok,
      conn: put_req_header(conn, "authorization", "Bearer " <> key), account: account, key: key}

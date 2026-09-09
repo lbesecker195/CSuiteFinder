@@ -5,7 +5,7 @@ defmodule CsuiteFinderWeb.BillingTest do
 
   describe "metering" do
     test "charges for an answer and debits the balance", %{conn: conn} do
-      {account, key} = Fixtures.account_with_key(tokens: 400)
+      {account, key} = Fixtures.account_with_key(usd: 1.0)
 
       TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
         {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
@@ -17,12 +17,12 @@ defmodule CsuiteFinderWeb.BillingTest do
       |> json_response(200)
 
       # $0.01 for email.find.
-      # A found email costs exactly one token.
-      assert Repo.reload(account).token_balance == 399
+      # A found email costs $0.0025.
+      assert Repo.reload(account).balance_micro == 1_000_000 - 2_500
     end
 
     test "does not charge for a guess", %{conn: conn} do
-      {account, key} = Fixtures.account_with_key(tokens: 400)
+      {account, key} = Fixtures.account_with_key(usd: 1.0)
       TregStub.stub(fn "treg.people.enrich", _ -> {200, %{"output" => nil}, 0} end)
 
       conn
@@ -30,11 +30,11 @@ defmodule CsuiteFinderWeb.BillingTest do
       |> post(~p"/csuitefinder/email/enrich", %{email: "jane.doe@acme.com"})
       |> json_response(200)
 
-      assert Repo.reload(account).token_balance == 400
+      assert Repo.reload(account).balance_micro == 1_000_000
     end
 
     test "refuses the lookup before spending when the account is empty", %{conn: conn} do
-      {_account, key} = Fixtures.account_with_key(tokens: 0)
+      {_account, key} = Fixtures.account_with_key(usd: 0.0)
 
       body =
         conn
@@ -42,13 +42,13 @@ defmodule CsuiteFinderWeb.BillingTest do
         |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
         |> json_response(402)
 
-      assert body["error"] == "insufficient_tokens"
+      assert body["error"] == "insufficient_credit"
       # Crucially, nothing was bought upstream for a customer who cannot pay.
       assert TregStub.call_count() == 0
     end
 
     test "a cache hit is still billed", %{conn: conn} do
-      {account, key} = Fixtures.account_with_key(tokens: 400)
+      {account, key} = Fixtures.account_with_key(usd: 1.0)
       conn = put_req_header(conn, "authorization", "Bearer " <> key)
 
       TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
@@ -58,13 +58,13 @@ defmodule CsuiteFinderWeb.BillingTest do
       post(conn, ~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
       post(conn, ~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
 
-      assert Repo.reload(account).token_balance == 398
+      assert Repo.reload(account).balance_micro == 1_000_000 - 5_000
     end
   end
 
   describe "included endpoints" do
     test "cost nothing but still need a balance", %{conn: conn} do
-      {account, key} = Fixtures.account_with_key(tokens: 10)
+      {account, key} = Fixtures.account_with_key(usd: 0.025)
 
       TregStub.stub(fn "treg.people.email.verify", _ ->
         {200, TregStub.routed(%{"valid" => true, "status" => "valid"}), 1_500}
@@ -75,13 +75,13 @@ defmodule CsuiteFinderWeb.BillingTest do
       |> post(~p"/csuitefinder/email/deliverable", %{email: "jane@acme.com"})
       |> json_response(200)
 
-      assert Repo.reload(account).token_balance == 10
+      assert Repo.reload(account).balance_micro == 25_000
     end
 
     test "are refused at a zero balance rather than served free", %{conn: conn} do
       # The point of the gate: these calls cost us real money upstream, so an
       # account that has spent down to nothing must not keep unlimited access.
-      {_account, key} = Fixtures.account_with_key(tokens: 0)
+      {_account, key} = Fixtures.account_with_key(usd: 0.0)
 
       body =
         conn
@@ -89,15 +89,15 @@ defmodule CsuiteFinderWeb.BillingTest do
         |> post(~p"/csuitefinder/company/info", %{email: "jane@acme.com"})
         |> json_response(402)
 
-      assert body["error"] == "insufficient_tokens"
+      assert body["error"] == "insufficient_credit"
       assert body["metered"] == false
       assert body["reason"] == "no_balance"
       assert body["message"] =~ "included"
       assert TregStub.call_count() == 0
     end
 
-    test "a single token unlocks all of them", %{conn: conn} do
-      {account, key} = Fixtures.account_with_key(tokens: 1)
+    test "any positive balance unlocks all of them", %{conn: conn} do
+      {account, key} = Fixtures.account_with_key(usd: 0.0025)
       conn = put_req_header(conn, "authorization", "Bearer " <> key)
 
       TregStub.stub(fn
@@ -109,11 +109,11 @@ defmodule CsuiteFinderWeb.BillingTest do
       json_response(post(conn, ~p"/csuitefinder/name/who", %{email: "jane@acme.com"}), 200)
       json_response(post(conn, ~p"/csuitefinder/company/info", %{email: "jane@acme.com"}), 200)
 
-      assert Repo.reload(account).token_balance == 1
+      assert Repo.reload(account).balance_micro == 2_500
     end
 
-    test "the last token still buys a find, and then finds stop", %{conn: conn} do
-      {account, key} = Fixtures.account_with_key(tokens: 1)
+    test "the last of the credit still buys a find, and then finds stop", %{conn: conn} do
+      {account, key} = Fixtures.account_with_key(usd: 0.0025)
       conn = put_req_header(conn, "authorization", "Bearer " <> key)
 
       TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
@@ -125,7 +125,7 @@ defmodule CsuiteFinderWeb.BillingTest do
         200
       )
 
-      assert Repo.reload(account).token_balance == 0
+      assert Repo.reload(account).balance_micro == 0
 
       body =
         conn
@@ -158,7 +158,7 @@ defmodule CsuiteFinderWeb.BillingTest do
 
   describe "GET /csuitefinder/billing/balance" do
     test "reports the balance and price list", %{conn: conn} do
-      {_account, key} = Fixtures.account_with_key(tokens: 2_000)
+      {_account, key} = Fixtures.account_with_key(usd: 5.0)
 
       body =
         conn
@@ -166,10 +166,10 @@ defmodule CsuiteFinderWeb.BillingTest do
         |> get(~p"/csuitefinder/billing/balance")
         |> json_response(200)
 
-      assert body["token_balance"] == 2_000
-      assert body["token_balance_usd"] == 5.0
-      assert body["prices_in_tokens"]["email.find"] == 1
-      assert body["prices_in_tokens"]["company.info"] == 0
+      assert body["balance_usd"] == 5.0
+      assert body["prices_usd"]["email.find"] == 0.0025
+      assert body["prices_usd"]["phone.find"] == 0.025
+      assert body["prices_usd"]["company.info"] == 0
     end
   end
 end

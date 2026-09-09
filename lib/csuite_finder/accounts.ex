@@ -38,31 +38,31 @@ defmodule CsuiteFinder.Accounts do
   another free grant — the trial is per account, once.
   """
   @spec register(map()) ::
-          {:ok, %{account: Account.t(), api_key: String.t(), tokens_granted: integer()}}
+          {:ok, %{account: Account.t(), api_key: String.t(), credit_granted_micro: integer()}}
           | {:error, Ecto.Changeset.t()}
   def register(attrs) do
-    tokens = Pricing.trial_tokens()
+    grant = Pricing.trial_micro()
 
     Repo.transaction(fn ->
       with {:ok, account} <- create_account(attrs),
-           {:ok, account} <- grant_trial(account, tokens) do
+           {:ok, account} <- grant_trial(account, grant) do
         {:ok, plaintext, _key} = create_api_key(account, "initial key")
-        %{account: account, api_key: plaintext, tokens_granted: tokens}
+        %{account: account, api_key: plaintext, credit_granted_micro: grant}
       else
         {:error, changeset} -> Repo.rollback(changeset)
       end
     end)
   end
 
-  defp grant_trial(%Account{trial_granted_at: nil} = account, tokens) do
-    {:ok, account} = Billing.credit(account, tokens)
+  defp grant_trial(%Account{trial_granted_at: nil} = account, micro) do
+    {:ok, account} = Billing.credit(account, micro)
 
     account
     |> Account.changeset(%{trial_granted_at: DateTime.utc_now()})
     |> Repo.update()
   end
 
-  defp grant_trial(account, _tokens), do: {:ok, account}
+  defp grant_trial(account, _micro), do: {:ok, account}
 
   @spec get_account(integer()) :: Account.t() | nil
   def get_account(id), do: Repo.get(Account, id)

@@ -95,7 +95,7 @@ defmodule CsuiteFinderWeb.AdminTest do
     end
 
     test "shows traffic once there is some", %{conn: conn} do
-      {account, key} = CsuiteFinder.Fixtures.account_with_key(tokens: 400)
+      {account, key} = CsuiteFinder.Fixtures.account_with_key(usd: 1.0)
 
       CsuiteFinder.TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
         {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
@@ -110,7 +110,7 @@ defmodule CsuiteFinderWeb.AdminTest do
 
       assert html =~ "email.find"
       refute html =~ "No requests in this window yet."
-      assert CsuiteFinder.Repo.reload(account).token_balance == 399
+      assert CsuiteFinder.Repo.reload(account).balance_micro == 1_000_000 - 2_500
     end
   end
 

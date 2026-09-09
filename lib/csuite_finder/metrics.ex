@@ -74,7 +74,7 @@ defmodule CsuiteFinder.Metrics do
           cache_hits: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", e.cache_hit)),
           found: sum(fragment("CASE WHEN ? = 'found' THEN 1 ELSE 0 END", e.outcome)),
           provider_cost_micro: sum(e.provider_cost_micro),
-          tokens: sum(e.charged_tokens),
+          charged_micro: sum(e.charged_micro),
           avg_ms: avg(e.duration_ms),
           p95_ms: fragment("percentile_disc(0.95) WITHIN GROUP (ORDER BY ?)", e.duration_ms)
         }
@@ -82,7 +82,7 @@ defmodule CsuiteFinder.Metrics do
       |> Repo.one()
       |> zero_nils()
 
-    revenue_micro = row.tokens * Pricing.micro_per_token()
+    revenue_micro = row.charged_micro
 
     Map.merge(row, %{
       cache_hit_rate: ratio(row.cache_hits, row.requests),
@@ -112,22 +112,25 @@ defmodule CsuiteFinder.Metrics do
           cache_hit: e.cache_hit,
           calls: count(e.id),
           provider_cost_micro: sum(e.provider_cost_micro),
-          tokens: sum(e.charged_tokens)
+          charged_micro: sum(e.charged_micro)
         }
       )
       |> Repo.all()
       |> Enum.map(&zero_nils/1)
 
-    cached = Enum.find(rows, %{calls: 0, provider_cost_micro: 0, tokens: 0}, & &1.cache_hit)
-    fresh = Enum.find(rows, %{calls: 0, provider_cost_micro: 0, tokens: 0}, &(not &1.cache_hit))
+    cached =
+      Enum.find(rows, %{calls: 0, provider_cost_micro: 0, charged_micro: 0}, & &1.cache_hit)
+
+    fresh =
+      Enum.find(rows, %{calls: 0, provider_cost_micro: 0, charged_micro: 0}, &(not &1.cache_hit))
 
     total_calls = cached.calls + fresh.calls
     total_cost = cached.provider_cost_micro + fresh.provider_cost_micro
-    total_tokens = cached.tokens + fresh.tokens
-    revenue_micro = total_tokens * Pricing.micro_per_token()
+    total_charged = cached.charged_micro + fresh.charged_micro
+    revenue_micro = total_charged
 
     %{
-      price_micro: Pricing.charge_for("email.find") * Pricing.micro_per_token(),
+      price_micro: Pricing.charge_for("email.find"),
       calls: total_calls,
       cached: segment(cached),
       fresh: segment(fresh),
@@ -145,11 +148,7 @@ defmodule CsuiteFinder.Metrics do
       calls: row.calls,
       provider_cost_usd: usd(row.provider_cost_micro),
       avg_cost_micro: per_call(row.provider_cost_micro, row.calls),
-      margin_micro:
-        per_call(
-          row.tokens * Pricing.micro_per_token() - row.provider_cost_micro,
-          row.calls
-        )
+      margin_micro: per_call(row.charged_micro - row.provider_cost_micro, row.calls)
     }
   end
 
@@ -159,7 +158,7 @@ defmodule CsuiteFinder.Metrics do
   defp breakeven_cache_rate(%{calls: 0}), do: nil
 
   defp breakeven_cache_rate(fresh) do
-    price = Pricing.charge_for("email.find") * Pricing.micro_per_token()
+    price = Pricing.charge_for("email.find")
     avg_fresh_cost = fresh.provider_cost_micro / fresh.calls
 
     cond do
@@ -186,7 +185,7 @@ defmodule CsuiteFinder.Metrics do
           requests: count(e.id),
           cache_hits: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", e.cache_hit)),
           provider_cost_micro: sum(e.provider_cost_micro),
-          tokens: sum(e.charged_tokens)
+          charged_micro: sum(e.charged_micro)
         }
       )
       |> Repo.all()
@@ -223,7 +222,7 @@ defmodule CsuiteFinder.Metrics do
         cache_hits: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", e.cache_hit)),
         found: sum(fragment("CASE WHEN ? = 'found' THEN 1 ELSE 0 END", e.outcome)),
         provider_cost_micro: sum(e.provider_cost_micro),
-        tokens: sum(e.charged_tokens),
+        charged_micro: sum(e.charged_micro),
         avg_ms: avg(e.duration_ms),
         p95_ms: fragment("percentile_disc(0.95) WITHIN GROUP (ORDER BY ?)", e.duration_ms),
         avg_cached_ms: fragment("avg(?) FILTER (WHERE ? = true)", e.duration_ms, e.cache_hit),
@@ -238,7 +237,7 @@ defmodule CsuiteFinder.Metrics do
         cache_hit_rate: ratio(row.cache_hits, row.calls),
         found_rate: ratio(row.found, row.calls),
         provider_cost_usd: usd(row.provider_cost_micro),
-        revenue_usd: usd(row.tokens * Pricing.micro_per_token()),
+        revenue_usd: usd(row.charged_micro),
         metered: Pricing.metered?(row.endpoint)
       })
     end)
@@ -350,7 +349,7 @@ defmodule CsuiteFinder.Metrics do
   @spec accounts_stats(DateTime.t()) :: map()
   def accounts_stats(since) do
     total = Repo.aggregate(Account, :count, :id)
-    outstanding = to_int(Repo.aggregate(Account, :sum, :token_balance))
+    outstanding = to_int(Repo.aggregate(Account, :sum, :balance_micro))
 
     active =
       from(e in UsageEvent,
@@ -362,7 +361,7 @@ defmodule CsuiteFinder.Metrics do
 
     on_trial =
       from(a in Account,
-        where: not is_nil(a.trial_granted_at) and a.token_balance > 0,
+        where: not is_nil(a.trial_granted_at) and a.balance_micro > 0,
         where:
           a.id not in subquery(
             from(p in Payment, where: p.status == "credited", select: p.account_id)
@@ -375,9 +374,8 @@ defmodule CsuiteFinder.Metrics do
       active: active,
       on_trial: on_trial,
       paying: total - on_trial,
-      tokens_outstanding: outstanding,
-      # Tokens sold but not yet spent — a liability, not revenue.
-      deferred_revenue_usd: Pricing.usd_for_tokens(outstanding)
+      # Credit sold but not yet spent — a liability, not revenue.
+      deferred_revenue_usd: Pricing.usd(outstanding)
     }
   end
 
@@ -390,7 +388,7 @@ defmodule CsuiteFinder.Metrics do
         select: %{
           count: count(p.id),
           amount_micro: sum(p.amount_micro),
-          tokens: sum(p.tokens)
+          credit_micro: sum(p.credit_micro)
         }
       )
       |> Repo.one()

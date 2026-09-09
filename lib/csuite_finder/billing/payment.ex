@@ -8,7 +8,7 @@ defmodule CsuiteFinder.Billing.Payment do
     field :paypal_order_id, :string
     field :paypal_capture_id, :string
     field :amount_micro, :integer
-    field :tokens, :integer, default: 0
+    field :credit_micro, :integer, default: 0
     field :currency, :string, default: "USD"
     field :status, :string, default: "created"
     field :credited_at, :utc_datetime_usec
@@ -26,7 +26,7 @@ defmodule CsuiteFinder.Billing.Payment do
       :paypal_order_id,
       :paypal_capture_id,
       :amount_micro,
-      :tokens,
+      :credit_micro,
       :currency,
       :status,
       :credited_at,

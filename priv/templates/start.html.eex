@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Get started — CSuiteFinder</title>
-<meta name="description" content="Resolve a name and a company domain to a work email. Deliverability, enrichment, patterns and company data. <%= @trial_tokens %> free tokens to start.">
+<meta name="description" content="Resolve a name and a company domain to a work email. Deliverability, enrichment, patterns and company data. $<%= @trial_usd %> of free credit to start.">
 <style>
   :root {
     --bg: #fbfaf8;
@@ -211,7 +211,7 @@
     <h3>It sets itself up</h3>
     <p>
       That file is written for machines. Your assistant reads it, registers an account,
-      and gets <strong><%= @trial_tokens %> free lookups</strong> — no card, no form, no
+      and gets <strong>$<%= @trial_usd %> of free credit</strong> — no card, no form, no
       waiting for anyone to approve you. It knows every endpoint and what each one costs,
       because the file is generated from the live service.
     </p>
@@ -272,7 +272,7 @@
 <h3 class="sub-label">In your browser</h3>
 <p class="quiet">
   <a href="/account"><strong>Open your account</strong></a>, enter your email, and you have a key
-  and <%= @trial_tokens %> lookups. The same page shows your balance, your usage and lets you buy
+  and $<%= @trial_usd %> of credit. The same page shows your balance, your usage and lets you buy
   more — no headers, no terminal.
 </p>
 
@@ -295,9 +295,9 @@ curl -H "Authorization: Bearer $KEY" \
 <h2 class="section-label">What it costs</h2>
 
 <p class="quiet">
-  Your first <strong><%= @trial_tokens %> lookups are free</strong> (<%= @trial_usd %> of credit) —
-  real lookups, not a limited preview. After that you pay <strong>one token per email found</strong>
-  at $<%= @token_price %>, and nothing at all for deliverability checks, identity lookups, company
+  Your first <strong>$<%= @trial_usd %> of credit are free</strong> (<%= @trial_usd %> of credit) —
+  real lookups, not a limited preview. After that you pay <strong>$<%= @email_price %> per email address</strong>
+  and <strong>$<%= @phone_price %> per phone number</strong>, and nothing at all for deliverability checks, identity lookups, company
   data or email formats. A lookup that finds nothing is free.
 </p>
 

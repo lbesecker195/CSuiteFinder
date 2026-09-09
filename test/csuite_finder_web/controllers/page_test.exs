@@ -18,7 +18,7 @@ defmodule CsuiteFinderWeb.PageTest do
       assert html =~ "0.0025"
       assert html =~ "$1,000"
       assert html =~ "400,000"
-      assert html =~ to_string(Pricing.trial_tokens())
+      assert html =~ "free credit"
     end
 
     test "documents every billable endpoint", %{conn: conn} do
@@ -44,21 +44,22 @@ defmodule CsuiteFinderWeb.PageTest do
 
       assert html =~ "Your account"
       assert html =~ "Create account"
-      assert html =~ "Buy tokens"
+      assert html =~ "Buy credit"
     end
 
     test "prices the bundles from the live constants", %{conn: conn} do
       html = conn |> get(~p"/account") |> html_response(200)
 
-      # Every bundle Pricing sells, with the token count it will actually credit.
+      # Every purchase Pricing sells, with the credit it will actually grant.
       for b <- Pricing.bundles() do
         assert html =~ "$" <> delimited(b.usd)
-        assert html =~ delimited(b.tokens) <> " tokens"
+        assert html =~ "$" <> delimited(b.credit_usd) <> " of credit"
       end
 
-      assert html =~ "1,000,000 tokens"
-      assert html =~ "better rate"
-      assert html =~ to_string(Pricing.trial_tokens())
+      # The bonus is the volume discount, stated as money.
+      assert html =~ "+$500 free"
+      assert html =~ "0.0025"
+      assert html =~ "0.025"
     end
 
     test "never embeds a key — the browser supplies its own", %{conn: conn} do
@@ -124,10 +125,10 @@ defmodule CsuiteFinderWeb.PageTest do
 
       for b <- Pricing.bundles() do
         assert body =~ "$" <> delimited(b.usd)
-        assert body =~ delimited(b.tokens) <> " tokens"
+        assert body =~ "$" <> delimited(b.credit_usd) <> " of credit"
       end
 
-      assert body =~ to_string(Pricing.trial_tokens())
+      assert body =~ "of free credit"
     end
 
     test "documents the discovery route, so an agent knows where to start", %{conn: conn} do
@@ -176,6 +177,28 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "prices are in dollars" do
+    test "no public surface still talks about tokens", %{conn: conn} do
+      # The only surviving "token" is PayPal's own query parameter, which is
+      # their name for an order id and nothing to do with our pricing.
+      for path <- ["/", "/start", "/account"] do
+        html = conn |> get(path) |> html_response(200)
+        stripped = String.replace(html, ~r/\?token=|params\.get\("token"\)|order id back as/, "")
+        refute stripped =~ ~r/\btokens\b/i, "#{path} still mentions tokens"
+      end
+
+      refute conn |> get(~p"/llms.txt") |> response(200) =~ ~r/\btokens\b/i
+    end
+
+    test "the headline prices appear where a buyer looks", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert html =~ "0.0025"
+      assert html =~ "0.025"
+      assert html =~ "of credit"
+    end
+  end
+
   describe "printed URLs" do
     test "use the configured public URL, not the request's Host header", %{conn: conn} do
       # The Host header is caller-controlled. Deriving documentation URLs from it
@@ -206,7 +229,7 @@ defmodule CsuiteFinderWeb.PageTest do
 
       assert html =~ "Get started"
       assert html =~ "/llms.txt"
-      assert html =~ to_string(Pricing.trial_tokens())
+      assert html =~ "free credit"
     end
 
     test "offers a path for people without an assistant", %{conn: conn} do
@@ -227,12 +250,14 @@ defmodule CsuiteFinderWeb.PageTest do
     test "publishes the same terms as JSON", %{conn: conn} do
       body = conn |> get(~p"/csuitefinder/pricing") |> json_response(200)
 
-      assert body["token_price_usd"] == 0.0025
-      assert body["minimum_bundle_usd"] == 1_000
-      assert body["tokens_per_minimum_bundle"] == 400_000
-      assert body["free_trial_tokens"] == 400
-      assert body["prices_in_tokens"]["email.find"] == 1
-      assert body["prices_in_tokens"]["email.enrich"] == 0
+      assert body["currency"] == "USD"
+      assert body["prices_usd"]["email.find"] == 0.0025
+      assert body["prices_usd"]["phone.find"] == 0.025
+      assert body["prices_usd"]["email.enrich"] == 0
+      assert body["minimum_purchase_usd"] == 1_000
+      assert body["free_trial_usd"] == 1.0
+      # No token vocabulary left anywhere in the published terms.
+      refute Jason.encode!(body) =~ "token"
     end
   end
 end

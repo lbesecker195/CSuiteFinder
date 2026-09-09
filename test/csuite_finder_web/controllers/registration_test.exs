@@ -12,9 +12,8 @@ defmodule CsuiteFinderWeb.RegistrationTest do
         |> post(~p"/csuitefinder/register", %{email: "new@company.com"})
         |> json_response(201)
 
-      assert body["tokens_granted"] == Pricing.trial_tokens()
-      assert body["tokens_granted_usd"] == 1.0
-      assert body["token_balance"] == Pricing.trial_tokens()
+      assert body["credit_granted_usd"] == 1.0
+      assert body["balance_usd"] == 1.0
       assert String.starts_with?(body["api_key"], "csf_live_")
       assert body["api_key_notice"] =~ "shown once"
     end
@@ -40,9 +39,9 @@ defmodule CsuiteFinderWeb.RegistrationTest do
     end
 
     test "the trial is enough to actually try the API" do
-      # 400 tokens at 1 per found email is 400 real lookups, with every
-      # follow-up endpoint included on top.
-      assert div(Pricing.trial_tokens(), Pricing.charge_for("email.find")) == 400
+      # $1 at $0.0025 an address is 400 real lookups, with every follow-up
+      # endpoint included on top.
+      assert div(Pricing.trial_micro(), Pricing.charge_for("email.find")) == 400
     end
 
     test "rejects a duplicate email rather than granting a second trial",
@@ -89,7 +88,7 @@ defmodule CsuiteFinderWeb.RegistrationTest do
         |> post(~p"/csuitefinder/billing/topup", %{amount_usd: 50})
         |> json_response(400)
 
-      assert response["error"] == "below_minimum_bundle"
+      assert response["error"] == "below_minimum_purchase"
       assert response["minimum_usd"] == 1_000
     end
   end

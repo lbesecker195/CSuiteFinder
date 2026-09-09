@@ -30,7 +30,7 @@ defmodule CsuiteFinderWeb.NoLeakTest do
                       companyenrich leadsforge aviato pdl lusha fiber-ai)
 
   setup %{conn: conn} do
-    {_account, key} = Fixtures.account_with_key(tokens: 400)
+    {_account, key} = Fixtures.account_with_key(usd: 1.0)
 
     TregStub.stub(fn
       "thecompaniesapi.companies.email_pattern", _ ->

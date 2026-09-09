@@ -13,7 +13,7 @@ defmodule CsuiteFinder.MetricsTest do
           outcome: "found",
           cache_hit: false,
           provider_cost_micro: 0,
-          charged_tokens: 1,
+          charged_micro: 2_500,
           duration_ms: 100
         },
         attrs
@@ -28,7 +28,7 @@ defmodule CsuiteFinder.MetricsTest do
     test "counts requests, hits and money" do
       event(%{cache_hit: true, provider_cost_micro: 0})
       event(%{cache_hit: false, provider_cost_micro: 1_900})
-      event(%{outcome: "not_found", charged_tokens: 0, provider_cost_micro: 5_000})
+      event(%{outcome: "not_found", charged_micro: 0, provider_cost_micro: 5_000})
 
       h = Metrics.headline(since())
 
@@ -36,8 +36,7 @@ defmodule CsuiteFinder.MetricsTest do
       assert h.cache_hits == 1
       assert h.found == 2
       assert h.provider_cost_micro == 6_900
-      assert h.tokens == 2
-      # 2 tokens at $0.0025.
+      assert h.charged_micro == 5_000
       assert h.revenue_usd == 0.005
       assert h.margin_usd == -0.0019
       assert h.cache_hit_rate == Float.round(1 / 3, 4)
@@ -59,7 +58,7 @@ defmodule CsuiteFinder.MetricsTest do
       event(%{cache_hit: false, provider_cost_micro: 20_000})
 
       # Other endpoints must not contaminate find economics.
-      event(%{endpoint: "company.info", charged_tokens: 0, provider_cost_micro: 1_900})
+      event(%{endpoint: "company.info", charged_micro: 0, provider_cost_micro: 1_900})
 
       e = Metrics.find_economics(since())
 
@@ -159,7 +158,7 @@ defmodule CsuiteFinder.MetricsTest do
   describe "by_endpoint/1" do
     test "flags which endpoints are metered" do
       event(%{endpoint: "email.find", charged_tokens: 1})
-      event(%{endpoint: "company.find", charged_tokens: 0, provider_cost_micro: 1_900})
+      event(%{endpoint: "company.find", charged_micro: 0, provider_cost_micro: 1_900})
 
       rows = Metrics.by_endpoint(since())
 
@@ -175,19 +174,18 @@ defmodule CsuiteFinder.MetricsTest do
 
   describe "accounts_stats/1" do
     test "counts unspent tokens as deferred revenue, not revenue" do
-      {_account, _key} = Fixtures.account_with_key(tokens: 400)
+      {_account, _key} = Fixtures.account_with_key(usd: 1.0)
 
       stats = Metrics.accounts_stats(since())
 
       assert stats.total == 1
-      assert stats.tokens_outstanding == 400
       assert stats.deferred_revenue_usd == 1.0
     end
 
     test "survives a bigint sum coming back as a Decimal" do
       # Regression: SUM() over a bigint column arrives as Decimal, and a Decimal
       # in an arithmetic expression raises rather than coercing.
-      Fixtures.account_with_key(tokens: 400_000)
+      Fixtures.account_with_key(usd: 1_000.0)
 
       assert Metrics.accounts_stats(since()).deferred_revenue_usd == 1_000.0
     end
@@ -207,8 +205,7 @@ defmodule CsuiteFinder.MetricsTest do
     end
 
     test "the price it prices finds at matches what billing charges" do
-      assert Metrics.find_economics(since()).price_micro ==
-               Pricing.charge_for("email.find") * Pricing.micro_per_token()
+      assert Metrics.find_economics(since()).price_micro == Pricing.charge_for("email.find")
     end
   end
 end

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CSuiteFinder — work email lookup API</title>
-<meta name="description" content="Resolve a name and a company domain to a work email. Deliverability, enrichment, patterns and company data. <%= @trial_tokens %> free tokens to start.">
+<meta name="description" content="Resolve a name and a company domain to a work email or phone number. $<%= @email_price %> an email, $<%= @phone_price %> a phone. <%= @trial_usd %> free credit to start.">
 <style>
   :root {
     --bg: #fbfaf8;
@@ -174,10 +174,10 @@
     so your message lands in an inbox instead of a support queue.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="/start">Get started — <%= @trial_tokens %> free lookups</a>
+    <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
     <a class="btn btn-ghost" href="#developers">Read the API docs</a>
   </div>
-  <p class="cta-note">No card, no call, no demo. Your first <%= @trial_tokens %> lookups are on us.</p>
+  <p class="cta-note">No card, no call, no demo. Your first <%= @trial_usd %> is on us.</p>
 </header>
 
 <h2 class="section-label">Who it's for</h2>
@@ -203,7 +203,7 @@
   </div>
   <div class="card">
     <span class="tag">Developers</span>
-    <h3 class="card-title">One endpoint, one token</h3>
+    <h3 class="card-title">One endpoint, one price</h3>
     <p>
       A plain JSON API with no SDK to install and no seat licence. Register with a
       <code>POST</code> and you have a key. <a href="#developers">Jump to the docs →</a>
@@ -239,26 +239,28 @@
 <h2 class="section-label" id="pricing">Pricing</h2>
 
 <p class="quiet" style="margin-top:-6px">
-  You pay for emails — <strong>one token each</strong>, whether you resolve one from a name or
-  discover a roomful from a domain. Deliverability checks, identity lookups, company data and
+  You pay for what we find: <strong>$<%= @email_price %> an email address</strong> and
+  <strong>$<%= @phone_price %> a phone number</strong>, whether you resolve one person from a name
+  or discover a roomful from a domain. Deliverability checks, identity lookups, company data and
   email formats are all included with any balance. A lookup that finds nothing is free.
 </p>
 
 <div class="bundle-grid">
   <%= for b <- @bundles do %>
-  <div class="bundle-card<%= if b.best_value, do: " best" %>">
-    <%= if b.best_value do %><span class="flag">Better rate</span><% end %>
+  <div class="bundle-card<%= if b.bonus?, do: " best" %>">
+    <%= if b.bonus? do %><span class="flag">+$<%= b.bonus %> free</span><% end %>
     <span class="amt">$<%= b.usd %></span>
-    <span class="qty"><%= b.tokens %> tokens</span>
-    <span class="rate">$<%= b.rate %> per email found · <%= b.finds %> lookups</span>
+    <span class="qty">$<%= b.credit %> of credit</span>
+    <span class="rate"><%= b.emails %> emails, or <%= b.phones %> phone numbers</span>
   </div>
   <% end %>
 </div>
 
 <p class="quiet">
-  Tokens never expire. Bundles start at $<%= @min_bundle %> and are paid through PayPal.
-  Start with <strong><%= @trial_tokens %> free tokens</strong> (<%= @trial_usd %>) to try it
-  properly first — that's <%= @trial_tokens %> real lookups, not a preview.
+  Credit never expires. Purchases start at $<%= @min_bundle %> and are paid through PayPal,
+  and buying more than the minimum credits you more than you pay. Start with
+  <strong><%= @trial_usd %> of free credit</strong> to try it properly first — real lookups,
+  not a preview.
 </p>
 
 <p style="margin-top:22px">
@@ -335,17 +337,17 @@ Verify every address before you give it to me.</code></pre>
     <tr>
       <td>POST</td><td><code>/csuitefinder/company/people</code></td>
       <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
-      <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. 5 tokens per person.</td>
+      <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. $<%= @phone_price %> per person.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/email/company/people</code></td>
       <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
-      <td>The same sweep, email addresses only. 1 token per person.</td>
+      <td>The same sweep, email addresses only. $<%= @email_price %> per person.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/phone/find</code></td>
       <td><code>full_name</code> + <code>domain</code>, or <code>email</code></td>
-      <td>A direct phone number, with line type. 5 tokens.</td>
+      <td>A direct phone number, with line type. $<%= @phone_price %>.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/phone/valid</code></td><td><code>phone</code></td>
@@ -411,13 +413,12 @@ Verify every address before you give it to me.</code></pre>
 
 <div class="table-scroll">
 <table>
-  <thead><tr><th>Endpoint</th><th class="num">Tokens</th><th class="num">Effective</th></tr></thead>
+  <thead><tr><th>Endpoint</th><th class="num">Price</th></tr></thead>
   <tbody>
-    <%= for {endpoint, tokens, usd} <- @price_rows do %>
+    <%= for {endpoint, usd, label} <- @price_rows do %>
     <tr>
       <td><code><%= endpoint %></code></td>
-      <td class="num"><%= if tokens > 0, do: tokens, else: "—" %></td>
-      <td class="num"><%= if tokens > 0, do: "$" <> usd, else: "included" %></td>
+      <td class="num"><%= if usd > 0, do: "$" <> label, else: "included" %></td>
     </tr>
     <% end %>
   </tbody>
@@ -430,10 +431,10 @@ Verify every address before you give it to me.</code></pre>
 <table>
   <thead><tr><th>Path</th><th>What it does</th></tr></thead>
   <tbody>
-    <tr><td><code>GET /csuitefinder/billing/balance</code></td><td>Token balance and the full price list</td></tr>
-    <tr><td><code>GET /csuitefinder/billing/usage?days=30</code></td><td>Calls, cache hits and tokens spent per endpoint</td></tr>
+    <tr><td><code>GET /csuitefinder/billing/balance</code></td><td>Your balance and the full price list</td></tr>
+    <tr><td><code>GET /csuitefinder/billing/usage?days=30</code></td><td>Calls, cache hits and spend per endpoint</td></tr>
     <tr><td><code>GET /csuitefinder/keys</code></td><td>Your API keys — mint a spare, revoke an old one</td></tr>
-    <tr><td><code>POST /csuitefinder/billing/topup</code></td><td>Buy a bundle — returns a PayPal approval link</td></tr>
+    <tr><td><code>POST /csuitefinder/billing/topup</code></td><td>Buy credit — returns a PayPal approval link</td></tr>
     <tr><td><code>GET /csuitefinder/health</code></td><td>Service status</td></tr>
   </tbody>
 </table>

@@ -48,8 +48,7 @@ defmodule CsuiteFinderWeb.AdminController do
       token: params["token"],
       base_path: conn.request_path,
       chart: chart(data.daily),
-      token_price_usd: Pricing.token_price_usd(),
-      find_price_micro: Pricing.charge_for("email.find") * Pricing.micro_per_token()
+      find_price_micro: Pricing.charge_for("email.find")
     })
   end
 

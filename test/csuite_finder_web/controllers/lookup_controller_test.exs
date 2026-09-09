@@ -111,10 +111,10 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
         {200, TregStub.routed(%{"name" => "Acme Inc"}), 1_900}
       end)
 
-      before = CsuiteFinder.Repo.reload(account).token_balance
+      before = CsuiteFinder.Repo.reload(account).balance_micro
       get(conn, ~p"/csuitefinder/company/find?email=jane@acme.com")
 
-      assert CsuiteFinder.Repo.reload(account).token_balance == before
+      assert CsuiteFinder.Repo.reload(account).balance_micro == before
     end
 
     test "says so for a consumer mailbox", %{conn: conn} do

@@ -65,12 +65,10 @@ defmodule CsuiteFinderWeb.OpsController do
 
   defp spend do
     provider = Repo.aggregate(UsageEvent, :sum, :provider_cost_micro) || 0
-    tokens = Repo.aggregate(UsageEvent, :sum, :charged_tokens) || 0
-    charged_micro = tokens * Pricing.micro_per_token()
+    charged_micro = Repo.aggregate(UsageEvent, :sum, :charged_micro) || 0
 
     %{
       provider_cost_usd: Float.round(provider / 1_000_000, 6),
-      tokens_charged: tokens,
       charged_usd: Float.round(charged_micro / 1_000_000, 6),
       margin_usd: Float.round((charged_micro - provider) / 1_000_000, 6)
     }

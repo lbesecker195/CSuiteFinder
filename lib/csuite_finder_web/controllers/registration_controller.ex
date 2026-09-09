@@ -14,7 +14,7 @@ defmodule CsuiteFinderWeb.RegistrationController do
   @doc "POST /csuitefinder/register"
   def create(conn, params) do
     case Accounts.register(%{email: params["email"], name: params["name"]}) do
-      {:ok, %{account: account, api_key: key, tokens_granted: tokens}} ->
+      {:ok, %{account: account, api_key: key, credit_granted_micro: granted}} ->
         conn
         |> put_status(:created)
         |> json(%{
@@ -25,9 +25,8 @@ defmodule CsuiteFinderWeb.RegistrationController do
           api_key_notice:
             "Store this key now — it is shown once and cannot be recovered. " <>
               "Send it as `Authorization: Bearer <key>`.",
-          tokens_granted: tokens,
-          tokens_granted_usd: Pricing.usd_for_tokens(tokens),
-          token_balance: account.token_balance,
+          credit_granted_usd: Pricing.usd(granted),
+          balance_usd: Pricing.usd(account.balance_micro),
           terms: Pricing.terms(),
           next_steps: [
             "GET /csuitefinder/email/find?full_name=Jane%20Doe&domain=acme.com",

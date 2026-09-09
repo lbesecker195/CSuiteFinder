@@ -59,32 +59,27 @@ defmodule CsuiteFinderWeb.PageController do
   def pricing(conn, _params), do: json(conn, Pricing.terms())
 
   defp assigns(conn) do
-    prices = Pricing.list()
-
     %{
       base_url: base_url(conn),
-      token_price: format(Pricing.token_price_usd()),
+      email_price: format(Pricing.price_usd("email.find")),
+      phone_price: format(Pricing.price_usd("phone.find")),
       min_bundle: delimit(Pricing.min_bundle_usd()),
-      trial_tokens: Pricing.trial_tokens(),
-      trial_usd: "$" <> format(Pricing.usd_for_tokens(Pricing.trial_tokens())),
-      # Pricing owns the bundles; recomputing them here is how a page and an
-      # invoice drift apart.
+      trial_usd: "$" <> format(Pricing.trial_usd()),
       bundles:
         for b <- Pricing.bundles() do
           %{
             usd: delimit(b.usd),
-            tokens: delimit(b.tokens),
-            finds: delimit(b.finds),
-            rate: format(b.micro_per_token / 1_000_000),
-            best_value: b.micro_per_token < Pricing.micro_per_token()
+            credit: delimit(b.credit_usd),
+            bonus: delimit(b.bonus_usd),
+            emails: delimit(b.emails),
+            phones: delimit(b.phones),
+            bonus?: b.bonus_usd > 0
           }
         end,
       price_rows:
-        prices
+        Pricing.list_usd()
         |> Enum.sort_by(fn {endpoint, _} -> endpoint end)
-        |> Enum.map(fn {endpoint, tokens} ->
-          {endpoint, tokens, format(Pricing.usd_for_tokens(tokens))}
-        end)
+        |> Enum.map(fn {endpoint, usd} -> {endpoint, usd, format(usd)} end)
     }
   end
 

@@ -25,18 +25,18 @@ defmodule CsuiteFinder.Billing.PayPal do
   @spec create_order(Account.t(), float(), keyword()) ::
           {:ok, Payment.t(), map()} | {:error, term()} | {:error, :below_minimum, map()}
   def create_order(%Account{} = account, amount_usd, opts \\ []) when amount_usd > 0 do
-    with {:ok, tokens} <- Pricing.validate_bundle(amount_usd) do
-      do_create_order(account, amount_usd, tokens, opts)
+    with {:ok, credit_micro} <- Pricing.validate_bundle(amount_usd) do
+      do_create_order(account, amount_usd, credit_micro, opts)
     end
   end
 
-  defp do_create_order(%Account{} = account, amount_usd, tokens, opts) do
+  defp do_create_order(%Account{} = account, amount_usd, credit_micro, opts) do
     body = %{
       intent: "CAPTURE",
       purchase_units: [
         %{
           reference_id: "topup_account_#{account.id}",
-          description: "CSuiteFinder — #{tokens} API tokens",
+          description: "CSuiteFinder — $#{Pricing.usd(credit_micro)} of API credit",
           amount: %{
             currency_code: "USD",
             value: :erlang.float_to_binary(amount_usd / 1, decimals: 2)
@@ -60,7 +60,7 @@ defmodule CsuiteFinder.Billing.PayPal do
           account_id: account.id,
           paypal_order_id: response["id"],
           amount_micro: round(amount_usd * 1_000_000),
-          tokens: tokens,
+          credit_micro: credit_micro,
           status: "created",
           raw: response
         })
@@ -122,22 +122,22 @@ defmodule CsuiteFinder.Billing.PayPal do
   # The credit and the status change are one transaction, so a crash between
   # them cannot leave an account credited for an order still marked capturable.
   defp credit_once(payment, capture_id, amount_micro, response) do
-    # Tokens are derived from what PayPal actually captured, never from what the
-    # client asked for — a tampered amount buys exactly the tokens it paid for.
-    # Priced through the volume tiers, so a buyer above the first tier is
-    # credited what they were quoted rather than a flat-rate undercount.
-    tokens = Pricing.tokens_for_purchase(amount_micro / 1_000_000)
+    # Credit is derived from what PayPal actually captured, never from what the
+    # client asked for — a tampered amount buys exactly what it paid for. Run
+    # through the bundles so a larger purchase gets the bonus it was quoted
+    # rather than only its face value.
+    credit_micro = Pricing.credit_for_purchase(amount_micro / 1_000_000)
 
     Repo.transaction(fn ->
       account = Repo.get!(Account, payment.account_id)
-      {:ok, _account} = Billing.credit(account, tokens)
+      {:ok, _account} = Billing.credit(account, credit_micro)
 
       payment
       |> Payment.changeset(%{
         status: "credited",
         paypal_capture_id: capture_id,
         amount_micro: amount_micro,
-        tokens: tokens,
+        credit_micro: credit_micro,
         credited_at: DateTime.utc_now(),
         raw: response
       })

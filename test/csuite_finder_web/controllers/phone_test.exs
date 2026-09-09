@@ -27,7 +27,7 @@ defmodule CsuiteFinderWeb.PhoneTest do
   }
 
   setup %{conn: conn} do
-    {account, key} = Fixtures.account_with_key(tokens: 400)
+    {account, key} = Fixtures.account_with_key(usd: 1.0)
     {:ok, conn: put_req_header(conn, "authorization", "Bearer " <> key), account: account}
   end
 
@@ -61,12 +61,12 @@ defmodule CsuiteFinderWeb.PhoneTest do
       assert body["belongs_to"]["full_name"] == "Dylan Field"
     end
 
-    test "costs 5 tokens", %{conn: conn, account: account} do
+    test "costs $0.025", %{conn: conn, account: account} do
       TregStub.stub(fn "treg.people.phone.find", _ -> {200, @found, 4_834} end)
 
       get(conn, ~p"/csuitefinder/phone/find?full_name=Dylan%20Field&domain=figma.com")
 
-      assert Repo.reload(account).token_balance == 395
+      assert Repo.reload(account).balance_micro == 1_000_000 - 25_000
     end
 
     test "needs an identity it can actually use", %{conn: conn} do
@@ -92,7 +92,7 @@ defmodule CsuiteFinderWeb.PhoneTest do
 
       get(conn, ~p"/csuitefinder/phone/valid?phone=7075485509")
 
-      assert Repo.reload(account).token_balance == 400
+      assert Repo.reload(account).balance_micro == 1_000_000
     end
   end
 
@@ -119,7 +119,7 @@ defmodule CsuiteFinderWeb.PhoneTest do
 
       # Both calls were made, and both are inside the $0.02 email ceiling.
       assert TregStub.call_count() == 2
-      assert CsuiteFinder.Budgets.usd(:phone_find_from_email) == 0.02
+      assert CsuiteFinder.Budgets.usd(:phone_find_from_email) > 0
     end
 
     test "the enrichment's cost is reported, not swallowed", %{conn: conn} do
@@ -140,19 +140,58 @@ defmodule CsuiteFinderWeb.PhoneTest do
       assert lookup.spent_micro < CsuiteFinder.Budgets.micro(:phone_find_from_email)
     end
 
-    test "an address we cannot put a name to is refused, not guessed at",
+    test "an address we cannot name falls through to the dearer email route",
          %{conn: conn} do
+      # $0.06 buys two routes. When there is no name to ask by, the email-native
+      # provider is still inside the ceiling — that is what the subsidy is for.
+      asked = fn ->
+        Enum.map(TregStub.calls(), & &1.endpoint)
+      end
+
       TregStub.stub(fn
         "treg.people.enrich", _ -> {200, %{"output" => nil}, 0}
-        _other, _ -> {404, %{}, 0}
+        "treg.people.phone.find", _ -> {200, @found, 44_500}
       end)
 
       body =
         conn
         |> get(~p"/csuitefinder/phone/find?email=nobody@acme.com")
-        |> json_response(400)
+        |> json_response(200)
 
-      assert body["error"] == "name_unknown"
+      assert body["found"]
+      assert "treg.people.phone.find" in asked.()
+    end
+
+    test "a name-route miss retries with the email before giving up",
+         %{conn: conn} do
+      # First call (by name) misses; second (by email) hits. Both are billed to
+      # us and both are inside the $0.06 ceiling.
+      {:ok, agent} = Agent.start_link(fn -> 0 end)
+
+      TregStub.stub(fn
+        "treg.people.enrich", _ ->
+          {200, %{"output" => %{"full_name" => "Dylan Field"}, "_treg" => %{"tried" => []}},
+           4_900}
+
+        "treg.people.phone.find", _ ->
+          n = Agent.get_and_update(agent, &{&1 + 1, &1 + 1})
+          if n == 1, do: {404, %{}, 0}, else: {200, @found, 44_500}
+      end)
+
+      body =
+        conn
+        |> get(~p"/csuitefinder/phone/find?email=dylan@figma.com")
+        |> json_response(200)
+
+      assert body["found"]
+      assert Agent.get(agent, & &1) == 2
+    end
+
+    test "the whole email path stays inside its ceiling" do
+      # Enrichment + the dearest route it can reach must not exceed the budget,
+      # or the subsidy is a licence to overspend rather than a bounded one.
+      assert CsuiteFinder.Budgets.usd(:phone_find_from_email) == 0.06
+      assert 0.0049 + 0.0445 < CsuiteFinder.Budgets.usd(:phone_find_from_email)
     end
   end
 

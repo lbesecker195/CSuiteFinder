@@ -48,7 +48,7 @@ defmodule CsuiteFinderWeb.ProspectTest do
   }
 
   setup %{conn: conn} do
-    {account, key} = Fixtures.account_with_key(tokens: 400)
+    {account, key} = Fixtures.account_with_key(usd: 1.0)
     TregStub.stub(fn "tomba.companies.emails.list", _ -> {200, @page, 8_900} end)
     {:ok, conn: put_req_header(conn, "authorization", "Bearer " <> key), account: account}
   end
@@ -109,8 +109,8 @@ defmodule CsuiteFinderWeb.ProspectTest do
          %{conn: conn, account: account} do
       conn |> get(~p"/csuitefinder/company/people?domain=acme.com") |> json_response(200)
 
-      # Three people at 5 each: the phone is a lookup of its own per person.
-      assert Repo.reload(account).token_balance == 385
+      # Three people at $0.025 each: the phone is a lookup of its own per person.
+      assert Repo.reload(account).balance_micro == 1_000_000 - 3 * 25_000
     end
 
     test "charges one token per person on the email-only route",
@@ -120,7 +120,7 @@ defmodule CsuiteFinderWeb.ProspectTest do
         |> get(~p"/csuitefinder/email/company/people?domain=acme.com")
         |> json_response(200)
 
-      assert Repo.reload(account).token_balance == 397
+      assert Repo.reload(account).balance_micro == 1_000_000 - 3 * 2_500
       refute Map.has_key?(hd(body["people"]), "phone")
     end
 
@@ -143,7 +143,7 @@ defmodule CsuiteFinderWeb.ProspectTest do
       # 12 tokens buys two rows at 5 each, or twelve at 1 each. Clamping against
       # the balance alone would hand back twelve rows for 12 tokens on a route
       # that charges 60 for them.
-      {_account, key} = Fixtures.account_with_key(tokens: 12)
+      {_account, key} = Fixtures.account_with_key(usd: 0.03)
       poor = put_req_header(build_conn(), "authorization", "Bearer " <> key)
 
       with_phones =
@@ -156,7 +156,7 @@ defmodule CsuiteFinderWeb.ProspectTest do
 
     test "an account that cannot afford a single row is refused outright",
          %{conn: conn} do
-      {_account, key} = Fixtures.account_with_key(tokens: 2)
+      {_account, key} = Fixtures.account_with_key(usd: 0.005)
 
       body =
         build_conn()
@@ -164,7 +164,7 @@ defmodule CsuiteFinderWeb.ProspectTest do
         |> get(~p"/csuitefinder/company/people?domain=acme.com")
         |> json_response(402)
 
-      assert body["error"] == "insufficient_tokens"
+      assert body["error"] == "insufficient_credit"
     end
 
     test "an empty result is not billed", %{conn: conn, account: account} do
@@ -174,7 +174,7 @@ defmodule CsuiteFinderWeb.ProspectTest do
 
       conn |> get(~p"/csuitefinder/company/people?domain=nobody.com") |> json_response(200)
 
-      assert Repo.reload(account).token_balance == 400
+      assert Repo.reload(account).balance_micro == 1_000_000
     end
   end
 

@@ -9,7 +9,7 @@ defmodule CsuiteFinder.Billing.UsageEvent do
     field :cache_hit, :boolean, default: false
     field :outcome, :string
     field :provider_cost_micro, :integer, default: 0
-    field :charged_tokens, :integer, default: 0
+    field :charged_micro, :integer, default: 0
     field :duration_ms, :integer
     field :request, :map
     field :treg_call_ids, {:array, :string}, default: []
@@ -29,7 +29,7 @@ defmodule CsuiteFinder.Billing.UsageEvent do
       :cache_hit,
       :outcome,
       :provider_cost_micro,
-      :charged_tokens,
+      :charged_micro,
       :duration_ms,
       :request,
       :treg_call_ids

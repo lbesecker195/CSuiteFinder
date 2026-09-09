@@ -19,12 +19,12 @@ defmodule CsuiteFinderWeb.Plugs.RequireFunds do
       :ok ->
         assign(conn, :endpoint_name, endpoint)
 
-      {:error, :insufficient_tokens, details} ->
+      {:error, :insufficient_credit, details} ->
         conn
         |> put_status(:payment_required)
         |> json(
           Map.merge(details, %{
-            error: "insufficient_tokens",
+            error: "insufficient_credit",
             message: message_for(details)
           })
         )
@@ -36,12 +36,12 @@ defmodule CsuiteFinderWeb.Plugs.RequireFunds do
   # a metered one refused for being a token short, and the caller should be told
   # which — the fix for the first is buying anything at all.
   defp message_for(%{metered: false}) do
-    "This endpoint is included, but needs a positive token balance. " <>
+    "This endpoint is included, but needs a positive balance. " <>
       "Buy a bundle at POST /csuitefinder/billing/topup."
   end
 
   defp message_for(_details) do
-    "Buy a token bundle at POST /csuitefinder/billing/topup."
+    "Buy credit at POST /csuitefinder/billing/topup."
   end
 
   # "/csuitefinder/email/find" -> "email.find", which is how pricing and usage

@@ -32,28 +32,25 @@ defmodule CsuiteFinderWeb.AccountController do
   end
 
   defp assigns do
-    # Pricing owns the bundles. Recomputing them here is how a page and an
-    # invoice drift apart — this would advertise one token count while the
-    # capture credited another.
-    bundles =
-      for b <- Pricing.bundles() do
-        %{
-          usd: b.usd,
-          usd_label: delimit(b.usd),
-          tokens_label: delimit(b.tokens),
-          finds_label: delimit(b.finds),
-          rate_label:
-            :erlang.float_to_binary(b.micro_per_token / 1_000_000, [:compact, decimals: 4]),
-          best_value: b.micro_per_token < Pricing.micro_per_token()
-        }
-      end
-
     %{
       minimum_usd_label: delimit(Pricing.min_bundle_usd()),
-      token_price_label:
-        :erlang.float_to_binary(Pricing.token_price_usd(), [:compact, decimals: 4]),
-      trial_tokens: Pricing.trial_tokens(),
-      bundles: bundles
+      email_price:
+        :erlang.float_to_binary(Pricing.price_usd("email.find"), [:compact, decimals: 4]),
+      phone_price:
+        :erlang.float_to_binary(Pricing.price_usd("phone.find"), [:compact, decimals: 4]),
+      trial_usd: :erlang.float_to_binary(Pricing.trial_usd(), [:compact, decimals: 2]),
+      bundles:
+        for b <- Pricing.bundles() do
+          %{
+            usd: b.usd,
+            usd_label: delimit(b.usd),
+            credit_label: delimit(b.credit_usd),
+            bonus_label: delimit(b.bonus_usd),
+            emails_label: delimit(b.emails),
+            phones_label: delimit(b.phones),
+            bonus?: b.bonus_usd > 0
+          }
+        end
     }
   end
 

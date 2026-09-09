@@ -200,15 +200,19 @@ defmodule CsuiteFinder.Phones do
   defp from_email(email) do
     with {:ok, email, domain} <- Cache.normalize_email(email) do
       case People.enrich(email) do
-        # Only a provider-sourced name is worth paying a lookup on. The
-        # inference fallback would hand us "Nobody" for nobody@acme.com and we
-        # would spend a find on it, which is a near-certain miss bought at full
-        # price.
+        # Only a provider-sourced name is worth asking by. The inference
+        # fallback would hand us "Nobody" for nobody@acme.com, and a find on
+        # that is a near-certain miss bought at full price.
         {:ok, %{full_name: full_name, source: "provider"}, lookup} when is_binary(full_name) ->
           {:ok, %{full_name: full_name, domain: domain, email: email}, lookup.spent_micro}
 
+        {:ok, _row, lookup} ->
+          # No usable name. The email still has a route of its own, just a
+          # dearer one — that is what the subsidy is for.
+          {:ok, %{email: email, domain: domain, email_only: true}, lookup.spent_micro}
+
         _ ->
-          {:error, :name_unknown}
+          {:ok, %{email: email, domain: domain, email_only: true}, 0}
       end
     end
   end
@@ -230,18 +234,25 @@ defmodule CsuiteFinder.Phones do
   defp cached_for(_), do: nil
 
   defp fetch(identity) do
-    body =
-      identity
-      |> Map.take([:full_name, :domain, :linkedin_url])
-      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-      |> Map.new()
+    # An email-input lookup may end up on either route, so it carries the higher
+    # ceiling throughout: the cheap name route is tried first and only falls
+    # through to the dear email one when there is no name to ask by.
+    {body, budget} =
+      if identity[:email_only] do
+        {%{email: identity[:email]}, :phone_find_from_email}
+      else
+        {identity
+         |> Map.take([:full_name, :domain, :linkedin_url])
+         |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+         |> Map.new(), if(identity[:email], do: :phone_find_from_email, else: :phone_find)}
+      end
 
     started = System.monotonic_time(:millisecond)
 
     case Client.call(@find_endpoint,
            method: :post,
            body: body,
-           max_cost: Budgets.usd(:phone_find),
+           max_cost: Budgets.usd(budget),
            prefer: CostModel.preferred(@find_capability)
          ) do
       {:ok, payload, meta} ->
@@ -250,13 +261,30 @@ defmodule CsuiteFinder.Phones do
 
       {result, meta} when result in [:miss] ->
         CostModel.record_waterfall(@find_capability, meta.tried, latency_ms: elapsed(started))
-        {:ok, not_found(identity, meta), Lookup.miss(meta.cost_micro)}
+        retry_direct(identity, meta)
 
       {:error, _reason, meta} ->
         CostModel.record_waterfall(@find_capability, meta.tried, latency_ms: elapsed(started))
         {:ok, not_found(identity, meta), Lookup.miss(meta.cost_micro)}
     end
   end
+
+  # Already on the direct route — there is nowhere cheaper or dearer left to go.
+  defp retry_direct(%{email_only: true} = identity, meta),
+    do: {:ok, not_found(identity, meta), Lookup.miss(meta.cost_micro)}
+
+  # The name route found nothing, but we hold an email. The email-native
+  # provider is dearer and is exactly what the subsidised ceiling pays for, so
+  # it is worth one attempt before giving up.
+  defp retry_direct(%{email: email} = identity, meta) when is_binary(email) do
+    {:ok, phone, lookup} =
+      fetch(%{email: email, domain: identity[:domain], email_only: true})
+
+    {:ok, phone, Lookup.add(lookup, meta.cost_micro)}
+  end
+
+  defp retry_direct(identity, meta),
+    do: {:ok, not_found(identity, meta), Lookup.miss(meta.cost_micro)}
 
   defp store_find(identity, payload, meta) do
     output = Map.get(payload, "output", %{}) || %{}
