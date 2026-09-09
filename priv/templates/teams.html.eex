@@ -12,7 +12,7 @@
     No API key, no terminal, and no meter running while you work.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="/account#pricing">Start a seat — $<%= @seat_usd %>/month</a>
+    <a class="btn btn-primary" href="/account#pricing">Reserve a Seat, now! — $<%= @seat_usd %>/month</a>
     <a class="btn btn-ghost" href="/account">Try it free first</a>
   </div>
   <p class="cta-note">
@@ -32,7 +32,7 @@
     <span class="price">$<%= @seat_usd %></span><span class="per">per person, per month</span>
   </div>
   <p class="gets">
-    Every seat gets <strong>$<%= @seat_usd %> of lookup credit</strong> each month.
+    Every seat gets nearly <strong>400,000 corporate emails</strong> each month.
   </p>
   <ul>
     <%= for item <- @seat_includes do %>
@@ -45,7 +45,7 @@
     <% end %>
   </ul>
   <p style="margin:24px 0 0">
-    <a class="btn btn-primary" href="/account#pricing">Start a seat</a>
+    <a class="btn btn-primary" href="/account#pricing">Reserve a Seat, now!</a>
   </p>
 </div>
 

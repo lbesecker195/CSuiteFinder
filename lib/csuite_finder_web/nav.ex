@@ -61,7 +61,7 @@ defmodule CsuiteFinderWeb.Nav do
 
     """
     <nav class="sitenav">
-      <a class="brand" href="#{home_for(audience)}">CSuiteFinder</a>
+      <a class="brand" href="#{home_for(audience)}">C Suite Finder.com</a>
       <div class="navlinks">
     #{items}
         <a class="navcta" href="/account" id="nav-account">Register / Log in</a>
