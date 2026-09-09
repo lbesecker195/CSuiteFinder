@@ -119,28 +119,16 @@
     </div>
   </div>
 
-  <div class="card">
-    <h3 style="margin:0 0 4px;font-size:17px">Lost your key?</h3>
-    <p class="muted" style="margin-bottom:16px">
-      We only ever store a hash of it, so we can't send the old one back — but your account and
-      its tokens are safe. We'll email you a link that issues a replacement.
-    </p>
-    <div class="row">
-      <div>
-        <label for="recoveremail">Your registered email</label>
-        <input type="email" id="recoveremail" placeholder="you@company.com" autocomplete="email">
-      </div>
-      <button id="recover" class="ghost">Email me a link</button>
-    </div>
-  </div>
 </section>
 
 <!-- ── the key, shown once ─────────────────────────────────────────────── -->
 <section id="newkey" hidden>
   <h1>Save your API key</h1>
   <div class="note">
-    <strong>This is the only time it is shown.</strong> We store only a hash of it, so we
-    cannot recover or resend it. Copy it somewhere safe now.
+    <strong>This is the only time it is shown.</strong> We store only a hash, so we cannot
+    recover or resend it — not a policy, just what hashing means. It is saved in this browser
+    so you stay signed in here, but that copy disappears if you clear site data or switch
+    device. Download it or put it in a password manager now.
   </div>
   <div class="keybox mono" id="newkeyvalue"></div>
   <div class="row">
@@ -203,9 +191,11 @@
       <button id="newkeybtn" class="ghost">Create another key</button>
     </div>
     <p class="muted" style="margin:14px 0 0">
-      Keep a spare somewhere safe and losing one stops being a problem. The key you are signed in
-      with is stored in this browser only, never sent anywhere but this API, and cleared when you
-      sign out. Send it as <code>Authorization: Bearer &lt;key&gt;</code> from your own code.
+      <strong>Create a spare and keep it somewhere safe.</strong> A key cannot be recovered if
+      it is lost — but a second one lets you revoke the first and carry on, and your token
+      balance is never affected either way. The key you are signed in with lives in this
+      browser only, never goes anywhere but this API, and is cleared when you sign out. Send it
+      as <code>Authorization: Bearer &lt;key&gt;</code> from your own code.
     </p>
   </div>
 </section>
@@ -400,43 +390,6 @@
     });
   });
 
-  // ---- recovery -----------------------------------------------------------
-  $("recover").addEventListener("click", function () {
-    var email = $("recoveremail").value.trim();
-    if (!email) { say("Enter the email you registered with.", "err"); return; }
-    var btn = this; btn.disabled = true; say("Sending…", "info");
-
-    fetch(API + "/keys/recover", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: email })
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, body: b }; });
-    }).then(function (res) {
-      btn.disabled = false;
-      say(res.body.message || (res.ok ? "Check your email." : "Could not send that link."),
-          res.ok ? "ok" : "err");
-    });
-  });
-
-  function handleRecovery(token) {
-    say("Issuing a new key…", "info");
-    fetch(API + "/keys/issue", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token: token })
-    }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, body: b }; });
-    }).then(function (res) {
-      window.history.replaceState({}, "", window.location.pathname);
-      if (!res.ok) { show("signedout"); say(res.body.message || "That link is not valid.", "err"); return; }
-      key = res.body.api_key; save(key);
-      $("newkeyvalue").textContent = key;
-      show("newkey");
-      say("New key issued for " + res.body.email + ". Your balance is untouched.", "ok");
-    });
-  }
-
   // ---- buy ----------------------------------------------------------------
   document.querySelectorAll(".bundle").forEach(function (btn) {
     btn.addEventListener("click", function () {
@@ -497,14 +450,9 @@
 
   // ---- boot ---------------------------------------------------------------
   key = load();
-  var recoverToken = new URLSearchParams(window.location.search).get("recover");
-  if (recoverToken) {
-    handleRecovery(recoverToken);
-  } else {
-    var returning = handleReturn();
-    if (key) { if (!returning) refresh(); }
-    else { show("signedout"); }
-  }
+  var returning = handleReturn();
+  if (key) { if (!returning) refresh(); }
+  else { show("signedout"); }
 })();
 </script>
 </body>

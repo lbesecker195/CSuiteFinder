@@ -9,7 +9,6 @@ defmodule CsuiteFinder.Accounts.Account do
     field :name, :string
     field :token_balance, :integer, default: 0
     field :trial_granted_at, :utc_datetime_usec
-    field :key_recovery_at, :utc_datetime_usec
     field :status, :string, default: "active"
 
     has_many :api_keys, CsuiteFinder.Accounts.ApiKey
@@ -19,7 +18,7 @@ defmodule CsuiteFinder.Accounts.Account do
 
   def changeset(struct, attrs) do
     struct
-    |> cast(attrs, [:email, :name, :token_balance, :trial_granted_at, :key_recovery_at, :status])
+    |> cast(attrs, [:email, :name, :token_balance, :trial_granted_at, :status])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
     |> update_change(:email, &String.downcase/1)

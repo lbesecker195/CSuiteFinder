@@ -48,9 +48,7 @@ defmodule CsuiteFinder.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:req, "~> 0.5"},
-      {:swoosh, "~> 1.16"},
-      {:gen_smtp, "~> 1.2"}
+      {:req, "~> 0.5"}
     ]
   end
 

@@ -362,5 +362,4 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 | App starts but nothing listens on 4000 | You ran `bin/csuite_finder start` instead of `bin/server` — only the latter sets `PHX_SERVER=true` |
 | `/admin` returns 503 | `ADMIN_TOKEN` is unset — deliberate, set it and restart |
 | `can't find include lib "public_key/include/public_key.hrl"` | Erlang installed without its full OTP set; install `esl-erlang`, or `erlang-dev erlang-public-key erlang-ssl erlang-crypto erlang-asn1` |
-| Key recovery says "not switched on" | `SMTP_HOST` is unset — see the email block in the env template |
 | Lookups return `treg_configured: false` | `TREG_TOKEN` not in the environment file |

@@ -32,13 +32,5 @@ config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-# We send through SMTP (gen_smtp), not an HTTP API adapter, so Swoosh needs no
-# HTTP client. Saying so explicitly avoids a hard dependency on hackney.
-config :swoosh, :api_client, false
-
-# Default: no real transport. config/runtime.exs promotes this to SMTP when
-# the SMTP_* variables are present, so an unconfigured deployment reports
-# "email is off" rather than pretending to send.
-config :csuite_finder, CsuiteFinder.Mailer, adapter: Swoosh.Adapters.Local
 
 import_config "#{config_env()}.exs"
