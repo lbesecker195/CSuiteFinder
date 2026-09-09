@@ -20,6 +20,13 @@ defmodule CsuiteFinder.Budgets do
     # a bare email is $0.0445 — above this ceiling on purpose, so a careless
     # email-only request is refused rather than costing ten times as much.
     phone_find: 0.04,
+    # The email path is allowed more than the name path because it costs two
+    # calls, not one: an enrichment to learn the name, then the find itself
+    # (~$0.0097 together). Deliberately subsidised — the result is an email and
+    # a phone attributed to the same person, which is what makes /phone/who work
+    # later. No provider sells a bare-email phone lookup under $0.0445, so this
+    # ceiling buys the two-step route rather than a one-step one.
+    phone_find_from_email: 0.02,
     phone_verify: 0.01
   }
 

@@ -61,16 +61,20 @@ defmodule CsuiteFinder.Phones do
   """
   @spec find(map(), keyword()) :: {:ok, Phone.t(), Lookup.meta()} | {:error, atom()}
   def find(identity, opts \\ []) do
-    with {:ok, identity} <- resolve_identity(identity) do
-      case cached_for(identity) do
-        %Phone{} = row ->
-          if Keyword.get(opts, :refresh, false),
-            do: fetch(identity),
-            else: {:ok, row, Lookup.hit()}
+    with {:ok, identity, resolution_micro} <- resolve_identity(identity) do
+      refresh? = Keyword.get(opts, :refresh, false)
 
-        nil ->
-          fetch(identity)
-      end
+      {:ok, phone, lookup} =
+        case {refresh?, cached_for(identity)} do
+          {false, %Phone{} = row} -> {:ok, row, Lookup.hit()}
+          _ -> fetch(identity)
+        end
+
+      # Resolving the name is part of what an email-input lookup cost. Folding
+      # it in keeps the reported figure honest — the alternative is a response
+      # claiming $0.0048 for a request that spent twice that.
+      {:ok, phone,
+       if(resolution_micro > 0, do: Lookup.add(lookup, resolution_micro), else: lookup)}
     end
   end
 
@@ -167,8 +171,6 @@ defmodule CsuiteFinder.Phones do
 
   # ------------------------------------------------------------------ finding
 
-  defp resolve_identity(%{"phone" => _} = _identity), do: {:error, :invalid_identity}
-
   defp resolve_identity(identity) do
     domain = identity["domain"] || identity[:domain]
     full_name = identity["full_name"] || identity[:full_name]
@@ -178,14 +180,14 @@ defmodule CsuiteFinder.Phones do
     cond do
       is_binary(full_name) and is_binary(domain) ->
         with {:ok, domain} <- Cache.normalize_domain(domain) do
-          {:ok, %{full_name: String.trim(full_name), domain: domain, email: email}}
+          {:ok, %{full_name: String.trim(full_name), domain: domain, email: email}, 0}
         end
 
       is_binary(email) ->
         from_email(email)
 
       is_binary(linkedin) ->
-        {:ok, %{linkedin_url: linkedin}}
+        {:ok, %{linkedin_url: linkedin}, 0}
 
       true ->
         {:error, :missing_identity}
@@ -198,8 +200,12 @@ defmodule CsuiteFinder.Phones do
   defp from_email(email) do
     with {:ok, email, domain} <- Cache.normalize_email(email) do
       case People.enrich(email) do
-        {:ok, %{full_name: full_name}, _} when is_binary(full_name) ->
-          {:ok, %{full_name: full_name, domain: domain, email: email}}
+        # Only a provider-sourced name is worth paying a lookup on. The
+        # inference fallback would hand us "Nobody" for nobody@acme.com and we
+        # would spend a find on it, which is a near-certain miss bought at full
+        # price.
+        {:ok, %{full_name: full_name, source: "provider"}, lookup} when is_binary(full_name) ->
+          {:ok, %{full_name: full_name, domain: domain, email: email}, lookup.spent_micro}
 
         _ ->
           {:error, :name_unknown}

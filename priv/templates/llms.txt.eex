@@ -115,8 +115,11 @@ A person's direct phone number.
 
 - `full_name` + `domain` (**cheapest — prefer this**), or `email`, or `linkedin_url`
 
-An email alone routes to a provider costing ten times as much, so an email-only
-request resolves the name first and asks by name. Send the name if you have it.
+No provider sells a bare-email phone lookup for less than $0.0445, so an
+email-only request resolves the name first and then asks by name — two cheap
+calls instead of one expensive one. It works, and costs you the same 5 tokens;
+send the name as well if you have it and it saves a step. An address we cannot
+put a real name to is refused rather than guessed at.
 
 Returns `{phone, line_type, belongs_to: {full_name, email, domain}}`.
 

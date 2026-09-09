@@ -96,6 +96,66 @@ defmodule CsuiteFinderWeb.PhoneTest do
     end
   end
 
+  describe "the email path is subsidised" do
+    test "an email input resolves the name first, then finds by name", %{conn: conn} do
+      # No provider sells a bare-email phone lookup under $0.0445, which is over
+      # our ceiling. Two cheap calls beat one expensive one.
+      TregStub.stub(fn
+        "treg.people.enrich", _ ->
+          {200, %{"output" => %{"full_name" => "Dylan Field"}, "_treg" => %{"tried" => []}},
+           4_900}
+
+        "treg.people.phone.find", _ ->
+          {200, @found, 4_834}
+      end)
+
+      body =
+        conn
+        |> get(~p"/csuitefinder/phone/find?email=dylan@figma.com")
+        |> json_response(200)
+
+      assert body["found"]
+      assert body["phone"] == "7075485509"
+
+      # Both calls were made, and both are inside the $0.02 email ceiling.
+      assert TregStub.call_count() == 2
+      assert CsuiteFinder.Budgets.usd(:phone_find_from_email) == 0.02
+    end
+
+    test "the enrichment's cost is reported, not swallowed", %{conn: conn} do
+      TregStub.stub(fn
+        "treg.people.enrich", _ ->
+          {200, %{"output" => %{"full_name" => "Dylan Field"}, "_treg" => %{"tried" => []}},
+           4_900}
+
+        "treg.people.phone.find", _ ->
+          {200, @found, 4_834}
+      end)
+
+      {:ok, _phone, lookup} = Phones.find(%{"email" => "dylan@figma.com"})
+
+      # 4900 + 4834. A response claiming only the find would understate what the
+      # request actually spent.
+      assert lookup.spent_micro == 9_734
+      assert lookup.spent_micro < CsuiteFinder.Budgets.micro(:phone_find_from_email)
+    end
+
+    test "an address we cannot put a name to is refused, not guessed at",
+         %{conn: conn} do
+      TregStub.stub(fn
+        "treg.people.enrich", _ -> {200, %{"output" => nil}, 0}
+        _other, _ -> {404, %{}, 0}
+      end)
+
+      body =
+        conn
+        |> get(~p"/csuitefinder/phone/find?email=nobody@acme.com")
+        |> json_response(400)
+
+      assert body["error"] == "name_unknown"
+    end
+  end
+
   describe "the reverse index" do
     setup %{conn: conn} do
       TregStub.stub(fn
