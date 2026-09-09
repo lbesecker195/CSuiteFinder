@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="refresh" content="60">
+<title>CSuiteFinder — admin</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --surface: #ffffff; --border: #e4e0d9;
+    --text: #1c1a17; --muted: #6b6560; --faint: #98918a;
+    --accent: #b8541f; --accent-soft: #fdf1e8;
+    --good: #2f6b45; --good-soft: #eaf3ed;
+    --bad: #a32b1c; --bad-soft: #fbecea;
+    --bar: #d8d2c8; --code-bg: #f5f2ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161513; --surface: #1e1d1a; --border: #33302b;
+      --text: #ece8e2; --muted: #a09990; --faint: #756e66;
+      --accent: #e8834a; --accent-soft: #2a1d14;
+      --good: #7bbd93; --good-soft: #17251c;
+      --bad: #e8796a; --bad-soft: #2a1613;
+      --bar: #3a362f; --code-bg: #131210;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 72px; }
+  header {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: baseline;
+    justify-content: space-between; padding: 32px 0 24px;
+  }
+  .title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .title span { color: var(--accent); }
+  .meta { font-size: 13px; color: var(--faint); }
+  .windows { display: flex; gap: 6px; }
+  .windows a {
+    font-size: 13px; padding: 5px 12px; border-radius: 999px; text-decoration: none;
+    border: 1px solid var(--border); color: var(--muted); background: var(--surface);
+  }
+  .windows a.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--muted); font-weight: 600; margin: 40px 0 14px;
+  }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .card .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .card .value { font-size: 25px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  .card .sub { font-size: 12px; color: var(--faint); margin-top: 4px; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .flat { color: var(--muted); }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 12px;
+  }
+  .panel h3 { margin: 0 0 4px; font-size: 15px; letter-spacing: -0.01em; }
+  .panel .hint { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+  .split { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .seg { border-left: 3px solid var(--border); padding-left: 14px; }
+  .seg.win { border-left-color: var(--good); }
+  .seg.lose { border-left-color: var(--bad); }
+  .seg .n { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .seg .k { font-size: 12px; color: var(--muted); }
+  .gauge { margin-top: 18px; }
+  .gauge-track {
+    position: relative; height: 26px; border-radius: 6px;
+    background: var(--bar); overflow: hidden;
+  }
+  .gauge-fill { height: 100%; background: var(--good); }
+  .gauge-fill.short { background: var(--bad); }
+  .gauge-mark {
+    position: absolute; top: -4px; bottom: -4px; width: 2px;
+    background: var(--text); opacity: 0.75;
+  }
+  .gauge-legend {
+    display: flex; justify-content: space-between; font-size: 12px;
+    color: var(--muted); margin-top: 7px;
+  }
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  tbody tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9em; background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+  }
+  .tag {
+    font-size: 11px; padding: 2px 7px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+  .tag.free { background: var(--good-soft); color: var(--good); }
+  /* preserveAspectRatio="none" strips the SVG's intrinsic ratio, so height:auto
+     has nothing to compute from and the element collapses or balloons. Pin the
+     height and let the viewBox stretch horizontally. */
+  .chart { width: 100%; height: 150px; display: block; }
+  .chart-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 6px; }
+  .empty { color: var(--faint); font-size: 13.5px; padding: 8px 0; }
+  footer { margin-top: 44px; font-size: 12.5px; color: var(--faint); }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="title">CSuiteFinder <span>admin</span></div>
+    <div class="meta">
+      Last <%= @days %> days · generated <%= Calendar.strftime(@generated_at, "%Y-%m-%d %H:%M UTC") %> · refreshes every 60s
+    </div>
+  </div>
+  <div class="windows">
+    <%= for w <- @windows do %>
+      <a class="<%= if w == @days, do: "on" %>" href="<%= CsuiteFinderWeb.AdminController.link_to(@base_path, @token, w) %>"><%= w %>d</a>
+    <% end %>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Requests</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.num(@headline.requests) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.pct(@headline.found_rate) %> answered</div>
+  </div>
+  <div class="card">
+    <div class="label">Cache hit rate</div>
+    <div class="value <%= if @headline.cache_hit_rate >= 0.5, do: "good", else: "flat" %>">
+      <%= CsuiteFinderWeb.AdminController.pct(@headline.cache_hit_rate) %>
+    </div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@headline.cache_hits) %> served free</div>
+  </div>
+  <div class="card">
+    <div class="label">Revenue</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@headline.revenue_usd) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@headline.tokens) %> tokens spent</div>
+  </div>
+  <div class="card">
+    <div class="label">Provider cost</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@headline.provider_cost_usd) %></div>
+    <div class="sub">paid to treg</div>
+  </div>
+  <div class="card">
+    <div class="label">Gross margin</div>
+    <div class="value <%= CsuiteFinderWeb.AdminController.tone(@headline.margin_usd) %>">
+      <%= CsuiteFinderWeb.AdminController.usd(@headline.margin_usd) %>
+    </div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.pct(@headline.margin_pct) %> of revenue</div>
+  </div>
+</div>
+
+<h2>Find economics</h2>
+
+<div class="panel">
+  <h3>Every find sells for <%= CsuiteFinderWeb.AdminController.micro_usd(@find_price_micro) %></h3>
+  <p class="hint">
+    A cached find costs us nothing. A fresh one falls through to a paid provider
+    and can cost more than it earns — so the mix, not the average, is what
+    decides whether finds make money.
+  </p>
+
+  <div class="split">
+    <div class="seg win">
+      <div class="n"><%= CsuiteFinderWeb.AdminController.num(@find_economics.cached.calls) %></div>
+      <div class="k">cached finds · <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.cached.margin_micro) %> each</div>
+    </div>
+    <div class="seg <%= if @find_economics.fresh.margin_micro < 0, do: "lose", else: "win" %>">
+      <div class="n"><%= CsuiteFinderWeb.AdminController.num(@find_economics.fresh.calls) %></div>
+      <div class="k">fresh finds · <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.fresh.margin_micro) %> each</div>
+    </div>
+    <div class="seg">
+      <div class="n <%= CsuiteFinderWeb.AdminController.tone(@find_economics.margin_per_find_micro) %>">
+        <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.margin_per_find_micro) %>
+      </div>
+      <div class="k">blended margin per find</div>
+    </div>
+  </div>
+
+  <%= if @find_economics.breakeven_cache_rate do %>
+  <div class="gauge">
+    <div class="gauge-track">
+      <div class="gauge-fill <%= if @find_economics.cache_hit_rate < @find_economics.breakeven_cache_rate, do: "short" %>"
+           style="width: <%= Float.round(@find_economics.cache_hit_rate * 100, 1) %>%"></div>
+      <div class="gauge-mark" style="left: <%= Float.round(@find_economics.breakeven_cache_rate * 100, 1) %>%"
+           title="break-even"></div>
+    </div>
+    <div class="gauge-legend">
+      <span>cache hit rate <strong><%= CsuiteFinderWeb.AdminController.pct(@find_economics.cache_hit_rate) %></strong></span>
+      <span>break-even <strong><%= CsuiteFinderWeb.AdminController.pct(@find_economics.breakeven_cache_rate) %></strong></span>
+    </div>
+  </div>
+  <% end %>
+</div>
+
+<h2>Daily volume</h2>
+
+<div class="panel">
+  <%= if @chart.max > 0 do %>
+    <svg class="chart" viewBox="0 0 <%= @chart.width %> <%= @chart.height %>"
+         preserveAspectRatio="none" role="img"
+         aria-label="Requests per day, with the cached share shaded">
+      <%= for bar <- @chart.bars do %>
+        <rect x="<%= bar.x %>" y="<%= bar.y %>" width="<%= bar.width %>" height="<%= bar.height %>"
+              rx="1.5" fill="var(--bar)"><title><%= bar.label %>: <%= bar.requests %> requests</title></rect>
+        <%= if bar.cached_height > 0 do %>
+        <rect x="<%= bar.x %>" y="<%= bar.cached_y %>" width="<%= bar.width %>" height="<%= bar.cached_height %>"
+              rx="1.5" fill="var(--accent)"><title><%= bar.label %>: <%= bar.cache_hits %> cached</title></rect>
+        <% end %>
+      <% end %>
+    </svg>
+    <div class="chart-axis">
+      <span><%= List.first(@chart.bars).label %></span>
+      <span>peak <%= CsuiteFinderWeb.AdminController.num(@chart.max) %>/day · shaded = cached</span>
+      <span><%= List.last(@chart.bars).label %></span>
+    </div>
+  <% else %>
+    <div class="empty">No requests in this window yet.</div>
+  <% end %>
+</div>
+
+<h2>By endpoint</h2>
+
+<div class="panel">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Endpoint</th><th></th>
+          <th class="num">Calls</th><th class="num">Answered</th><th class="num">Cached</th>
+          <th class="num">Cost</th><th class="num">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for row <- @by_endpoint do %>
+        <tr>
+          <td><code><%= CsuiteFinderWeb.AdminController.esc(row.endpoint) %></code></td>
+          <td><span class="tag <%= unless row.metered, do: "free" %>"><%= if row.metered, do: "1 token", else: "included" %></span></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.num(row.calls) %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.pct(row.found_rate) %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.pct(row.cache_hit_rate) %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.usd(row.provider_cost_usd) %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.usd(row.revenue_usd) %></td>
+        </tr>
+        <% end %>
+        <%= if @by_endpoint == [] do %>
+        <tr><td colspan="7" class="empty">No traffic in this window.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2>Customers</h2>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Accounts</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.num(@accounts.total) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@accounts.active) %> active this window</div>
+  </div>
+  <div class="card">
+    <div class="label">Paying</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.num(@accounts.paying) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@accounts.on_trial) %> still on trial</div>
+  </div>
+  <div class="card">
+    <div class="label">Bundles sold</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@payments.amount_usd) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@payments.count) %> captured</div>
+  </div>
+  <div class="card">
+    <div class="label">Deferred revenue</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.usd(@accounts.deferred_revenue_usd) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.num(@accounts.tokens_outstanding) %> tokens unspent</div>
+  </div>
+</div>
+
+<h2>Cache</h2>
+
+<div class="panel">
+  <h3><%= CsuiteFinderWeb.AdminController.num(@cache.patterns_held) %> company patterns held</h3>
+  <p class="hint">
+    Each one resolves every future employee of that company for free. This table
+    is the asset the margin above is built on.
+  </p>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Table</th><th class="num">Rows</th><th class="num">Stale</th></tr></thead>
+      <tbody>
+        <%= for row <- @cache.tables do %>
+        <tr>
+          <td><code><%= CsuiteFinderWeb.AdminController.esc(row.table) %></code></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.num(row.rows) %></td>
+          <td class="num <%= if row.stale > 0, do: "flat" %>"><%= CsuiteFinderWeb.AdminController.num(row.stale) %></td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <p class="hint" style="margin: 14px 0 0">
+    Stale rows are answers we still hold but could not re-confirm on the last
+    refresh. They are served with <code>stale: true</code> rather than dropped.
+  </p>
+</div>
+
+<h2>Providers</h2>
+
+<div class="panel">
+  <p class="hint">
+    Ranked by expected cost per success — sticker price divided by the
+    difficulty-weighted hit rate. This is the order the waterfall tries them in.
+  </p>
+  <%= for {capability, report} <- @providers do %>
+  <div class="table-scroll" style="margin-bottom: 18px">
+    <table>
+      <thead>
+        <tr>
+          <th><%= CsuiteFinderWeb.AdminController.esc(capability) %></th>
+          <th class="num">Hit rate</th><th class="num">Hits</th>
+          <th class="num">Cost/hit</th><th class="num">Expected/success</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= for p <- report.providers do %>
+        <tr>
+          <td><code><%= CsuiteFinderWeb.AdminController.esc(p.provider) %></code><%= if p.cost_is_estimated do %> <span class="tag">est</span><% end %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.pct(p.weighted_hit_rate) %></td>
+          <td class="num"><%= p.hits %>/<%= p.attempts %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.micro_usd(p.cost_micro_per_hit) %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.micro_usd(p.expected_cost_micro_per_success) %></td>
+        </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <% end %>
+  <%= if @providers == %{} do %>
+    <div class="empty">No provider calls recorded yet.</div>
+  <% end %>
+</div>
+
+<footer>
+  <a href="<%= CsuiteFinderWeb.AdminController.esc(@base_path) %>/metrics.json<%= if @token, do: "?token=" <> CsuiteFinderWeb.AdminController.esc(URI.encode_www_form(@token)) %>">metrics.json</a>
+  · tokens at <%= CsuiteFinderWeb.AdminController.micro_usd(round(@token_price_usd * 1_000_000)) %> each
+</footer>
+
+</div>
+</body>
+</html>

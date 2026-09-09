@@ -1,0 +1,256 @@
+defmodule CsuiteFinderWeb.EmailControllerTest do
+  use CsuiteFinderWeb.ConnCase, async: true
+
+  alias CsuiteFinder.{Fixtures, TregStub}
+
+  setup %{conn: conn} do
+    {account, key} = Fixtures.account_with_key()
+
+    conn =
+      conn
+      |> put_req_header("authorization", "Bearer " <> key)
+      |> put_req_header("content-type", "application/json")
+
+    {:ok, conn: conn, account: account, key: key}
+  end
+
+  defp stub_pattern(pattern, usage \\ 95.0) do
+    TregStub.stub(fn
+      "thecompaniesapi.companies.email_pattern", _params ->
+        {200, %{"patterns" => [%{"pattern" => pattern, "usagePercentage" => usage}]}, 1_900}
+
+      _other, _params ->
+        {404, %{}, 0}
+    end)
+  end
+
+  describe "POST /csuitefinder/email/find" do
+    test "builds the address from the company pattern", %{conn: conn} do
+      stub_pattern("[F].[L]")
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+        |> json_response(200)
+
+      assert body["email"] == "jane.doe@acme.com"
+      assert body["found"]
+      assert body["source"] == "pattern"
+      assert body["pattern"] == "{first}.{last}"
+      assert body["cost"]["provider_micro"] == 1_900
+    end
+
+    test "a second person at the same company costs nothing", %{conn: conn} do
+      stub_pattern("[F1][L]")
+
+      post(conn, ~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+      calls_after_first = TregStub.call_count()
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/find", %{full_name: "John Roe", domain: "acme.com"})
+        |> json_response(200)
+
+      assert body["email"] == "jroe@acme.com"
+      assert body["cost"]["provider_micro"] == 0
+      assert body["cached"]
+      # The pattern was already held; nothing new was bought.
+      assert TregStub.call_count() == calls_after_first
+    end
+
+    test "re-asking for the same person hits the email cache", %{conn: conn} do
+      stub_pattern("[F].[L]")
+      post(conn, ~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+        |> json_response(200)
+
+      assert body["source"] == "cache"
+      assert body["cost"]["provider_micro"] == 0
+    end
+
+    test "falls back to a paid find when the domain has no pattern", %{conn: conn} do
+      TregStub.stub(fn
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => []}, 1_900}
+
+        "treg.people.email.find", _ ->
+          {200, TregStub.routed(%{"email" => "jdoe@acme.com"}, cost: 5_000), 5_000}
+      end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+        |> json_response(200)
+
+      assert body["email"] == "jdoe@acme.com"
+      assert body["source"] == "provider"
+      assert body["cost"]["provider_micro"] == 6_900
+    end
+
+    test "learns the pattern from a paid find, so the next colleague is free",
+         %{conn: conn} do
+      TregStub.stub(fn
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => []}, 1_900}
+
+        "treg.people.email.find", _ ->
+          {200, TregStub.routed(%{"email" => "jdoe@acme.com"}, cost: 5_000), 5_000}
+      end)
+
+      post(conn, ~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/find", %{full_name: "Sam Poe", domain: "acme.com"})
+        |> json_response(200)
+
+      assert body["email"] == "spoe@acme.com"
+      assert body["source"] == "pattern"
+      assert body["cost"]["provider_micro"] == 0
+    end
+
+    test "rejects a missing parameter", %{conn: conn} do
+      assert %{"error" => "missing_params"} =
+               conn
+               |> post(~p"/csuitefinder/email/find", %{domain: "acme.com"})
+               |> json_response(400)
+    end
+
+    test "rejects a malformed domain", %{conn: conn} do
+      assert %{"error" => "invalid_domain"} =
+               conn
+               |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "nope"})
+               |> json_response(400)
+    end
+
+    test "requires an API key", %{conn: conn} do
+      conn
+      |> delete_req_header("authorization")
+      |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
+      |> json_response(401)
+    end
+  end
+
+  describe "POST /csuitefinder/email/deliverable" do
+    test "returns a normalised verdict and caches it", %{conn: conn} do
+      TregStub.stub(fn "treg.people.email.verify", _ ->
+        {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+      end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/deliverable", %{email: "jane@acme.com"})
+        |> json_response(200)
+
+      assert body["deliverable"]
+      assert body["status"] == "deliverable"
+
+      cached =
+        conn
+        |> post(~p"/csuitefinder/email/deliverable", %{email: "jane@acme.com"})
+        |> json_response(200)
+
+      assert cached["cached"]
+      assert cached["cost"]["provider_micro"] == 0
+      assert TregStub.call_count() == 1
+    end
+
+    test "maps an invalid verdict to undeliverable", %{conn: conn} do
+      TregStub.stub(fn "treg.people.email.verify", _ ->
+        {200, TregStub.routed(%{"valid" => false, "status" => "invalid"}), 1_500}
+      end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/deliverable", %{email: "nope@acme.com"})
+        |> json_response(200)
+
+      refute body["deliverable"]
+      assert body["status"] == "undeliverable"
+    end
+  end
+
+  describe "POST /csuitefinder/email/enrich" do
+    test "returns provider data when a provider has the person", %{conn: conn} do
+      TregStub.stub(fn "treg.people.enrich", _ ->
+        {200,
+         TregStub.routed(%{
+           "full_name" => "Jane Doe",
+           "title" => "CTO",
+           "company" => "Acme"
+         }), 4_900}
+      end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/enrich", %{email: "jane@acme.com"})
+        |> json_response(200)
+
+      assert body["full_name"] == "Jane Doe"
+      assert body["position"] == "CTO"
+      assert body["source"] == "provider"
+      refute body["warning"]
+    end
+
+    test "labels the fallback as inferred rather than passing it off as real",
+         %{conn: conn} do
+      TregStub.stub(fn "treg.people.enrich", _ -> {200, %{"output" => nil}, 0} end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/enrich", %{email: "jane.doe@acme.com"})
+        |> json_response(200)
+
+      assert body["full_name"] == "Jane Doe"
+      assert body["source"] == "inferred"
+      assert body["confidence"] in ["low", "medium"]
+      assert body["warning"] =~ "not verified"
+    end
+
+    test "invents nobody for a shared mailbox", %{conn: conn} do
+      TregStub.stub(fn "treg.people.enrich", _ -> {200, %{"output" => nil}, 0} end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/enrich", %{email: "info@acme.com"})
+        |> json_response(200)
+
+      refute body["found"]
+      refute body["full_name"]
+    end
+  end
+
+  describe "POST /csuitefinder/email/pattern" do
+    test "returns the company pattern with an example", %{conn: conn} do
+      stub_pattern("[F].[L]", 97.0)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/pattern", %{email: "someone@acme.com"})
+        |> json_response(200)
+
+      assert body["pattern"] == "{first}.{last}"
+      assert body["pattern_provider_notation"] == "[F].[L]"
+      assert body["example"] == "jane.doe@acme.com"
+      assert body["confidence"] == 0.97
+    end
+
+    test "derives the pattern from the person when the domain has none", %{conn: conn} do
+      TregStub.stub(fn
+        "thecompaniesapi.companies.email_pattern", _ -> {200, %{"patterns" => []}, 1_900}
+        "treg.people.enrich", _ -> {200, TregStub.routed(%{"full_name" => "Jane Doe"}), 4_900}
+      end)
+
+      body =
+        conn
+        |> post(~p"/csuitefinder/email/pattern", %{email: "jdoe@acme.com"})
+        |> json_response(200)
+
+      assert body["pattern"] == "{f}{last}"
+      assert body["source"] == "observed"
+    end
+  end
+end

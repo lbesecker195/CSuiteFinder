@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSuiteFinder — work email lookup API</title>
+<meta name="description" content="Resolve a name and a company domain to a work email. Deliverability, enrichment, patterns and company data. <%= @trial_tokens %> free tokens to start.">
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --surface: #ffffff;
+    --border: #e4e0d9;
+    --text: #1c1a17;
+    --muted: #6b6560;
+    --accent: #b8541f;
+    --accent-soft: #fdf1e8;
+    --code-bg: #f5f2ee;
+    --ok: #2f6b45;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161513;
+      --surface: #1e1d1a;
+      --border: #33302b;
+      --text: #ece8e2;
+      --muted: #a09990;
+      --accent: #e8834a;
+      --accent-soft: #2a1d14;
+      --code-bg: #131210;
+      --ok: #7bbd93;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 72px 0 40px; }
+  .logo {
+    font-weight: 700; letter-spacing: -0.02em; font-size: 15px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 28px;
+  }
+  h1 {
+    font-size: clamp(32px, 6vw, 52px); line-height: 1.08;
+    letter-spacing: -0.03em; margin: 0 0 20px; font-weight: 700;
+  }
+  .lede { font-size: clamp(17px, 2.4vw, 20px); color: var(--muted); max-width: 62ch; margin: 0 0 32px; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--muted); font-weight: 600; margin: 64px 0 20px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 17px; margin: 28px 0 8px; letter-spacing: -0.01em; }
+  p { margin: 0 0 16px; }
+  a { color: var(--accent); }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em; background: var(--code-bg);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px; overflow-x: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.6; margin: 0 0 20px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .step {
+    display: flex; gap: 16px; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .step-n {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+    position: relative; top: 4px;
+  }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 8px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card .big { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; display: block; }
+  .card .label { font-size: 13px; color: var(--muted); }
+  .table-scroll { overflow-x: auto; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 480px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  td code { white-space: nowrap; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 0 0 20px;
+    font-size: 15px;
+  }
+  .note strong { color: var(--accent); }
+  ul { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  footer {
+    margin-top: 72px; padding: 28px 0 56px;
+    border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">CSuiteFinder</div>
+  <h1>Find anyone's work email from a name and a domain.</h1>
+  <p class="lede">
+    One token per email found. Deliverability, enrichment, patterns, names and
+    company data are all included.
+    Start with <strong><%= @trial_tokens %> free tokens</strong> — <%= @trial_tokens %> emails,
+    no card, no call.
+  </p>
+  <pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \
+  -H 'content-type: application/json' \
+  -d '{"email": "you@company.com"}'</code></pre>
+</header>
+
+<h2>Register in one call</h2>
+
+<div class="step"><span class="step-n">1</span><div><strong>Sign up.</strong> Post your email to <code>/csuitefinder/register</code>. You get an API key and <%= @trial_tokens %> tokens (<%= @trial_usd %>) straight back — good for <%= @trial_tokens %> emails.</div></div>
+<div class="step"><span class="step-n">2</span><div><strong>Save the key.</strong> It is shown once and stored only as a hash — we cannot recover it for you.</div></div>
+<div class="step"><span class="step-n">3</span><div><strong>Call the API.</strong> Send the key as <code>Authorization: Bearer &lt;key&gt;</code> on every request.</div></div>
+<div class="step"><span class="step-n">4</span><div><strong>Buy tokens when you're ready.</strong> Bundles start at $<%= @min_bundle %>, paid through PayPal.</div></div>
+
+<p>The registration response looks like this:</p>
+
+<pre><code>{
+  "account_id": 42,
+  "api_key": "csf_live_…",
+  "api_key_notice": "Store this key now — it is shown once…",
+  "tokens_granted": <%= @trial_tokens %>,
+  "token_balance": <%= @trial_tokens %>
+}</code></pre>
+
+<h2>Pricing</h2>
+
+<div class="cards">
+  <div class="card">
+    <span class="big">1 token</span>
+    <span class="label">per email found ($<%= @token_price %>)</span>
+  </div>
+  <div class="card">
+    <span class="big">$<%= @min_bundle %>+</span>
+    <span class="label">bundles, <%= @min_bundle_tokens %> tokens</span>
+  </div>
+  <div class="card">
+    <span class="big"><%= @trial_tokens %></span>
+    <span class="label">free trial tokens (<%= @trial_usd %>)</span>
+  </div>
+</div>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Endpoint</th><th class="num">Tokens</th><th class="num">Effective</th></tr></thead>
+  <tbody>
+    <%= for {endpoint, tokens, usd} <- @price_rows do %>
+    <tr>
+      <td><code><%= endpoint %></code></td>
+      <td class="num"><%= if tokens > 0, do: tokens, else: "—" %></td>
+      <td class="num"><%= if tokens > 0, do: "$" <> usd, else: "included" %></td>
+    </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <strong>You pay for emails found — nothing else.</strong> One token per
+  resolved address. Deliverability, enrichment, patterns, names and both company
+  endpoints are included with any balance. A find that resolves nothing is free, and
+  unverified guesses are never billed.
+</div>
+
+<p>
+  Included endpoints still need a positive token balance to call — a balance is
+  what makes you a customer. They just don't spend it.
+</p>
+
+<h2>Endpoints</h2>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Parameters</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><code>/csuitefinder/email/find</code></td><td><code>full_name</code>, <code>domain</code>, <code>email (optional)</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> (honestly, any)</td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Example</h3>
+
+<pre><code>curl -H "Authorization: Bearer $CSF_KEY" \
+  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"
+
+{
+  "email": "jhuang@nvidia.com",
+  "found": true,
+  "source": "pattern",
+  "pattern": "{f}{last}",
+  "confidence": 0.937638,
+  "cached": false,
+  "stale": false
+}</code></pre>
+
+
+<h2>Managing your account</h2>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Path</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET /csuitefinder/billing/balance</code></td><td>Token balance and the full price list</td></tr>
+    <tr><td><code>GET /csuitefinder/billing/usage?days=30</code></td><td>Calls, cache hits and tokens spent per endpoint</td></tr>
+    <tr><td><code>POST /csuitefinder/billing/topup</code></td><td>Buy a bundle — returns a PayPal approval link</td></tr>
+    <tr><td><code>GET /csuitefinder/health</code></td><td>Service status</td></tr>
+  </tbody>
+</table>
+</div>
+
+<pre><code>curl -X POST <%= @base_url %>/csuitefinder/billing/topup \
+  -H "Authorization: Bearer $CSF_KEY" \
+  -H 'content-type: application/json' \
+  -d '{"amount_usd": <%= @min_bundle %>}'</code></pre>
+
+<footer>
+  CSuiteFinder · <a href="/csuitefinder/pricing">pricing as JSON</a> ·
+  <a href="/csuitefinder/health">status</a>
+</footer>
+
+</div>
+</body>
+</html>
