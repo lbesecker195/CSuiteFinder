@@ -46,14 +46,9 @@ defmodule CsuiteFinder.Billing.Pricing do
   # The smallest purchase we sell, in USD.
   @min_bundle_usd 1_000
 
-  # What a bundle costs and what it credits. Larger bundles credit more than
-  # they cost; that bonus is the volume discount, stated as money rather than
-  # as a percentage off an invented list price.
-  @bundles [
-    %{usd: 1_000, credit_usd: 1_000},
-    %{usd: 2_000, credit_usd: 2_500},
-    %{usd: 3_000, credit_usd: 3_750}
-  ]
+  # The amounts we offer. A dollar paid is a dollar of credit — no volume tier,
+  # no bonus, nothing to reconcile later.
+  @bundles [1_000, 2_000, 3_000]
 
   # Credit granted to a new account, with no card and no commitment.
   @trial_micro 1_000_000
@@ -87,38 +82,26 @@ defmodule CsuiteFinder.Billing.Pricing do
   def min_bundle_usd, do: @min_bundle_usd
 
   @doc """
-  What `usd` credits, in micro-USD, at the best bundle it reaches.
+  What `usd` credits, in micro-USD.
 
-  This — not the amount paid — is what a purchase must be credited. A larger
-  bundle credits more than it costs, and paying out only what was paid in would
-  silently withhold the discount that was advertised.
+  A dollar buys a dollar of credit at every size. Kept as its own function
+  because the capture path must call something that cannot silently disagree
+  with what the purchase page quoted.
   """
   @spec credit_for_purchase(number()) :: non_neg_integer()
-  def credit_for_purchase(usd_paid) do
-    case Enum.filter(@bundles, &(usd_paid >= &1.usd)) do
-      [] ->
-        micro(usd_paid)
+  def credit_for_purchase(usd_paid), do: micro(usd_paid)
 
-      reached ->
-        best = Enum.max_by(reached, & &1.usd)
-        # Pro-rata above the largest bundle, so $6,000 credits at the same rate
-        # as $3,000 rather than falling back to face value.
-        micro(usd_paid * best.credit_usd / best.usd)
-    end
-  end
-
-  @doc "The bundles offered for sale, cheapest first."
+  @doc "The amounts offered for sale, smallest first."
   @spec bundles() :: [map()]
   def bundles do
-    for b <- @bundles do
-      bonus = b.credit_usd - b.usd
-
-      Map.merge(b, %{
-        bonus_usd: bonus,
-        # What a bundle buys, in the units customers actually care about.
-        emails: trunc(micro(b.credit_usd) / max(charge_for("email.find"), 1)),
-        phones: trunc(micro(b.credit_usd) / max(charge_for("phone.find"), 1))
-      })
+    for usd <- @bundles do
+      %{
+        usd: usd,
+        credit_usd: usd,
+        # What it buys, in the units customers actually care about.
+        emails: trunc(micro(usd) / max(charge_for("email.find"), 1)),
+        phones: trunc(micro(usd) / max(charge_for("phone.find"), 1))
+      }
     end
   end
 
@@ -165,10 +148,7 @@ defmodule CsuiteFinder.Billing.Pricing do
       prices_usd: list_usd(),
       minimum_purchase_usd: @min_bundle_usd,
       free_trial_usd: trial_usd(),
-      bundles:
-        Enum.map(bundles(), fn b ->
-          %{pay_usd: b.usd, credit_usd: b.credit_usd, bonus_usd: b.bonus_usd}
-        end),
+      purchase_amounts_usd: @bundles,
       billing_rules: [
         "Charged per answer: $#{:erlang.float_to_binary(usd(@prices["email.find"]), [:compact, decimals: 4])} an email address, $#{:erlang.float_to_binary(usd(@prices["phone.find"]), [:compact, decimals: 4])} a phone number.",
         "Everything else is included, but still needs a positive balance.",

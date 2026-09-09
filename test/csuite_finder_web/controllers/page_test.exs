@@ -50,14 +50,14 @@ defmodule CsuiteFinderWeb.PageTest do
     test "prices the bundles from the live constants", %{conn: conn} do
       html = conn |> get(~p"/account") |> html_response(200)
 
-      # Every purchase Pricing sells, with the credit it will actually grant.
+      # Every amount Pricing sells, with the credit it will actually grant.
       for b <- Pricing.bundles() do
         assert html =~ "$" <> delimited(b.usd)
         assert html =~ "$" <> delimited(b.credit_usd) <> " of credit"
       end
 
-      # The bonus is the volume discount, stated as money.
-      assert html =~ "+$500 free"
+      # No discount is advertised, because none is given.
+      refute html =~ "free</span>"
       assert html =~ "0.0025"
       assert html =~ "0.025"
     end
@@ -125,8 +125,9 @@ defmodule CsuiteFinderWeb.PageTest do
 
       for b <- Pricing.bundles() do
         assert body =~ "$" <> delimited(b.usd)
-        assert body =~ "$" <> delimited(b.credit_usd) <> " of credit"
       end
+
+      assert body =~ "A dollar buys a dollar of credit"
 
       assert body =~ "of free credit"
     end

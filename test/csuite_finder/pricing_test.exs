@@ -52,29 +52,20 @@ defmodule CsuiteFinder.PricingTest do
       assert {:error, :below_minimum, %{minimum_usd: 1_000}} = Pricing.validate_bundle(500)
     end
 
-    test "the minimum credits what it costs" do
-      assert Pricing.credit_for_purchase(1_000) == Pricing.micro(1_000)
+    test "a dollar buys a dollar of credit, at every size" do
+      # No volume tier. Whatever is paid is what is credited, so the purchase
+      # page and the capture path cannot quote different numbers.
+      for usd <- [1_000, 1_500, 2_000, 3_000, 6_000, 10_000] do
+        assert Pricing.credit_for_purchase(usd) == Pricing.micro(usd)
+      end
     end
 
-    test "larger purchases credit more than they cost" do
-      # The volume discount, stated as money rather than a percentage off an
-      # invented list price.
-      assert Pricing.credit_for_purchase(2_000) == Pricing.micro(2_500)
-      assert Pricing.credit_for_purchase(3_000) == Pricing.micro(3_750)
+    test "the amounts offered are $1,000, $2,000 and $3,000" do
+      assert Enum.map(Pricing.bundles(), & &1.usd) == [1_000, 2_000, 3_000]
+      assert Enum.all?(Pricing.bundles(), &(&1.credit_usd == &1.usd))
     end
 
-    test "above the largest bundle the rate carries on rather than reverting" do
-      # $6,000 at the $3,000 bundle's rate, not back to face value.
-      assert Pricing.credit_for_purchase(6_000) == Pricing.micro(7_500)
-    end
-
-    test "more money never buys less credit" do
-      amounts = [1_000, 1_500, 2_000, 2_500, 3_000, 6_000, 10_000]
-      credits = Enum.map(amounts, &Pricing.credit_for_purchase/1)
-      assert credits == Enum.sort(credits)
-    end
-
-    test "a bundle says what it buys in things customers care about" do
+    test "each says what it buys in things customers care about" do
       [smallest | _] = Pricing.bundles()
 
       assert smallest.usd == 1_000

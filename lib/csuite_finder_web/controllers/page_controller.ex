@@ -69,11 +69,8 @@ defmodule CsuiteFinderWeb.PageController do
         for b <- Pricing.bundles() do
           %{
             usd: delimit(b.usd),
-            credit: delimit(b.credit_usd),
-            bonus: delimit(b.bonus_usd),
             emails: delimit(b.emails),
-            phones: delimit(b.phones),
-            bonus?: b.bonus_usd > 0
+            phones: delimit(b.phones)
           }
         end,
       price_rows:

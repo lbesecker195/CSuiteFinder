@@ -53,9 +53,9 @@ Everything else is **included** — deliverability, enrichment, patterns, names,
 company data, phone validation — but still needs a positive balance (an empty
 account gets HTTP 402). A lookup that finds nothing is free.
 
-<%= for b <- @bundles do %>- Pay $<%= b.usd %> → $<%= b.credit %> of credit<%= if b.bonus?, do: " (+$#{b.bonus} free)" %>
-<% end %>
-Purchases start at $<%= @min_bundle %>, paid through PayPal. Credit does not expire.
+Buy credit in amounts of <%= Enum.map_join(@bundles, ", ", &("$" <> &1.usd)) %>.
+A dollar buys a dollar of credit. Purchases start at $<%= @min_bundle %>, paid
+through PayPal, and credit does not expire.
 
 ## Endpoints
 

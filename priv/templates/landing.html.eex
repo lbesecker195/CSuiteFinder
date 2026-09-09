@@ -247,18 +247,17 @@
 
 <div class="bundle-grid">
   <%= for b <- @bundles do %>
-  <div class="bundle-card<%= if b.bonus?, do: " best" %>">
-    <%= if b.bonus? do %><span class="flag">+$<%= b.bonus %> free</span><% end %>
+  <div class="bundle-card">
     <span class="amt">$<%= b.usd %></span>
-    <span class="qty">$<%= b.credit %> of credit</span>
+    <span class="qty">$<%= b.usd %> of credit</span>
     <span class="rate"><%= b.emails %> emails, or <%= b.phones %> phone numbers</span>
   </div>
   <% end %>
 </div>
 
 <p class="quiet">
-  Credit never expires. Purchases start at $<%= @min_bundle %> and are paid through PayPal,
-  and buying more than the minimum credits you more than you pay. Start with
+  Credit never expires and a dollar buys a dollar of it. Purchases start at
+  $<%= @min_bundle %> and are paid through PayPal. Start with
   <strong><%= @trial_usd %> of free credit</strong> to try it properly first — real lookups,
   not a preview.
 </p>

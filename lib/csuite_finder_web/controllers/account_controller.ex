@@ -44,11 +44,8 @@ defmodule CsuiteFinderWeb.AccountController do
           %{
             usd: b.usd,
             usd_label: delimit(b.usd),
-            credit_label: delimit(b.credit_usd),
-            bonus_label: delimit(b.bonus_usd),
             emails_label: delimit(b.emails),
-            phones_label: delimit(b.phones),
-            bonus?: b.bonus_usd > 0
+            phones_label: delimit(b.phones)
           }
         end
     }

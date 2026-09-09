@@ -155,15 +155,14 @@
 
   <h2>Buy credit</h2>
   <p class="muted" style="margin-top:-6px">
-    Credit never expires, and buying more than the minimum credits you more than you pay.
-    Purchases start at $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then
-    straight back here.
+    Credit never expires and a dollar buys a dollar of it. Purchases start at
+    $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then straight back here.
   </p>
   <div class="bundles" id="bundles">
     <%= for b <- @bundles do %>
     <button class="bundle" data-usd="<%= b.usd %>">
       <span class="price">$<%= b.usd_label %></span>
-      <span class="credit">$<%= b.credit_label %> of credit<%= if b.bonus?, do: " (+$#{b.bonus_label} free)" %></span>
+      <span class="credit">$<%= b.usd_label %> of credit</span>
       <span class="finds"><%= b.emails_label %> emails, or <%= b.phones_label %> phone numbers</span>
     </button>
     <% end %>
