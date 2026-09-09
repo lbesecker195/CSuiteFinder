@@ -222,6 +222,11 @@
       $(id).hidden = (id !== which);
     });
     $("signout").hidden = (which !== "signedin");
+
+    // Sign-in and sign-out happen without a page load, so the header label
+    // has to be updated here too or it goes stale mid-session.
+    var navLink = document.getElementById("nav-account");
+    if (navLink) navLink.textContent = key ? "Dashboard" : "Register / Log in";
   }
 
   function say(text, kind) {

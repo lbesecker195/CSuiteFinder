@@ -75,24 +75,35 @@ defmodule CsuiteFinderWeb.PageTest do
   end
 
   describe "site navigation" do
-    test "every page carries the same header links", %{conn: conn} do
+    test "every page carries the same three header items", %{conn: conn} do
       for path <- ["/", "/start", "/account"] do
         html = conn |> get(path) |> html_response(200)
 
         assert html =~ ~s|class="sitenav"|, "#{path} has no nav"
 
-        for href <- ["/start", "/#pricing", "/#developers", "/account"] do
+        for href <- ["/start", "/#pricing", "/account"] do
           assert html =~ ~s|href="#{href}"|, "#{path} is missing #{href}"
         end
-
-        assert html =~ "Sign in / Register"
       end
+    end
+
+    test "the account item is rendered signed-out and swapped client-side", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      # Server-rendered as the signed-out label, because the key lives only in
+      # the browser — and a browser that blocks storage still gets a usable one.
+      assert html =~ "Register / Log in"
+      assert html =~ ~s|id="nav-account"|
+      assert html =~ ~s|localStorage.getItem("csf_api_key")|
+      assert html =~ ~s|"Dashboard"|
     end
 
     test "the pricing link has something to land on", %{conn: conn} do
       html = conn |> get(~p"/") |> html_response(200)
       assert html =~ ~s|id="pricing"|
+      # Docs left the nav but must stay reachable from the page itself.
       assert html =~ ~s|id="developers"|
+      assert html =~ ~s|href="#developers"|
     end
   end
 

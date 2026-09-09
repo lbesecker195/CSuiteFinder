@@ -9,10 +9,13 @@ defmodule CsuiteFinderWeb.Nav do
 
   @links [
     {:start, "/start", "Get started"},
-    {:pricing, "/#pricing", "Pricing"},
-    {:docs, "/#developers", "Docs"},
-    {:account, "/account", "Account"}
+    {:pricing, "/#pricing", "Pricing"}
   ]
+
+  # The key the account page stores in the visitor's browser. Its presence is
+  # what decides whether the last nav item reads "Register / Log in" or
+  # "Dashboard".
+  @key_store "csf_api_key"
 
   @doc """
   The header markup. `current` is the key of the page being rendered, or `nil`.
@@ -33,9 +36,22 @@ defmodule CsuiteFinderWeb.Nav do
       <a class="brand" href="/">CSuiteFinder</a>
       <div class="navlinks">
     #{items}
-        <a class="navcta" href="/account">Sign in / Register</a>
+        <a class="navcta" href="/account" id="nav-account">Register / Log in</a>
       </div>
     </nav>
+    <script>
+    // Someone who already has a key is not registering again — they want their
+    // dashboard. The key lives only in this browser, so the swap has to happen
+    // here rather than server-side. Rendered signed-out first, so a browser
+    // that blocks storage still shows a sensible label instead of nothing.
+    (function () {
+      try {
+        if (localStorage.getItem("#{@key_store}")) {
+          document.getElementById("nav-account").textContent = "Dashboard";
+        }
+      } catch (e) {}
+    })();
+    </script>
     """
   end
 
