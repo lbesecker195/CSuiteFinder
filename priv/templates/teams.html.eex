@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<%= CsuiteFinderWeb.Analytics.tag() %>
+<title>For sales teams — CSuiteFinder</title>
+<meta name="description" content="CSuiteFinder for sales teams: verified work emails and direct numbers for the people you need to reach. $<%= @seat_usd %> per person per month."> an email, $<%= @phone_price %> a phone. <%= @trial_usd %> free credit to start.">
+<style>
+  :root {
+    --bg: #fbfaf8;
+    --surface: #ffffff;
+    --border: #e4e0d9;
+    --text: #1c1a17;
+    --muted: #6b6560;
+    --accent: #b8541f;
+    --accent-soft: #fdf1e8;
+    --code-bg: #f5f2ee;
+    --ok: #2f6b45;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161513;
+      --surface: #1e1d1a;
+      --border: #33302b;
+      --text: #ece8e2;
+      --muted: #a09990;
+      --accent: #e8834a;
+      --accent-soft: #2a1d14;
+      --code-bg: #131210;
+      --ok: #7bbd93;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 72px 0 40px; }
+  .logo {
+    font-weight: 700; letter-spacing: -0.02em; font-size: 15px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 28px;
+  }
+  h1 {
+    font-size: clamp(32px, 6vw, 52px); line-height: 1.08;
+    letter-spacing: -0.03em; margin: 0 0 20px; font-weight: 700;
+  }
+  .lede { font-size: clamp(17px, 2.4vw, 20px); color: var(--muted); max-width: 62ch; margin: 0 0 32px; }
+  h2 { font-size: 17px; margin: 28px 0 8px; letter-spacing: -0.01em; }
+  h3 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--muted); font-weight: 600; margin: 64px 0 20px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  p { margin: 0 0 16px; }
+  a { color: var(--accent); }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em; background: var(--code-bg);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px; overflow-x: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.6; margin: 0 0 20px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .step {
+    display: flex; gap: 16px; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .step-n {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+    position: relative; top: 4px;
+  }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 8px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card .big { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; display: block; }
+  .card .label { font-size: 13px; color: var(--muted); }
+  .table-scroll { overflow-x: auto; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 480px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  td code { white-space: nowrap; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 0 0 20px;
+    font-size: 15px;
+  }
+  .note strong { color: var(--accent); }
+  ul { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  footer {
+    margin-top: 72px; padding: 28px 0 56px;
+    border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
+  }
+
+  /* --- audience-led sections ------------------------------------------- */
+  /* The base h2/h3 rules in this sheet carry visual roles rather than
+     hierarchy, so section and card headings name their look explicitly.
+     That keeps the document outline correct without restyling the sheet. */
+  .section-label{font-size:13px;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:600;margin:56px 0 18px;padding-bottom:10px;
+    border-bottom:1px solid var(--border)}
+  .card-title{font-size:16.5px;text-transform:none;letter-spacing:-.01em;
+    color:var(--text);font-weight:700;margin:0 0 6px;padding:0;border:none}
+  .sub-label{font-size:17px;text-transform:none;letter-spacing:-.01em;
+    color:var(--text);font-weight:700;margin:30px 0 10px;padding:0;border:none}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+  .btn{display:inline-block;padding:13px 22px;border-radius:9px;font-weight:600;
+       text-decoration:none;font-size:15.5px;border:1px solid transparent}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.07)}
+  .btn-ghost{border-color:var(--border);color:var(--text);background:var(--surface)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .cta-note{font-size:13.5px;color:var(--faint)}
+  .who{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .who .card p{margin:0;font-size:14.5px;color:var(--muted)}
+  .who .card .tag{display:inline-block;font-size:11px;text-transform:uppercase;
+    letter-spacing:.07em;font-weight:700;color:var(--accent);margin-bottom:9px}
+  .does{display:grid;gap:0;margin-bottom:18px}
+  .does .item{display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:18px;
+    padding:15px 0;border-bottom:1px solid var(--border);align-items:baseline}
+  .does .item:last-child{border-bottom:none}
+  .does .item strong{font-size:15.5px}
+  .does .item span{color:var(--muted);font-size:14.5px}
+  @media (max-width:620px){.does .item{grid-template-columns:1fr;gap:4px}}
+  .bundle-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    margin-bottom:14px}
+  .bundle-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:20px;position:relative}
+  .bundle-card.best{border-color:var(--accent)}
+  .bundle-card .amt{font-size:27px;font-weight:700;letter-spacing:-.02em;display:block}
+  .bundle-card .qty{font-size:14px;color:var(--text);margin-top:4px;display:block}
+  .bundle-card .rate{font-size:12.5px;color:var(--faint);margin-top:8px;display:block}
+  .bundle-card .flag{position:absolute;top:-9px;right:14px;background:var(--accent);color:#fff;
+    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    padding:3px 9px;border-radius:99px}
+  .dev{border-top:1px solid var(--border);margin-top:56px;padding-top:8px}
+  /* The developer reference is a four-column table and needs more room than the
+     prose above it. Only this section widens, so the marketing copy keeps a
+     readable measure instead of every paragraph stretching to match. Guarded by
+     a media query: below this width it stays inside .wrap and the table's own
+     .table-scroll wrapper handles the overflow. */
+  @media (min-width: 1120px){
+    .dev{width:1040px;margin-left:calc(-1 * (1040px - 100%) / 2)}
+  }
+  .endpoints table{min-width:820px}
+  .endpoints td:nth-child(4){color:var(--muted);font-size:14px;line-height:1.5}
+  .endpoints td:nth-child(1){white-space:nowrap;color:var(--muted);font-size:13px}
+  .quiet{color:var(--muted);font-size:14.5px}
+<%= CsuiteFinderWeb.Nav.css() %>
+  .plan{background:var(--surface);border:2px solid var(--accent);border-radius:14px;
+    padding:30px;margin-bottom:16px}
+  .plan .price{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1}
+  .plan .per{color:var(--muted);font-size:15px;margin-left:4px}
+  .plan ul{list-style:none;padding:0;margin:22px 0 0}
+  .plan li{padding:9px 0 9px 28px;position:relative;border-bottom:1px solid var(--border)}
+  .plan li:last-child{border-bottom:none}
+  .plan li::before{content:"\2713";position:absolute;left:0;color:var(--accent);font-weight:700}
+  .compare table{min-width:640px}
+  .compare th:first-child{width:26%}
+  .compare .seat{background:var(--accent-soft)}
+  .switch{display:flex;gap:10px;margin:0 0 26px;flex-wrap:wrap}
+  .switch a{padding:11px 20px;border-radius:9px;text-decoration:none;font-weight:600;
+    font-size:15px;border:1px solid var(--border);color:var(--muted);background:var(--surface)}
+  .switch a.on{background:var(--accent);border-color:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<%= CsuiteFinderWeb.Nav.render(:teams) %>
+
+<header>
+  <h1>Your team reaches the decision-maker. Not the contact form.</h1>
+  <p class="lede">
+    Give a name and a company, get a verified work email and a direct number.
+    No API key, no terminal, and no meter running while you work.
+  </p>
+  <div class="switch">
+    <a class="on" href="/teams">For sales teams</a>
+    <a href="/#developers">For developers</a>
+  </div>
+</header>
+
+<h2 class="section-label">One price per person</h2>
+
+<div class="plan">
+  <div>
+    <span class="price">$<%= @seat_usd %></span><span class="per">per person, per month</span>
+  </div>
+  <ul>
+    <%= for item <- @seat_includes do %>
+    <li><%= item %></li>
+    <% end %>
+  </ul>
+  <p style="margin:24px 0 0">
+    <a class="btn btn-primary" href="/account">Try it free first</a>
+  </p>
+  <p class="cta-note" style="margin:10px 0 0">
+    <%= @trial_usd %> of credit, no card. Run your own list through it before deciding anything.
+  </p>
+</div>
+
+<h2 class="section-label">What your team actually does with it</h2>
+
+<div class="does">
+  <div class="item"><strong>Work a target account</strong><span>Give us the company domain and get the people at it, filtered to executives — names, titles and addresses.</span></div>
+  <div class="item"><strong>Reach a named person</strong><span>You know who you need. We work out their address from how their company formats email.</span></div>
+  <div class="item"><strong>Get a direct number</strong><span>A mobile or direct line for the same person, with the carrier and line type.</span></div>
+  <div class="item"><strong>Check before you send</strong><span>Every address verified against the live mailbox, so bounces never touch your sending reputation.</span></div>
+  <div class="item"><strong>Know who called</strong><span>A number you were called from, matched back to the person and their company.</span></div>
+</div>
+
+<h2 class="section-label">Seat or credit — which one</h2>
+
+<p class="quiet" style="margin-top:-6px">
+  The same data, two ways to buy it. Worth being honest with yourself about which you are:
+</p>
+
+<div class="table-scroll compare">
+<table>
+  <thead>
+    <tr><th></th><th class="seat">A seat — $<%= @seat_usd %>/month</th><th>Credit — pay per answer</th></tr>
+  </thead>
+  <tbody>
+    <%= for row <- @comparison do %>
+    <tr>
+      <td><strong><%= row.question %></strong></td>
+      <td class="seat"><%= row.seat %></td>
+      <td><%= row.credit %></td>
+    </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>
+
+<div class="note">
+  <strong>If you can write code and only want the data, use credit.</strong> It is
+  cheaper per lookup and always will be. A seat buys the app around the data — the
+  browser, the saved work, someone to email — not the feed itself. We would rather
+  say that now than sell you a seat you cancel in a month.
+</div>
+
+<h2 class="section-label">Getting started</h2>
+
+<div class="step"><span class="step-n">1</span><div><strong>Try it free.</strong> <a href="/account">Open an account</a> and you get <%= @trial_usd %> of credit — enough to run a real list through it before committing.</div></div>
+<div class="step"><span class="step-n">2</span><div><strong>Tell us your team size.</strong> Email <a href="mailto:<%= @contact_email %>"><%= @contact_email %></a> and we will set the seats up and invoice you.</div></div>
+<div class="step"><span class="step-n">3</span><div><strong>Your team signs in.</strong> Each person gets their own login. Nothing to install.</div></div>
+
+<p class="quiet">
+  Seats are billed monthly and you can stop any time. There is no annual lock-in,
+  because a tool worth keeping should not need one.
+</p>
+
+<p style="margin-top:22px">
+  <a class="btn btn-primary" href="/account">Start free</a>
+  <a class="btn btn-ghost" href="mailto:<%= @contact_email %>">Talk about seats</a>
+</p>
+
+<footer>
+  <a href="/">Home</a> ·
+  <a href="/start">Get started</a> ·
+  <a href="/#developers">Developer API</a> ·
+  <a href="/account">Your account</a>
+</footer>
+
+</div>
+</body>
+</html>

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<%= CsuiteFinderWeb.Analytics.tag() %>
 <title>CSuiteFinder — work email lookup API</title>
 <meta name="description" content="Resolve a name and a company domain to a work email or phone number. $<%= @email_price %> an email, $<%= @phone_price %> a phone. <%= @trial_usd %> free credit to start.">
 <style>
@@ -174,22 +175,24 @@
     so your message lands in an inbox instead of a support queue.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
-    <a class="btn btn-ghost" href="#developers">Read the API docs</a>
+    <a class="btn btn-primary" href="/teams">For sales teams — $<%= @seat_usd %>/mo per person</a>
+    <a class="btn btn-ghost" href="#developers">For developers — pay per lookup</a>
   </div>
-  <p class="cta-note">No card, no call, no demo. Your first <%= @trial_usd %> is on us.</p>
+  <p class="cta-note">
+    Both start the same way: <a href="/account"><%= @trial_usd %> of free credit</a>, no card, no call.
+  </p>
 </header>
 
 <h2 class="section-label">Who it's for</h2>
 
 <div class="who">
   <div class="card">
-    <span class="tag">Sales</span>
+    <span class="tag">Sales · $<%= @seat_usd %>/mo a seat</span>
     <h3 class="card-title">Get past the gatekeeper</h3>
     <p>
       Start from a company or from a list of names — either way you end up with deliverable
-      addresses. Pull the executives at an account, or turn names you already have into
-      inboxes, and verify each one before you send so bounces never touch your reputation.
+      addresses and direct numbers. Work in the browser, with no meter running.
+      <a href="/teams"><strong>See the team plan →</strong></a>
     </p>
   </div>
   <div class="card">
@@ -202,7 +205,7 @@
     </p>
   </div>
   <div class="card">
-    <span class="tag">Developers</span>
+    <span class="tag">Developers · pay per lookup</span>
     <h3 class="card-title">One endpoint, one price</h3>
     <p>
       A plain JSON API with no SDK to install and no seat licence. Register with a
@@ -239,6 +242,12 @@
 <h2 class="section-label" id="pricing">Pricing</h2>
 
 <p class="quiet" style="margin-top:-6px">
+  Two ways to buy the same data. <strong>A seat</strong> is $<%= @seat_usd %> a month per
+  person and works in the browser — <a href="/teams">see the team plan</a>. <strong>Credit</strong>
+  is priced per answer and is what the API bills against:
+</p>
+
+<p class="quiet" style="margin-top:-6px">
   You pay for what we find: <strong>$<%= @email_price %> an email address</strong> and
   <strong>$<%= @phone_price %> a phone number</strong>, whether you resolve one person from a name
   or discover a roomful from a domain. Deliverability checks, identity lookups, company data and
@@ -247,16 +256,16 @@
 
 <div class="bundle-grid">
   <div class="bundle-card">
-    <span class="amt">$0.0025/ea</span>
+    <span class="amt">$<%= @email_price %>/ea</span>
     <span class="rate">Corporate Emails</span>
   </div>
   <div class="bundle-card">
-    <span class="amt">$0.025/ea</span>
+    <span class="amt">$<%= @phone_price %>/ea</span>
     <span class="rate">Phone Numbers</span>
   </div>
   <div class="bundle-card">
     <span class="amt">Free</span>
-    <span class="rate">$1 Credit</span>
+    <span class="rate"><%= @trial_usd %> Credit</span>
   </div>
 </div>
 

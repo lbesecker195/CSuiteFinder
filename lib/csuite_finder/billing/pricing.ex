@@ -33,6 +33,8 @@ defmodule CsuiteFinder.Billing.Pricing do
     "email.enrich" => 0,
     "email.pattern" => 0,
     "email.name" => 0,
+    # The original path for email.name, still routed for the catalog listing.
+    "name.who" => 0,
     # Phone-input routes are answered from numbers we already hold: nothing to
     # buy, so nothing to charge beyond requiring a balance.
     "phone.name" => 0,

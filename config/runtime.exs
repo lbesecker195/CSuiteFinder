@@ -125,6 +125,12 @@ if config_env() == :prod do
   # someone to copy. Pinned rather than derived from the request's Host header:
   # that header is caller-controlled, so a request with a forged Host would
   # otherwise get documentation telling it to call some other server.
+  # Overridable so a staging deployment does not report into production's
+  # property; unset it entirely to serve pages with no tag.
+  config :csuite_finder,
+         :ga_measurement_id,
+         System.get_env("GA_MEASUREMENT_ID") || "G-632F1T5SQ2"
+
   config :csuite_finder,
          :public_base_url,
          System.get_env("PUBLIC_BASE_URL") || "https://" <> host

@@ -64,3 +64,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 # Left unset in dev so pages show whatever host you are actually browsing
 # (localhost:4000, a LAN IP, an ngrok tunnel) and the examples stay copyable.
+
+# No analytics from dev: this traffic is ours and would distort the numbers.
+config :csuite_finder, :ga_measurement_id, nil

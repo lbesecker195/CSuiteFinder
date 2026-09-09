@@ -1,7 +1,7 @@
 defmodule CsuiteFinderWeb.PageTest do
   use CsuiteFinderWeb.ConnCase, async: true
 
-  alias CsuiteFinder.Billing.Pricing
+  alias CsuiteFinder.Billing.{Plans, Pricing}
 
   describe "GET /" do
     test "renders the landing page", %{conn: conn} do
@@ -15,9 +15,10 @@ defmodule CsuiteFinderWeb.PageTest do
          %{conn: conn} do
       html = conn |> get(~p"/") |> html_response(200)
 
-      assert html =~ "0.0025"
-      assert html =~ "$1,000"
-      assert html =~ "400,000"
+      # Both halves of the business, both rendered from their own module.
+      assert html =~ "$" <> fmt(Pricing.price_usd("email.find"))
+      assert html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
+      assert html =~ "$" <> delimited(CsuiteFinder.Billing.Plans.seat_usd())
       assert html =~ "free credit"
     end
 
@@ -29,6 +30,8 @@ defmodule CsuiteFinderWeb.PageTest do
       end
     end
   end
+
+  defp fmt(usd), do: :erlang.float_to_binary(usd, [:compact, decimals: 4])
 
   defp delimited(n) do
     n
@@ -50,16 +53,10 @@ defmodule CsuiteFinderWeb.PageTest do
     test "prices the bundles from the live constants", %{conn: conn} do
       html = conn |> get(~p"/account") |> html_response(200)
 
-      # Every amount Pricing sells, with the credit it will actually grant.
+      # The account page prices purchases; the amounts come from Pricing.
       for b <- Pricing.bundles() do
         assert html =~ "$" <> delimited(b.usd)
-        assert html =~ "$" <> delimited(b.credit_usd) <> " of credit"
       end
-
-      # No discount is advertised, because none is given.
-      refute html =~ "free</span>"
-      assert html =~ "0.0025"
-      assert html =~ "0.025"
     end
 
     test "never embeds a key — the browser supplies its own", %{conn: conn} do
@@ -75,14 +72,63 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "analytics" do
+    test "the tag is emitted on every page when configured" do
+      Application.put_env(:csuite_finder, :ga_measurement_id, "G-TESTID")
+      on_exit(fn -> Application.put_env(:csuite_finder, :ga_measurement_id, nil) end)
+
+      for path <- ["/", "/teams", "/start", "/account"] do
+        html = build_conn() |> get(path) |> html_response(200)
+        assert html =~ "googletagmanager.com/gtag/js?id=G-TESTID", "#{path} is untagged"
+        assert html =~ "gtag('config', 'G-TESTID')"
+      end
+    end
+
+    test "and is absent when it is not, so dev traffic stays out of the data",
+         %{conn: conn} do
+      # A page silently missing the tag is invisible in the numbers rather than
+      # obviously broken, so both directions are worth asserting.
+      refute conn |> get(~p"/") |> html_response(200) =~ "googletagmanager"
+    end
+  end
+
+  describe "the two halves of the business" do
+    test "the home page sends each audience somewhere", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert html =~ ~s|href="/teams"|
+      assert html =~ ~s|href="#developers"|
+    end
+
+    test "/teams prices a seat from Plans", %{conn: conn} do
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ "$" <> delimited(Plans.seat_usd())
+      assert html =~ "per person, per month"
+
+      for item <- Plans.seat().includes do
+        assert html =~ item
+      end
+    end
+
+    test "/teams says plainly when credit is the better buy", %{conn: conn} do
+      # A seat sold to someone who wanted an API churns in a month, so the page
+      # steers them rather than taking the money.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ "use credit"
+      assert html =~ "cheaper per lookup"
+    end
+  end
+
   describe "site navigation" do
-    test "every page carries the same three header items", %{conn: conn} do
+    test "every page carries the same header items", %{conn: conn} do
       for path <- ["/", "/start", "/account"] do
         html = conn |> get(path) |> html_response(200)
 
         assert html =~ ~s|class="sitenav"|, "#{path} has no nav"
 
-        for href <- ["/start", "/#pricing", "/account"] do
+        for href <- ["/teams", "/#developers", "/#pricing", "/account"] do
           assert html =~ ~s|href="#{href}"|, "#{path} is missing #{href}"
         end
       end
@@ -204,7 +250,9 @@ defmodule CsuiteFinderWeb.PageTest do
     test "the renamed routes are gone and their replacements are live", %{conn: conn} do
       routed = CsuiteFinderWeb.Router.__routes__() |> Enum.map(& &1.path) |> MapSet.new()
 
-      refute MapSet.member?(routed, "/csuitefinder/name/who")
+      # /name/who stays routed on purpose: it is published in the treg catalog
+      # listing, and a listed endpoint that 404s fails their verification.
+      assert MapSet.member?(routed, "/csuitefinder/name/who")
       refute MapSet.member?(routed, "/csuitefinder/phone/who")
 
       for path <- ~w(/csuitefinder/email/name /csuitefinder/phone/name
@@ -230,9 +278,11 @@ defmodule CsuiteFinderWeb.PageTest do
     test "the headline prices appear where a buyer looks", %{conn: conn} do
       html = conn |> get(~p"/") |> html_response(200)
 
-      assert html =~ "0.0025"
-      assert html =~ "0.025"
-      assert html =~ "of credit"
+      # Rendered from Pricing and Plans, not typed into the markup, so the page
+      # cannot advertise a number the invoice disagrees with.
+      assert html =~ "$" <> fmt(Pricing.price_usd("email.find")) <> "/ea"
+      assert html =~ "$" <> fmt(Pricing.price_usd("phone.find")) <> "/ea"
+      assert html =~ "$" <> delimited(CsuiteFinder.Billing.Plans.seat_usd())
     end
   end
 

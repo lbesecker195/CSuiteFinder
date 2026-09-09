@@ -9,7 +9,7 @@ defmodule CsuiteFinderWeb.PageController do
 
   use CsuiteFinderWeb, :controller
 
-  alias CsuiteFinder.Billing.Pricing
+  alias CsuiteFinder.Billing.{Plans, Pricing}
 
   require EEx
 
@@ -17,6 +17,11 @@ defmodule CsuiteFinderWeb.PageController do
   @external_resource @template
 
   EEx.function_from_file(:defp, :render_landing, @template, [:assigns])
+
+  @teams_template Path.join(:code.priv_dir(:csuite_finder), "templates/teams.html.eex")
+  @external_resource @teams_template
+
+  EEx.function_from_file(:defp, :render_teams, @teams_template, [:assigns])
 
   @start_template Path.join(:code.priv_dir(:csuite_finder), "templates/start.html.eex")
   @external_resource @start_template
@@ -33,6 +38,29 @@ defmodule CsuiteFinderWeb.PageController do
     conn
     |> put_resp_content_type("text/html")
     |> send_resp(200, render_landing(assigns(conn)))
+  end
+
+  @doc "GET /teams — the seat plan, for people who buy a tool rather than an API."
+  def teams(conn, _params) do
+    seat = Plans.seat()
+
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_resp(
+      200,
+      render_teams(
+        Map.merge(assigns(conn), %{
+          seat_usd: delimit(seat.usd_per_month),
+          seat_includes: seat.includes,
+          comparison: Plans.comparison(),
+          contact_email: contact_email()
+        })
+      )
+    )
+  end
+
+  defp contact_email do
+    Application.get_env(:csuite_finder, :contact_email, "sales@csuitefinder.com")
   end
 
   @doc "GET /start"
@@ -61,6 +89,7 @@ defmodule CsuiteFinderWeb.PageController do
   defp assigns(conn) do
     %{
       base_url: base_url(conn),
+      seat_usd: delimit(Plans.seat_usd()),
       email_price: format(Pricing.price_usd("email.find")),
       phone_price: format(Pricing.price_usd("phone.find")),
       min_bundle: delimit(Pricing.min_bundle_usd()),

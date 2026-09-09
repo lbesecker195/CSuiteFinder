@@ -45,6 +45,12 @@ defmodule CsuiteFinderWeb.Router do
     get "/email/name", EmailNameController, :name
     post "/email/name", EmailNameController, :name
 
+    # The original path. Kept working because it is published in the treg
+    # catalog listing, and a listed endpoint that 404s fails their verification
+    # — and would break any agent that had already learned it.
+    get "/name/who", EmailNameController, :name
+    post "/name/who", EmailNameController, :name
+
     get "/company/info", CompanyController, :info
     post "/company/info", CompanyController, :info
 
@@ -123,6 +129,7 @@ defmodule CsuiteFinderWeb.Router do
 
     get "/", PageController, :index
     get "/account", AccountController, :index
+    get "/teams", PageController, :teams
     get "/start", PageController, :start
     get "/llms.txt", PageController, :llms
   end
