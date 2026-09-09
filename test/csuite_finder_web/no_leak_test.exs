@@ -195,6 +195,14 @@ defmodule CsuiteFinderWeb.NoLeakTest do
       refute html =~ ~s("stale")
     end
 
+    test "the account page does not name a supplier either", %{conn: conn} do
+      html = conn |> get(~p"/account") |> html_response(200) |> String.downcase()
+
+      for term <- @forbidden_terms do
+        refute String.contains?(html, term), "account page mentioned #{inspect(term)}"
+      end
+    end
+
     test "/ops is operator-only, not reachable with a customer key", %{conn: conn} do
       # It ranks every upstream by name and price, so a customer key must not
       # open it. Refused either as unauthorised or as disabled — both are

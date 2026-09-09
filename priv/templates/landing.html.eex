@@ -49,12 +49,12 @@
     letter-spacing: -0.03em; margin: 0 0 20px; font-weight: 700;
   }
   .lede { font-size: clamp(17px, 2.4vw, 20px); color: var(--muted); max-width: 62ch; margin: 0 0 32px; }
-  h2 {
+  h2 { font-size: 17px; margin: 28px 0 8px; letter-spacing: -0.01em; }
+  h3 {
     font-size: 13px; text-transform: uppercase; letter-spacing: 0.09em;
     color: var(--muted); font-weight: 600; margin: 64px 0 20px;
     padding-bottom: 10px; border-bottom: 1px solid var(--border);
   }
-  h3 { font-size: 17px; margin: 28px 0 8px; letter-spacing: -0.01em; }
   p { margin: 0 0 16px; }
   a { color: var(--accent); }
   code {
@@ -121,6 +121,10 @@
   <pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \
   -H 'content-type: application/json' \
   -d '{"email": "you@company.com"}'</code></pre>
+  <p style="margin-top:-4px">
+    Prefer a browser? <a href="/account"><strong>Open your account</strong></a> to register,
+    check your balance and buy tokens without touching a header.
+  </p>
 </header>
 
 <h2>Register in one call</h2>
@@ -152,8 +156,8 @@
     <span class="label">bundles, <%= @min_bundle_tokens %> tokens</span>
   </div>
   <div class="card">
-    <span class="big"><%= @trial_tokens %></span>
-    <span class="label">free trial tokens (<%= @trial_usd %>)</span>
+    <span class="big">FREE</span>
+    <span class="label"><%= @trial_tokens %> free trial tokens (<%= @trial_usd %>)</span>
   </div>
 </div>
 
@@ -235,7 +239,7 @@
   -d '{"amount_usd": <%= @min_bundle %>}'</code></pre>
 
 <footer>
-  CSuiteFinder · <a href="/csuitefinder/pricing">pricing as JSON</a> ·
+  <a href="/account">Your account</a> · <a href="/csuitefinder/pricing">pricing as JSON</a> ·
   <a href="/csuitefinder/health">status</a>
 </footer>
 

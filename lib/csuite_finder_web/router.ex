@@ -96,5 +96,6 @@ defmodule CsuiteFinderWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+    get "/account", AccountController, :index
   end
 end

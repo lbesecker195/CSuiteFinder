@@ -30,6 +30,40 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "GET /account" do
+    test "renders the account page", %{conn: conn} do
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      assert html =~ "Your account"
+      assert html =~ "Create account"
+      assert html =~ "Buy tokens"
+    end
+
+    test "prices the bundles from the live constants", %{conn: conn} do
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      # $1,000 minimum at $0.0025 a token.
+      assert html =~ "$1,000"
+      assert html =~ "400,000 tokens"
+      # and the multiples of it we offer
+      assert html =~ "$5,000"
+      assert html =~ "$25,000"
+      assert html =~ to_string(Pricing.trial_tokens())
+    end
+
+    test "never embeds a key — the browser supplies its own", %{conn: conn} do
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      refute html =~ "csf_live_" <> "e"
+      assert html =~ "localStorage"
+    end
+
+    test "is reachable from the landing page", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+      assert html =~ ~s|href="/account"|
+    end
+  end
+
   describe "GET /csuitefinder/pricing" do
     test "publishes the same terms as JSON", %{conn: conn} do
       body = conn |> get(~p"/csuitefinder/pricing") |> json_response(200)
