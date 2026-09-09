@@ -44,8 +44,6 @@ Authenticate with `Authorization: Bearer <api_key>` or `X-API-Key`.
 | `POST /company/find` | `email` | $0.005 |
 | `POST /company/info` | `email` *(or `domain`)* | $0.005 |
 
-Add `refresh=true` to any of them to bypass the cache.
-
 `/company/find` and `/company/info` share one lookup and one cached row.
 `find` answers "which company is this" — name, domain, website, LinkedIn —
 while `info` returns the full profile. Same relationship as `/name/who` to

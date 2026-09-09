@@ -38,3 +38,7 @@ config :csuite_finder, CsuiteFinder.Treg.Client,
 
 # Exercise the real auth path in tests.
 config :csuite_finder, :require_api_key, true
+
+# Deterministic in tests, so assertions about printed URLs do not depend on
+# whatever host Phoenix.ConnTest happens to synthesise.
+config :csuite_finder, :public_base_url, "https://csuitefinder.test"

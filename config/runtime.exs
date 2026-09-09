@@ -121,6 +121,14 @@ if config_env() == :prod do
 
   config :csuite_finder, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # The canonical public URL, used wherever a page or llms.txt prints a URL for
+  # someone to copy. Pinned rather than derived from the request's Host header:
+  # that header is caller-controlled, so a request with a forged Host would
+  # otherwise get documentation telling it to call some other server.
+  config :csuite_finder,
+         :public_base_url,
+         System.get_env("PUBLIC_BASE_URL") || "https://" <> host
+
   # Bind to loopback by default. Behind a reverse proxy (the standard VPS
   # deployment) binding to every interface would leave port 4000 reachable
   # from the internet directly — bypassing nginx, and with it TLS, the

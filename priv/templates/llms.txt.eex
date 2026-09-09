@@ -52,8 +52,7 @@ Bundles start at $<%= @min_bundle %>, paid through PayPal. Tokens do not expire.
 
 ## Endpoints
 
-All accept GET (query string) or POST (JSON body). Add `refresh=true` to force a
-re-check instead of using a stored answer.
+All accept GET (query string) or POST (JSON body).
 
 ### POST /csuitefinder/email/find — 1 token
 

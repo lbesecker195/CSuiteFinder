@@ -61,3 +61,6 @@ config :phoenix, :stacktrace_depth, 20
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Left unset in dev so pages show whatever host you are actually browsing
+# (localhost:4000, a LAN IP, an ngrok tunnel) and the examples stay copyable.

@@ -149,6 +149,57 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "the developer endpoint reference" do
+    test "says what each endpoint does, not just its shape", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert html =~ "What it does"
+      # Every documented route needs a description, or the column is decoration.
+      assert html =~ "Who works at a company"
+      assert html =~ "Is this mailbox real?"
+      assert html =~ "The person behind an address"
+    end
+
+    test "the table can scroll rather than forcing the page to", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+      assert html =~ ~s|class="table-scroll endpoints"|
+    end
+
+    test "does not advertise the cache bypass", %{conn: conn} do
+      # A refresh costs us an upstream call and earns the same as a cache hit,
+      # so it is not something to put in front of customers.
+      for path <- ["/", "/start"] do
+        refute conn |> get(path) |> html_response(200) =~ "refresh=true"
+      end
+
+      refute conn |> get(~p"/llms.txt") |> response(200) =~ "refresh=true"
+    end
+  end
+
+  describe "printed URLs" do
+    test "use the configured public URL, not the request's Host header", %{conn: conn} do
+      # The Host header is caller-controlled. Deriving documentation URLs from it
+      # means a forged Host hands the reader a link to someone else's server.
+      body =
+        conn
+        |> Map.put(:host, "evil.example.com")
+        |> get(~p"/llms.txt")
+        |> response(200)
+
+      assert body =~ "https://csuitefinder.test"
+      refute body =~ "evil.example.com"
+      refute body =~ "localhost"
+    end
+
+    test "the home page and /start agree with it", %{conn: conn} do
+      for path <- ["/", "/start"] do
+        html = conn |> get(path) |> html_response(200)
+        assert html =~ "https://csuitefinder.test", "#{path} printed a different base URL"
+        refute html =~ "localhost", "#{path} printed a localhost URL"
+      end
+    end
+  end
+
   describe "GET /start" do
     test "renders the getting-started page", %{conn: conn} do
       html = conn |> get(~p"/start") |> html_response(200)

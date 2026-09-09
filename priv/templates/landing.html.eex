@@ -147,6 +147,17 @@
     font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
     padding:3px 9px;border-radius:99px}
   .dev{border-top:1px solid var(--border);margin-top:56px;padding-top:8px}
+  /* The developer reference is a four-column table and needs more room than the
+     prose above it. Only this section widens, so the marketing copy keeps a
+     readable measure instead of every paragraph stretching to match. Guarded by
+     a media query: below this width it stays inside .wrap and the table's own
+     .table-scroll wrapper handles the overflow. */
+  @media (min-width: 1120px){
+    .dev{width:1040px;margin-left:calc(-1 * (1040px - 100%) / 2)}
+  }
+  .endpoints table{min-width:820px}
+  .endpoints td:nth-child(4){color:var(--muted);font-size:14px;line-height:1.5}
+  .endpoints td:nth-child(1){white-space:nowrap;color:var(--muted);font-size:13px}
   .quiet{color:var(--muted);font-size:14.5px}
 <%= CsuiteFinderWeb.Nav.css() %></style>
 </head>
@@ -315,26 +326,52 @@ Verify every address before you give it to me.</code></pre>
 
 <h3 class="sub-label">Endpoints</h3>
 
-<div class="table-scroll">
+<div class="table-scroll endpoints">
 <table>
-  <thead><tr><th>Method</th><th>Path</th><th>Parameters</th></tr></thead>
+  <thead><tr><th>Method</th><th>Path</th><th>Parameters</th><th>What it does</th></tr></thead>
   <tbody>
-    <tr><td>POST</td><td><code>/csuitefinder/email/find</code></td><td><code>full_name</code>, <code>domain</code>, <code>email</code><span class="label"> (optional)</span></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/company/people</code></td><td><code>domain</code>, <code>department</code>, <code>limit</code> — who works there</td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> — which company this is</td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code> or <code>domain</code> — the full profile</td></tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/people</code></td>
+      <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
+      <td>Who works at a company. <code>department=executive</code> for the C-suite. Billed per person returned.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/find</code></td>
+      <td><code>full_name</code>, <code>domain</code>, <code>email</code><span class="label"> (optional)</span></td>
+      <td>A name and a company become that person's work email. The optional <code>email</code> is a colleague's address at the same company.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td>
+      <td>Is this mailbox real? Returns deliverable, undeliverable, risky or unknown, with the MX and SMTP signals behind it.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td>
+      <td>The person behind an address — name, job title, seniority, department, employer, location.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td>
+      <td>Just the identity: name, title, employer. The narrow form of enrich.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td>
+      <td>How a company formats its addresses, with every alternative and how common each is.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> or <code>domain</code></td>
+      <td>Which company an address belongs to — name, domain, website, LinkedIn.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code> or <code>domain</code></td>
+      <td>The full company profile: industry, headcount, founding year, location.</td>
+    </tr>
   </tbody>
 </table>
 </div>
 
 <p class="quiet">
-  Every endpoint also accepts <code>GET</code> with a query string, and <code>refresh=true</code>
-  to force a re-check. The optional <code>email</code> on <code>/email/find</code> is a
-  colleague's address at the same company: give us one address there and we can resolve the rest.
+  Every endpoint also accepts <code>GET</code> with a query string. The optional
+  <code>email</code> on <code>/email/find</code> is a colleague's address at the same company:
+  give us one address there and we can resolve the rest.
 </p>
 
 <h3 class="sub-label">Example</h3>
