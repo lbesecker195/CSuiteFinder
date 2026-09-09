@@ -6,7 +6,7 @@
       css: CsuiteFinderWeb.Layout.page_css(:teams)
     ) %>
 <header>
-  <h1>Your team reaches the decision-maker. Not the contact form.</h1>
+  <h1>Reach the decision-maker</br>Not the contact form.</h1>
   <p class="lede">
     Give a name and a company, get a verified work email and a direct number.
     No API key, no terminal, and no meter running while you work.
