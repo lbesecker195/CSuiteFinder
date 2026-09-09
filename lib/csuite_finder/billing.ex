@@ -68,7 +68,14 @@ defmodule CsuiteFinder.Billing do
   def settle(%{endpoint: endpoint, found: found?} = params) do
     account = Map.get(params, :account)
     api_key = Map.get(params, :api_key)
-    charge = if Pricing.billable?(endpoint, found?), do: Pricing.charge_for(endpoint), else: 0
+    # `units` is how many billable things the answer contained — rows, for a
+    # per-result endpoint. Everything else bills one unit per call.
+    units = Map.get(params, :units, 1)
+
+    charge =
+      if Pricing.billable?(endpoint, found?),
+        do: Pricing.charge_for(endpoint) * units,
+        else: 0
 
     charged =
       case account do

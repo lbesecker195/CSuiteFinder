@@ -12,7 +12,10 @@ defmodule CsuiteFinder.Budgets do
     email_verify: 0.002,
     person_enrich: 0.005,
     email_pattern: 0.01,
-    company_enrich: 0.005
+    company_enrich: 0.005,
+    # A page of ten people. The provider charges ceil(limit/10) credits, so a
+    # 50-row sweep needs headroom for five.
+    company_people: 0.05
   }
 
   @doc "Ceiling in USD for a lookup kind."

@@ -37,6 +37,11 @@ defmodule CsuiteFinderWeb.PublicView do
   @company_find ~w(queried_email domain found name legal_name website
                    linkedin_url logo_url last_verified_at note)a
 
+  # A person in a /company/people result. The list wrapper is built by the
+  # controller; this is the per-row shape.
+  @person ~w(email full_name first_name last_name position department seniority
+             linkedin_url twitter kind confidence)a
+
   @company_info ~w(domain found name legal_name description industry
                    employee_count employee_range founded_year revenue_range
                    country city website linkedin_url logo_url tech_stack
@@ -51,6 +56,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def render(:who, result), do: take(result, @who)
   def render(:company_find, result), do: take(result, @company_find)
   def render(:company_info, result), do: take(result, @company_info)
+  def render(:person, result), do: take(result, @person)
 
   @doc "The field list for a view, for tests and documentation."
   @spec fields(atom()) :: [atom()]
@@ -61,6 +67,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def fields(:who), do: @who
   def fields(:company_find), do: @company_find
   def fields(:company_info), do: @company_info
+  def fields(:person), do: @person
 
   # Keys absent from the result are simply absent from the response, rather
   # than rendered as nulls that imply a field we do not have.

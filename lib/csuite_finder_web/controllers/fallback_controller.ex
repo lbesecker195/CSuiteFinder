@@ -9,6 +9,15 @@ defmodule CsuiteFinderWeb.FallbackController do
     bad_request(conn, "invalid_domain", "`domain` must be a valid domain, e.g. acme.com.")
   end
 
+  def call(conn, {:error, :invalid_department}) do
+    bad_request(
+      conn,
+      "invalid_department",
+      "`department` must be one of: " <>
+        Enum.join(CsuiteFinder.Prospects.departments(), ", ") <> "."
+    )
+  end
+
   def call(conn, {:error, :invalid_name}) do
     bad_request(conn, "invalid_name", "`full_name` could not be parsed into a name.")
   end

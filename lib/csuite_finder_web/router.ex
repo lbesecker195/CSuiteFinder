@@ -50,6 +50,9 @@ defmodule CsuiteFinderWeb.Router do
 
     get "/company/find", CompanyController, :find
     post "/company/find", CompanyController, :find
+
+    get "/company/people", ProspectController, :people
+    post "/company/people", ProspectController, :people
   end
 
   scope "/csuitefinder", CsuiteFinderWeb do

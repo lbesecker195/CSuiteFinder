@@ -130,14 +130,14 @@ defmodule CsuiteFinderWeb.PageTest do
       assert body =~ to_string(Pricing.trial_tokens())
     end
 
-    test "says plainly that it is not a prospect database", %{conn: conn} do
-      # Agents otherwise waste turns hunting for a people-search endpoint that
-      # does not exist.
+    test "documents the discovery route, so an agent knows where to start", %{conn: conn} do
+      # An agent holding only a company domain needs to be told this exists,
+      # or it will try to guess names to feed /email/find.
       body = conn |> get(~p"/llms.txt") |> response(200)
 
-      assert body =~ "prospect database"
-      assert body =~ "no people-search endpoint"
-      assert body =~ "It resolves an address for someone you can already NAME"
+      assert body =~ "/csuitefinder/company/people"
+      assert body =~ "department=executive"
+      assert body =~ "This is the discovery route"
     end
 
     test "names no supplier", %{conn: conn} do

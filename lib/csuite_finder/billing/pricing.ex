@@ -52,7 +52,9 @@ defmodule CsuiteFinder.Billing.Pricing do
     "email.pattern" => 0,
     "name.who" => 0,
     "company.info" => 0,
-    "company.find" => 0
+    "company.find" => 0,
+    # Billed per person returned, not per call — see Billing.settle/1's `units`.
+    "company.people" => 1
   }
 
   @doc "Token price in micro-USD."

@@ -11,14 +11,15 @@ Base URL: <%= @base_url %>/csuitefinder
 Human docs: <%= @base_url %>/
 Live rate card (no key needed): <%= @base_url %>/csuitefinder/pricing
 
-## What this is, and is not
+## Two ways in
 
-It resolves an address for someone you can already NAME. Give it "Jensen Huang"
-and "nvidia.com" and it returns his work email.
+**You have a name**: `/email/find` with `full_name` and `domain` returns that
+person's work email. Give it "Jensen Huang" and "nvidia.com".
 
-It is **not** a prospect database and has no people-search endpoint. It will not
-tell you who the VP of Sales at a company is, or return a list of employees. If
-you do not have a name, this API cannot help — get the name elsewhere first.
+**You only have a company**: `/company/people` with a `domain` returns the
+people who work there — names, addresses, job titles and departments. Pass
+`department=executive` for the C-suite. This is the discovery route; start here
+when you do not yet know who you are looking for.
 
 ## Getting a key
 
@@ -75,6 +76,32 @@ curl -H "Authorization: Bearer $KEY" \
 ```
 
 `found: false` means no address was resolved — and you were not charged.
+
+### POST /csuitefinder/company/people — 1 token per person returned
+
+Who works at a company. **The discovery endpoint** — use it when you have a
+domain but no names.
+
+- `domain` (required) — "stripe.com"
+- `department` (optional) — executive, engineering, sales, finance, hr, it,
+  marketing, legal, support, operations, communication. `executive` is the
+  C-suite.
+- `limit` (optional) — 1..50, default 10. **This is the price dial**: you are
+  billed one token per person returned, so ask for what you will use. It is also
+  clamped to your balance, so it can never overdraw you.
+- `type` (optional) — `personal` for named humans, `generic` for role mailboxes
+  like sales@
+
+```bash
+curl -H "Authorization: Bearer $KEY" \
+  "<%= @base_url %>/csuitefinder/company/people?domain=stripe.com&department=executive&limit=10"
+```
+
+Returns `{domain, department, count, people: [{email, full_name, position,
+department, seniority, linkedin_url, kind, confidence}]}`.
+
+A sweep is stored per person, so a later narrower query — the engineers at a
+domain you already swept — is answered from what the first one paid for.
 
 ### POST /csuitefinder/email/deliverable — included
 
@@ -139,7 +166,9 @@ company domain" rather than returning the mail provider as the employer.
 ## A sensible agent workflow
 
 1. `POST /register` once, store the key.
-2. For each person, `GET /email/find?full_name=…&domain=…`.
+2. **If you have names**: `GET /email/find?full_name=…&domain=…` for each.
+   **If you only have companies**: `GET /company/people?domain=…&department=executive`
+   to get the people first, which returns their addresses directly.
 3. If `found`, `GET /email/deliverable?email=…` before you send anything.
 4. Only send to `deliverable`. Treat `undeliverable` as dead and `risky` as a
    judgement call — `risky` usually means a catch-all domain that accepts

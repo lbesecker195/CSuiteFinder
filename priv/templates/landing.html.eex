@@ -176,9 +176,9 @@
     <span class="tag">Sales</span>
     <h3 class="card-title">Get past the gatekeeper</h3>
     <p>
-      You've built a target list and you know the titles you need. Turn those names into
-      deliverable addresses — and check each one before you send, so bounces never touch
-      your domain's reputation.
+      Start from a company or from a list of names — either way you end up with deliverable
+      addresses. Pull the executives at an account, or turn names you already have into
+      inboxes, and verify each one before you send so bounces never touch your reputation.
     </p>
   </div>
   <div class="card">
@@ -207,14 +207,15 @@
 <div class="step"><span class="step-n">3</span><div><strong>Check before you send.</strong> Confirm the mailbox is real and deliverable, and see who and what is behind it — all included, no extra charge.</div></div>
 
 <div class="note" style="margin-top:22px">
-  <strong>To be clear about what this is:</strong> CSuiteFinder finds the address of someone you
-  can already name. It is not a prospect database and it will not build your target list for
-  you — bring the names, and we'll get you the inbox.
+  <strong>Don't have names yet?</strong> Give us just the company domain and we'll return the
+  people at it — filter to <code>executive</code> and you have the C-suite, with addresses and
+  job titles. Bring a name and we'll find one address; bring a domain and we'll find the room.
 </div>
 
 <h2 class="section-label">What you can do</h2>
 
 <div class="does">
+  <div class="item"><strong>Find the people at a company</strong><span>A domain in, named people out — with titles, departments and addresses. Filter to executives for the C-suite.</span></div>
   <div class="item"><strong>Find an email</strong><span>A name and a company domain become a work email address.</span></div>
   <div class="item"><strong>Check it's deliverable</strong><span>Confirm the mailbox is real before you send, so bounces don't hurt your sender reputation.</span></div>
   <div class="item"><strong>Identify an address</strong><span>Given an email, find out whose it is — name, job title, employer.</span></div>
@@ -225,9 +226,9 @@
 <h2 class="section-label" id="pricing">Pricing</h2>
 
 <p class="quiet" style="margin-top:-6px">
-  You pay for emails found — <strong>one token each</strong>. Deliverability checks, identity
-  lookups, company data and email formats are all included with any balance. A lookup that finds
-  nothing is free.
+  You pay for emails — <strong>one token each</strong>, whether you resolve one from a name or
+  discover a roomful from a domain. Deliverability checks, identity lookups, company data and
+  email formats are all included with any balance. A lookup that finds nothing is free.
 </p>
 
 <div class="bundle-grid">
@@ -323,6 +324,7 @@ Verify every address before you give it to me.</code></pre>
     <tr><td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td></tr>
     <tr><td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td></tr>
     <tr><td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/company/people</code></td><td><code>domain</code>, <code>department</code>, <code>limit</code> — who works there</td></tr>
     <tr><td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> — which company this is</td></tr>
     <tr><td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code> or <code>domain</code> — the full profile</td></tr>
   </tbody>

@@ -19,6 +19,7 @@ defmodule CsuiteFinder.Metrics do
   alias CsuiteFinder.Billing.{Payment, Pricing, UsageEvent}
 
   alias CsuiteFinder.Cache.{
+    CompanyPerson,
     CompanyProfile,
     Email,
     EmailPattern,
@@ -33,7 +34,8 @@ defmodule CsuiteFinder.Metrics do
     {"emails", Email},
     {"email_verifications", EmailVerification},
     {"person_enrichments", PersonEnrichment},
-    {"company_profiles", CompanyProfile}
+    {"company_profiles", CompanyProfile},
+    {"company_people", CompanyPerson}
   ]
 
   @doc "Everything the dashboard renders, for a window of `days`."
@@ -50,6 +52,7 @@ defmodule CsuiteFinder.Metrics do
       by_endpoint: by_endpoint(since),
       latency: latency(since),
       cache: cache_stats(),
+      corpus: corpus(),
       accounts: accounts_stats(since),
       payments: payments_stats(),
       providers: CostModel.report()
@@ -277,16 +280,69 @@ defmodule CsuiteFinder.Metrics do
         %{
           table: name,
           rows: Repo.aggregate(schema, :count, :id),
-          stale: Repo.aggregate(from(r in schema, where: r.refresh_failures > 0), :count, :id)
+          stale: stale_count(schema)
         }
       end)
 
     %{
       tables: tables,
       total_rows: tables |> Enum.map(& &1.rows) |> Enum.sum(),
-      total_stale: tables |> Enum.map(& &1.stale) |> Enum.sum(),
+      # Tables that do not track staleness contribute nothing to the total
+      # rather than breaking the sum.
+      total_stale: tables |> Enum.map(&(&1.stale || 0)) |> Enum.sum(),
       # Patterns are the asset: each one resolves a whole company for free.
       patterns_held: Repo.aggregate(from(p in EmailPattern, where: p.found), :count, :id)
+    }
+  end
+
+  # Not every cached table tracks refresh failures: company_people is a roster
+  # written whole by a sweep, not a row refreshed in place, so it has no such
+  # column and no staleness to report.
+  defp stale_count(schema) do
+    if :refresh_failures in schema.__schema__(:fields) do
+      Repo.aggregate(from(r in schema, where: r.refresh_failures > 0), :count, :id)
+    else
+      nil
+    end
+  end
+
+  @doc """
+  The email corpus: every address we hold, however it arrived.
+
+  Two ways in, and they overlap — an address found by name can later turn up in
+  a domain sweep. The total is a UNION rather than a sum, so it counts people
+  rather than rows.
+  """
+  @spec corpus() :: map()
+  def corpus do
+    found =
+      Repo.one(
+        from e in Email,
+          where: e.found and not is_nil(e.email),
+          select: count(e.email, :distinct)
+      ) || 0
+
+    received =
+      Repo.one(from p in CompanyPerson, select: count(p.email, :distinct)) || 0
+
+    # A UNION rather than found + received: an address resolved by name can
+    # later turn up in a domain sweep, and counting it twice would overstate
+    # the corpus by exactly the amount we most want to know about.
+    %Postgrex.Result{rows: [[total]]} =
+      Repo.query!("""
+      SELECT COUNT(*) FROM (
+        SELECT lower(email::text) AS address FROM emails
+          WHERE found AND email IS NOT NULL
+        UNION
+        SELECT lower(email::text) AS address FROM company_people
+      ) AS all_addresses
+      """)
+
+    %{
+      found: found,
+      received: received,
+      total: total,
+      overlap: found + received - total
     }
   end
 

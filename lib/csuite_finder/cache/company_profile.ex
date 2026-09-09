@@ -26,6 +26,8 @@ defmodule CsuiteFinder.Cache.CompanyProfile do
     field :provider_cost_micro, :integer, default: 0
     field :raw, :map
     field :expires_at, :utc_datetime_usec
+    field :people_fetched_at, :utc_datetime_usec
+    field :people_total, :integer
     field :last_found_at, :utc_datetime_usec
     field :refresh_failures, :integer, default: 0
 
@@ -34,7 +36,7 @@ defmodule CsuiteFinder.Cache.CompanyProfile do
 
   @fields ~w(domain name legal_name description industry employee_count employee_range
              founded_year revenue_range country city website linkedin_url logo_url
-             tech_stack found source provider provider_cost_micro raw expires_at last_found_at refresh_failures)a
+             tech_stack found source provider provider_cost_micro raw expires_at last_found_at refresh_failures people_fetched_at people_total)a
 
   def changeset(struct, attrs) do
     struct
