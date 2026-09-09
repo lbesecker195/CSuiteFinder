@@ -214,7 +214,7 @@
 <h2 class="section-label">How it works</h2>
 
 <div class="step"><span class="step-n">1</span><div><strong>Tell us who.</strong> A full name and the company's domain — <em>Jensen Huang</em> at <em>nvidia.com</em>. That's the whole input.</div></div>
-<div class="step"><span class="step-n">2</span><div><strong>Get the address.</strong> We work out how that company formats its email and build the person's address from it.</div></div>
+<div class="step"><span class="step-n">2</span><div><strong>Get the address.</strong> We do the work to find the person's email address.</div></div>
 <div class="step"><span class="step-n">3</span><div><strong>Check before you send.</strong> Confirm the mailbox is real and deliverable, and see who and what is behind it — all included, no extra charge.</div></div>
 
 <div class="note" style="margin-top:22px">
@@ -246,18 +246,22 @@
 </p>
 
 <div class="bundle-grid">
-  <%= for b <- @bundles do %>
   <div class="bundle-card">
-    <span class="amt">$<%= b.usd %></span>
-    <span class="qty">$<%= b.usd %> of credit</span>
-    <span class="rate"><%= b.emails %> emails, or <%= b.phones %> phone numbers</span>
+    <span class="amt">$0.0025/ea</span>
+    <span class="rate">Corporate Emails</span>
   </div>
-  <% end %>
+  <div class="bundle-card">
+    <span class="amt">$0.025/ea</span>
+    <span class="rate">Phone Numbers</span>
+  </div>
+  <div class="bundle-card">
+    <span class="amt">Free</span>
+    <span class="rate">$1 Credit</span>
+  </div>
 </div>
 
 <p class="quiet">
-  Credit never expires and a dollar buys a dollar of it. Purchases start at
-  $<%= @min_bundle %> and are paid through PayPal. Start with
+  Credit never expires and a dollar buys a dollar of it. Purchasable through PayPal. Start with
   <strong><%= @trial_usd %> of free credit</strong> to try it properly first — real lookups,
   not a preview.
 </p>
@@ -269,14 +273,12 @@
 <h2 class="section-label">Why the addresses are good</h2>
 
 <p class="quiet">
-  Most companies build every employee's address the same way. We work out that format once and
-  apply it — which is why a lookup costs a fraction of a cent instead of the several cents a
-  per-person database charges, and why the second person you look up at a company is usually
-  instant.
+  With over 95% success rate and lookups costing a fraction of a cent instead whole dollars a
+  normal per-person database charges, and low latencty.
 </p>
 <p class="quiet">
-  Every address can then be verified against the live mailbox before you use it. Checking is
-  included, and it is the single best thing you can do for your domain's deliverability:
+  Every address can then be verified against the live mailbox before you use it. Checking email deliverability is
+  included, and it is the single best thing you can do for your domain's inbox-rate:
   a bounced cold email costs you far more than the lookup did.
 </p>
 
