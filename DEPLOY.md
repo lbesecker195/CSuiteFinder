@@ -19,6 +19,11 @@ doubles as the redeploy command:
 git pull && sudo bash deploy/install.sh --yes
 ```
 
+On a re-run it reads the domain and Let's Encrypt address back out of
+`/etc/csuite-finder.env`, so a redeploy needs no arguments and asks nothing. It
+also skips certbot when a certificate is already in place — renewal is the
+certbot timer's job, not the installer's.
+
 Useful flags: `--no-ssl` (DNS not pointed here yet), `--db-socket` (no database
 password at all — see below), `--treg-token <token>`, `--yes` (never prompt).
 

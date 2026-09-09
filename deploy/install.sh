@@ -51,14 +51,37 @@ while [[ $# -gt 0 ]]; do
 done
 
 ask() { # ask <var> <prompt> [default]
-  local __var=$1 __prompt=$2 __default=${3:-} __reply
-  if [[ -n "${!__var}" ]]; then return; fi
+  local __var=$1 __prompt=$2 __reply
+  local __has_default=0 __default=""
+  # An empty default passed on purpose ("" means: blank is a valid answer) is
+  # not the same as no default at all. $# is what tells them apart.
+  if [[ $# -ge 3 ]]; then __has_default=1; __default=$3; fi
+
+  # :- guards an entirely undeclared name, which would otherwise trip `set -u`
+  # and report "unbound variable" instead of the message we want.
+  if [[ -n "${!__var:-}" ]]; then return; fi
+
   if [[ $ASSUME_YES -eq 1 ]]; then
-    [[ -n "$__default" ]] && printf -v "$__var" '%s' "$__default" && return
-    die "--yes was given but $__var is not set"
+    if [[ $__has_default -eq 1 ]]; then
+      printf -v "$__var" '%s' "$__default"
+      return
+    fi
+    die "--yes was given but $__var is not set (pass it as a flag)"
   fi
+
   read -rp "    $__prompt${__default:+ [$__default]}: " __reply
   printf -v "$__var" '%s' "${__reply:-$__default}"
+}
+
+# On a re-run, reuse what we configured last time so a redeploy needs no input.
+load_existing_config() {
+  [[ -f "$ENV_FILE" ]] || return 0
+  local prev_host prev_email
+  prev_host="$(sed -n 's/^PHX_HOST=//p' "$ENV_FILE" | head -1)"
+  prev_email="$(sed -n 's/^LETSENCRYPT_EMAIL=//p' "$ENV_FILE" | head -1)"
+  [[ -z "$DOMAIN"   && -n "$prev_host"  ]] && DOMAIN="$prev_host"
+  [[ -z "$LE_EMAIL" && -n "$prev_email" ]] && LE_EMAIL="$prev_email"
+  return 0
 }
 
 # ---------------------------------------------------------------- preflight
@@ -68,6 +91,11 @@ step "Preflight"
 [[ -f "$APP_DIR/mix.exs" ]] || die "cannot find mix.exs — run this from inside the app checkout"
 command -v apt-get >/dev/null || die "this installer targets Debian/Ubuntu"
 ok "app directory: $APP_DIR"
+
+load_existing_config
+if [[ -n "$DOMAIN" ]]; then
+  ok "reusing existing configuration for $DOMAIN"
+fi
 
 ask DOMAIN "Public domain (blank for IP-only, no SSL)" ""
 if [[ -z "$DOMAIN" ]]; then
@@ -221,6 +249,7 @@ MIX_ENV=prod
 PHX_SERVER=true
 PORT=$PORT
 PHX_HOST=$DOMAIN
+LETSENCRYPT_EMAIL=${LE_EMAIL:-}
 
 $DB_LINES
 
@@ -308,6 +337,14 @@ ok "proxying $DOMAIN -> 127.0.0.1:$PORT"
 if [[ $DO_SSL -eq 1 ]]; then
   step "TLS certificate"
   apt-get install -y -qq certbot python3-certbot-nginx >/dev/null
+  if [[ -s "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]]; then
+    ok "certificate already present; renewal is handled by the certbot timer"
+    DO_SSL=1
+    SKIP_CERTBOT=1
+  fi
+  if [[ "${SKIP_CERTBOT:-0}" == "1" ]]; then
+    resolved=""; public_ip=""
+  else
   resolved="$(getent hosts "$DOMAIN" | awk '{print $1}' | head -1 || true)"
   public_ip="$(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || true)"
   if [[ -n "$resolved" && -n "$public_ip" && "$resolved" != "$public_ip" ]]; then
@@ -322,6 +359,7 @@ if [[ $DO_SSL -eq 1 ]]; then
       warn "  certbot --nginx -d $DOMAIN --agree-tos -m $LE_EMAIL --redirect"
       DO_SSL=0
     fi
+  fi
   fi
 fi
 
