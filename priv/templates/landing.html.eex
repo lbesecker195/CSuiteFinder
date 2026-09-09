@@ -45,7 +45,7 @@
 
 <p class="cta-note" style="margin-top:18px">
   Not sure yet? Both start the same way —
-  <a href="/account"><%= @trial_usd %> of free credit</a>, no card, no call.
+  <a href="/account">free trial</a>, no card, no call.
 </p>
 
 <h2 class="section-label">What it does, either way</h2>
