@@ -10,6 +10,7 @@ defmodule CsuiteFinderWeb.PageController do
   use CsuiteFinderWeb, :controller
 
   alias CsuiteFinder.Billing.{Plans, Pricing}
+  alias CsuiteFinderWeb.SampleSheet
 
   require EEx
 
@@ -61,7 +62,13 @@ defmodule CsuiteFinderWeb.PageController do
           seat_emails: delimit(seat.lookups.emails),
           seat_phones: delimit(seat.lookups.phones),
           comparison: Plans.comparison(),
-          contact_email: contact_email()
+          contact_email: contact_email(),
+          sheet: SampleSheet.rows(),
+          sheet_date: Calendar.strftime(SampleSheet.generated_on(), "%-d %B %Y"),
+          # The row count in the status bar is the seat's monthly credit at the
+          # price of a work email — the same arithmetic the plan is built on,
+          # not a number typed into markup.
+          sheet_rows: delimit(seat.lookups.emails)
         })
       )
     )

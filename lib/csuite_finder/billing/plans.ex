@@ -81,8 +81,8 @@ defmodule CsuiteFinder.Billing.Plans do
       includes: [
         "$#{delimit(@seat_usd_per_month)} of credit every month — around #{delimit(lookups.emails)} work emails, or #{delimit(lookups.phones)} phone numbers",
         "Every lookup: work emails, phone numbers, deliverability, enrichment and company data",
-        "The browser app, no API key or terminal required",
-        "Your team's own lookups, kept and searchable",
+        "Works with ChatGPT, Claude or any AI assistant — your team asks in plain English",
+        "Everything you look up is kept, so asking again answers instantly",
         "Email support"
       ],
       # Said plainly rather than in a footnote. A customer who discovers this at

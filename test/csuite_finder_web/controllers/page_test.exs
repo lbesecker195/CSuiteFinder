@@ -15,8 +15,10 @@ defmodule CsuiteFinderWeb.PageTest do
     test "prices the seat from Plans rather than from markup", %{conn: conn} do
       html = conn |> get(~p"/") |> html_response(200)
 
+      # The price, not the prose. The wording around it is the marketing's to
+      # change; a test that pins the sentence just breaks when someone edits it.
       assert html =~ "$" <> delimited(Plans.seat_usd())
-      assert html =~ "free credit"
+      assert html =~ ~s|href="/account"|
     end
 
     test "leaves per-lookup pricing to the developer page", %{conn: conn} do
@@ -145,6 +147,34 @@ defmodule CsuiteFinderWeb.PageTest do
       assert html =~ ~s|href="/developers"|
       refute html =~ "$" <> fmt(Pricing.price_usd("email.find"))
       refute html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
+    end
+
+    test "/teams shows the sample sheet, and the row count is the seat's own arithmetic",
+         %{conn: conn} do
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      # The spreadsheet is the first thing a salesperson recognises, and the
+      # number in its status bar is what a seat actually buys — derived, not
+      # typed, so it cannot drift from the plan.
+      assert html =~ ~s|class="sheet"|
+      assert html =~ "Rows <strong>#{delimited(Plans.seat_lookups().emails)}</strong> / month"
+
+      for row <- CsuiteFinderWeb.SampleSheet.rows() do
+        assert html =~ row.name, "the sheet is missing #{row.name}"
+        assert html =~ row.email
+      end
+    end
+
+    test "the sheet publishes no working address", %{conn: conn} do
+      # These are real people. The masking is the only thing standing between a
+      # marketing page and ten inboxes, so it is worth a test of its own.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      for row <- CsuiteFinderWeb.SampleSheet.rows() do
+        assert String.contains?(row.email, "•"), "#{row.email} is not masked"
+      end
+
+      refute html =~ ~r/[a-z]{4,}\.[a-z]{4,}@[a-z]+\.com/
     end
 
     test "/teams says the monthly credit does not roll over", %{conn: conn} do
