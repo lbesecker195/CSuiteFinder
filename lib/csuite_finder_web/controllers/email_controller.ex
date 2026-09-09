@@ -10,6 +10,7 @@ defmodule CsuiteFinderWeb.EmailController do
   use CsuiteFinderWeb, :controller
 
   alias CsuiteFinder.{Billing, Finder, PatternStore, People, Verifier}
+  alias CsuiteFinderWeb.PublicView
 
   action_fallback CsuiteFinderWeb.FallbackController
 
@@ -23,7 +24,7 @@ defmodule CsuiteFinderWeb.EmailController do
              refresh: truthy(params["refresh"])
            ) do
       meter(conn, result, %{full_name: full_name, domain: domain})
-      json(conn, result)
+      json(conn, PublicView.render(:email_find, result))
     end
   end
 
@@ -35,7 +36,7 @@ defmodule CsuiteFinderWeb.EmailController do
       # A verdict of "undeliverable" is a successful answer — the caller learned
       # something actionable, and it is billed as a result.
       meter(conn, Map.put(result, :found, row.status != "unknown"), %{email: email})
-      json(conn, result)
+      json(conn, PublicView.render(:deliverable, result))
     end
   end
 
@@ -49,7 +50,7 @@ defmodule CsuiteFinderWeb.EmailController do
         email: email
       })
 
-      json(conn, result)
+      json(conn, PublicView.render(:enrich, result))
     end
   end
 
@@ -59,7 +60,7 @@ defmodule CsuiteFinderWeb.EmailController do
          {:ok, result, lookup} <-
            PatternStore.for_email(email, refresh: truthy(params["refresh"])) do
       meter(conn, Map.put(result, :cached, lookup.cached), %{email: email})
-      json(conn, result)
+      json(conn, PublicView.render(:pattern, result))
     end
   end
 

@@ -22,9 +22,17 @@ defmodule CsuiteFinderWeb.FallbackController do
   end
 
   def call(conn, {:error, reason}) do
+    # The reason can carry an upstream provider's response verbatim — its name,
+    # its error vocabulary, sometimes its quota. Log it, do not serve it.
+    require Logger
+    Logger.error("lookup failed: #{inspect(reason)}")
+
     conn
     |> put_status(:internal_server_error)
-    |> json(%{error: "lookup_failed", detail: inspect(reason)})
+    |> json(%{
+      error: "lookup_failed",
+      message: "The lookup could not be completed. Nothing was charged."
+    })
   end
 
   defp bad_request(conn, error, message) do

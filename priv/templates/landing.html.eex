@@ -208,12 +208,10 @@
 
 {
   "email": "jhuang@nvidia.com",
+  "full_name": "Jensen Huang",
+  "domain": "nvidia.com",
   "found": true,
-  "source": "pattern",
-  "pattern": "{f}{last}",
-  "confidence": 0.937638,
-  "cached": false,
-  "stale": false
+  "confidence": 0.937638
 }</code></pre>
 
 

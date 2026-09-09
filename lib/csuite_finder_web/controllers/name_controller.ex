@@ -26,23 +26,8 @@ defmodule CsuiteFinderWeb.NameController do
         position: row.position,
         company_name: row.company_name,
         linkedin_url: row.linkedin_url,
-        source: row.source,
-        confidence: row.confidence,
-        provider: row.provider,
-        cached: lookup.cached,
-        cost: CsuiteFinder.Lookup.cost_block(lookup)
+        confidence: row.confidence
       }
-
-      result =
-        if row.source == "inferred" do
-          Map.put(
-            result,
-            :warning,
-            "Derived from the address itself — no provider confirmed this person."
-          )
-        else
-          result
-        end
 
       Billing.settle(%{
         account: conn.assigns[:account],
@@ -54,7 +39,7 @@ defmodule CsuiteFinderWeb.NameController do
         request: %{email: email}
       })
 
-      json(conn, result)
+      json(conn, CsuiteFinderWeb.PublicView.render(:who, result))
     end
   end
 

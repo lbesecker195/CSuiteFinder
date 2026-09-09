@@ -20,6 +20,11 @@ defmodule CsuiteFinderWeb.Router do
     plug CsuiteFinderWeb.Plugs.ApiAuth
   end
 
+  # Operator-only, behind a shared token (see Plugs.AdminAuth).
+  pipeline :admin do
+    plug CsuiteFinderWeb.Plugs.AdminAuth
+  end
+
   scope "/csuitefinder", CsuiteFinderWeb do
     pipe_through [:api, :metered]
 
@@ -53,6 +58,12 @@ defmodule CsuiteFinderWeb.Router do
     get "/billing/usage", BillingController, :usage
     post "/billing/topup", BillingController, :topup
     post "/billing/capture", BillingController, :capture
+  end
+
+  # /ops names every upstream we buy from and prices our margin. It is operator
+  # data, so it sits behind the admin token rather than any customer's API key.
+  scope "/csuitefinder", CsuiteFinderWeb do
+    pipe_through [:api, :admin]
 
     get "/ops/costs", OpsController, :costs
     get "/ops/cache", OpsController, :cache
@@ -66,11 +77,6 @@ defmodule CsuiteFinderWeb.Router do
     post "/register", RegistrationController, :create
     get "/health", HealthController, :index
     get "/pricing", PageController, :pricing
-  end
-
-  # Admin dashboard, behind a shared token (see Plugs.AdminAuth).
-  pipeline :admin do
-    plug CsuiteFinderWeb.Plugs.AdminAuth
   end
 
   scope "/admin", CsuiteFinderWeb do

@@ -1,6 +1,7 @@
 defmodule CsuiteFinderWeb.EmailControllerTest do
   use CsuiteFinderWeb.ConnCase, async: true
 
+  alias CsuiteFinder.Cache.{EmailPattern, PersonEnrichment}
   alias CsuiteFinder.{Fixtures, TregStub}
 
   setup %{conn: conn} do
@@ -35,9 +36,17 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
 
       assert body["email"] == "jane.doe@acme.com"
       assert body["found"]
-      assert body["source"] == "pattern"
-      assert body["pattern"] == "{first}.{last}"
-      assert body["cost"]["provider_micro"] == 1_900
+
+      # How it was derived, and what it cost us, are ours — not the caller's.
+      refute Map.has_key?(body, "source")
+      refute Map.has_key?(body, "pattern")
+      refute Map.has_key?(body, "cost")
+
+      # The pattern path is still what ran; it is recorded internally.
+      row = CsuiteFinder.Finder.cached_row("jane doe", "acme.com")
+      assert row.source == "pattern"
+      assert row.pattern_used == "{first}.{last}"
+      assert row.provider_cost_micro == 1_900
     end
 
     test "a second person at the same company costs nothing", %{conn: conn} do
@@ -52,10 +61,9 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["email"] == "jroe@acme.com"
-      assert body["cost"]["provider_micro"] == 0
-      assert body["cached"]
       # The pattern was already held; nothing new was bought.
       assert TregStub.call_count() == calls_after_first
+      assert CsuiteFinder.Finder.cached_row("john roe", "acme.com").provider_cost_micro == 0
     end
 
     test "re-asking for the same person hits the email cache", %{conn: conn} do
@@ -67,8 +75,9 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> post(~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
         |> json_response(200)
 
-      assert body["source"] == "cache"
-      assert body["cost"]["provider_micro"] == 0
+      assert body["email"] == "jane.doe@acme.com"
+      # One upstream call for the pattern, and nothing since.
+      assert TregStub.call_count() == 1
     end
 
     test "falls back to a paid find when the domain has no pattern", %{conn: conn} do
@@ -86,8 +95,11 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["email"] == "jdoe@acme.com"
-      assert body["source"] == "provider"
-      assert body["cost"]["provider_micro"] == 6_900
+      refute Map.has_key?(body, "source")
+
+      row = CsuiteFinder.Finder.cached_row("jane doe", "acme.com")
+      assert row.source == "provider"
+      assert row.provider_cost_micro == 6_900
     end
 
     test "learns the pattern from a paid find, so the next colleague is free",
@@ -108,8 +120,9 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["email"] == "spoe@acme.com"
-      assert body["source"] == "pattern"
-      assert body["cost"]["provider_micro"] == 0
+      row = CsuiteFinder.Finder.cached_row("sam poe", "acme.com")
+      assert row.source == "pattern"
+      assert row.provider_cost_micro == 0
     end
 
     test "rejects a missing parameter", %{conn: conn} do
@@ -148,13 +161,11 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
       assert body["deliverable"]
       assert body["status"] == "deliverable"
 
-      cached =
-        conn
-        |> post(~p"/csuitefinder/email/deliverable", %{email: "jane@acme.com"})
-        |> json_response(200)
+      conn
+      |> post(~p"/csuitefinder/email/deliverable", %{email: "jane@acme.com"})
+      |> json_response(200)
 
-      assert cached["cached"]
-      assert cached["cost"]["provider_micro"] == 0
+      # The second call was served from cache: no new upstream request.
       assert TregStub.call_count() == 1
     end
 
@@ -191,8 +202,8 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
 
       assert body["full_name"] == "Jane Doe"
       assert body["position"] == "CTO"
-      assert body["source"] == "provider"
-      refute body["warning"]
+      refute Map.has_key?(body, "source")
+      refute Map.has_key?(body, "provider")
     end
 
     test "labels the fallback as inferred rather than passing it off as real",
@@ -205,9 +216,16 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["full_name"] == "Jane Doe"
-      assert body["source"] == "inferred"
       assert body["confidence"] in ["low", "medium"]
-      assert body["warning"] =~ "not verified"
+
+      # The response no longer distinguishes a guess from a verified record,
+      # but the distinction is kept internally — billing depends on it, and an
+      # inference must never overwrite real data.
+      refute Map.has_key?(body, "source")
+      refute Map.has_key?(body, "warning")
+
+      assert CsuiteFinder.Repo.get_by(PersonEnrichment, email: "jane.doe@acme.com").source ==
+               "inferred"
     end
 
     test "invents nobody for a shared mailbox", %{conn: conn} do
@@ -249,8 +267,12 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> post(~p"/csuitefinder/email/pattern", %{email: "jdoe@acme.com"})
         |> json_response(200)
 
+      # The pattern itself is the product of this endpoint, so it stays.
       assert body["pattern"] == "{f}{last}"
-      assert body["source"] == "observed"
+      # Which upstream supplied it does not.
+      refute Map.has_key?(body, "source")
+
+      assert CsuiteFinder.Repo.get_by(EmailPattern, domain: "acme.com").source == "observed"
     end
   end
 end

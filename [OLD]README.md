@@ -89,15 +89,10 @@ curl -H "Authorization: Bearer $CSF_KEY" \
 ```json
 {
   "email": "jhuang@nvidia.com",
+  "full_name": "Jensen Huang",
+  "domain": "nvidia.com",
   "found": true,
-  "source": "pattern",
-  "pattern": "{f}{last}",
-  "pattern_source": "thecompaniesapi",
-  "confidence": 0.937638,
-  "cached": false,
-  "stale": false,
-  "last_verified_at": "2026-09-09T02:37:24.961589Z",
-  "cost": { "provider_micro": 1900, "provider_usd": 0.0019 }
+  "confidence": 0.937638
 }
 ```
 
@@ -165,6 +160,34 @@ of the mix.
 Charts are server-rendered SVG: no external dependencies, works with JavaScript
 disabled, and cannot break because a CDN moved.
 
+## What the API discloses
+
+Responses carry the customer's answer and nothing else. How a result was
+derived, which upstream served it, what it cost us, and whether the cache
+answered are all internal — they name our suppliers and price our margin, so
+they stay on our side of the boundary.
+
+`CsuiteFinderWeb.PublicView` is that boundary, and it works by **whitelist**:
+a field added to a context stays internal unless it is listed there on purpose.
+`test/csuite_finder_web/no_leak_test.exs` asserts, per endpoint, that no
+response carries an internal key, that every key it does carry is in the view,
+and — as a substring sweep over the encoded body — that no supplier is named
+anywhere, including inside values we pass through.
+
+The one deliberate exception is `/email/pattern`, which still returns
+`pattern`: that is the answer the endpoint exists to give. What it no longer
+returns is where the pattern came from.
+
+`/csuitefinder/ops/*` ranks every upstream by name and price, so it sits behind
+the admin token rather than any customer's API key. `/health` reports
+`lookups_configured` rather than naming a vendor, and a failed lookup is logged
+in full but answered with a generic message — an upstream's error body can carry
+its name, its vocabulary and sometimes its quota.
+
+None of this changes what is stored. Billing depends on knowing whether a result
+was provider-verified or inferred, the cost model depends on knowing who served
+it, and the admin dashboard shows all of it.
+
 ## The cost model
 
 `/ops/costs` ranks providers by **expected cost per success**, not sticker price:
@@ -201,7 +224,7 @@ split as John Smith rather than guessed at.
 That answer is always labelled:
 
 ```json
-{ "source": "inferred", "confidence": "low", "warning": "…not verified — treat them as a guess." }
+{ "confidence": "low" }
 ```
 
 It is stored in its own right so it can be told apart from provider data later,
@@ -290,7 +313,7 @@ mix run priv/repo/seeds.exs      # registers a demo account, prints its API key
 mix phx.server
 ```
 
-PayPal is optional in development (`/health` reports `paypal_configured`):
+PayPal is optional in development (`/health` reports `payments_configured`):
 
 ```bash
 export PAYPAL_CLIENT_ID=... PAYPAL_CLIENT_SECRET=... PAYPAL_WEBHOOK_ID=...
@@ -319,7 +342,7 @@ sudo systemctl restart csuite-finder
 mix test
 ```
 
-132 tests, no network: treg is served by an in-process plug
+145 tests, no network: treg is served by an in-process plug
 (`CsuiteFinder.TregStub`), so the code under test is the code that runs in
 production. Coverage includes name parsing (particles, accents, inversion,
 mononyms), the pattern language in both directions, cache and billing

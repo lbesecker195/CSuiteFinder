@@ -25,10 +25,13 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
 
       assert body["full_name"] == "Jane Doe"
       assert body["first_name"] == "Jane"
-      assert body["source"] == "provider"
       # The narrower endpoint does not carry the full employment record.
       refute Map.has_key?(body, "seniority")
       refute Map.has_key?(body, "phone")
+      # Nor any of our plumbing.
+      refute Map.has_key?(body, "source")
+      refute Map.has_key?(body, "provider")
+      refute Map.has_key?(body, "cost")
     end
 
     test "shares the enrichment cache rather than paying twice", %{conn: conn} do
@@ -39,8 +42,8 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
       get(conn, ~p"/csuitefinder/email/enrich?email=jane@acme.com")
       body = conn |> get(~p"/csuitefinder/name/who?email=jane@acme.com") |> json_response(200)
 
-      assert body["cached"]
-      assert body["cost"]["provider_micro"] == 0
+      assert body["full_name"] == "Jane Doe"
+      # Served from the enrichment cache: no second upstream call.
       assert TregStub.call_count() == 1
     end
 
@@ -50,8 +53,15 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
       body =
         conn |> get(~p"/csuitefinder/name/who?email=jane.doe@acme.com") |> json_response(200)
 
-      assert body["source"] == "inferred"
-      assert body["warning"] =~ "Derived from the address"
+      assert body["full_name"] == "Jane Doe"
+      refute Map.has_key?(body, "source")
+      refute Map.has_key?(body, "warning")
+
+      # Still recorded as a guess where it matters: it is not billed, and it
+      # must never displace a real record.
+      assert CsuiteFinder.Repo.get_by(CsuiteFinder.Cache.PersonEnrichment,
+               email: "jane.doe@acme.com"
+             ).source == "inferred"
     end
   end
 
@@ -93,7 +103,6 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
         conn |> get(~p"/csuitefinder/company/find?email=bob@acme.com") |> json_response(200)
 
       assert body["name"] == "Acme Inc"
-      assert body["cached"]
       assert TregStub.call_count() == 1
     end
 
@@ -151,7 +160,7 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
       get(conn, ~p"/csuitefinder/company/info?email=jane@acme.com")
       body = conn |> get(~p"/csuitefinder/company/info?email=bob@acme.com") |> json_response(200)
 
-      assert body["cached"]
+      assert body["name"] == "Acme Inc"
       assert TregStub.call_count() == 1
     end
 

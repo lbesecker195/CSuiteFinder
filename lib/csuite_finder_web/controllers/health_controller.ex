@@ -17,8 +17,9 @@ defmodule CsuiteFinderWeb.HealthController do
     |> json(%{
       status: if(db_ok, do: "ok", else: "degraded"),
       database: db_ok,
-      treg_configured: CsuiteFinder.Treg.Client.configured?(),
-      paypal_configured: CsuiteFinder.Billing.PayPal.configured?(),
+      # Deliberately generic: a health check should not name our suppliers.
+      lookups_configured: CsuiteFinder.Treg.Client.configured?(),
+      payments_configured: CsuiteFinder.Billing.PayPal.configured?(),
       version: Application.spec(:csuite_finder, :vsn) |> to_string()
     })
   end

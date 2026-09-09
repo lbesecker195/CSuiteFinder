@@ -24,7 +24,14 @@ defmodule CsuiteFinderWeb.CompanyController do
          {:ok, row, lookup} <-
            Companies.info(value, refresh: params["refresh"] in ["true", "1"]) do
       meter(conn, row, lookup, value)
-      json(conn, Companies.present_identity(row, lookup, params["email"]))
+
+      json(
+        conn,
+        CsuiteFinderWeb.PublicView.render(
+          :company_find,
+          Companies.present_identity(row, lookup, params["email"])
+        )
+      )
     end
   end
 
@@ -36,7 +43,7 @@ defmodule CsuiteFinderWeb.CompanyController do
          {:ok, row, lookup} <-
            Companies.info(value, refresh: params["refresh"] in ["true", "1"]) do
       meter(conn, row, lookup, value)
-      json(conn, Companies.present(row, lookup))
+      json(conn, CsuiteFinderWeb.PublicView.render(:company_info, Companies.present(row, lookup)))
     end
   end
 

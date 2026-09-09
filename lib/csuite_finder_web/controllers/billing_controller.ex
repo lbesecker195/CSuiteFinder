@@ -5,6 +5,8 @@ defmodule CsuiteFinderWeb.BillingController do
 
   use CsuiteFinderWeb, :controller
 
+  require Logger
+
   alias CsuiteFinder.Billing
   alias CsuiteFinder.Billing.{PayPal, Pricing}
 
@@ -104,9 +106,18 @@ defmodule CsuiteFinderWeb.BillingController do
         conn |> put_status(:not_found) |> json(%{error: "unknown_order"})
 
       {:error, reason} ->
+        # PayPal's error body carries its debug_id, its internal vocabulary and
+        # its documentation links. Log it, do not hand it to the caller.
+        Logger.warning("paypal capture failed: #{inspect(reason)}")
+
         conn
         |> put_status(:bad_gateway)
-        |> json(%{error: "capture_failed", detail: inspect(reason)})
+        |> json(%{
+          error: "capture_failed",
+          message:
+            "The payment could not be captured. If you have not approved it yet, " <>
+              "open the approve_url from the top-up response first. Nothing was charged."
+        })
     end
   end
 
@@ -131,9 +142,11 @@ defmodule CsuiteFinderWeb.BillingController do
         conn |> put_status(:unauthorized) |> json(%{error: "invalid_signature"})
 
       {:error, reason} ->
+        Logger.warning("paypal webhook verification unavailable: #{inspect(reason)}")
+
         conn
         |> put_status(:service_unavailable)
-        |> json(%{error: "verification_unavailable", detail: inspect(reason)})
+        |> json(%{error: "verification_unavailable"})
     end
   end
 
