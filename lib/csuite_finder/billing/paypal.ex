@@ -13,7 +13,7 @@ defmodule CsuiteFinder.Billing.PayPal do
 
   alias CsuiteFinder.Accounts.Account
   alias CsuiteFinder.Billing
-  alias CsuiteFinder.Billing.{Payment, Pricing}
+  alias CsuiteFinder.Billing.{Payment, PayPalPlan, Plans, Pricing}
   alias CsuiteFinder.Repo
 
   @doc """
@@ -198,6 +198,182 @@ defmodule CsuiteFinder.Billing.PayPal do
     end
   end
 
+  # ------------------------------------------------------ seat subscriptions
+
+  @doc """
+  Create a monthly seat subscription for `account`, `seats` seats.
+
+  Returns PayPal's subscription resource; the caller stores it and sends the
+  customer to the approval link. Nothing is charged until they approve.
+  """
+  @spec create_seat_subscription(Account.t(), pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def create_seat_subscription(%Account{} = account, seats, opts \\ []) do
+    with {:ok, plan} <- ensure_seat_plan(),
+         {:ok, token} <- access_token(),
+         {:ok, %{status: status, body: response}} when status in 200..299 <-
+           post(
+             "/v1/billing/subscriptions",
+             %{
+               plan_id: plan.paypal_plan_id,
+               quantity: to_string(seats),
+               subscriber: %{email_address: account.email},
+               custom_id: "account_#{account.id}",
+               application_context: %{
+                 brand_name: "CSuiteFinder",
+                 user_action: "SUBSCRIBE_NOW",
+                 shipping_preference: "NO_SHIPPING",
+                 return_url: Keyword.get(opts, :return_url, ""),
+                 cancel_url: Keyword.get(opts, :cancel_url, "")
+               }
+             },
+             token
+           ) do
+      {:ok, response}
+    else
+      {:ok, %{status: status, body: body}} ->
+        Logger.error("paypal create_subscription failed #{status}: #{inspect(body)}")
+        {:error, {:paypal, status, body}}
+
+      error ->
+        error
+    end
+  end
+
+  @doc "A subscription's current state at PayPal."
+  @spec get_subscription(String.t()) :: {:ok, map()} | {:error, term()}
+  def get_subscription(id) do
+    with {:ok, token} <- access_token(),
+         {:ok, %{status: status, body: body}} when status in 200..299 <-
+           get("/v1/billing/subscriptions/#{id}", token) do
+      {:ok, body}
+    else
+      {:ok, %{status: status, body: body}} -> {:error, {:paypal, status, body}}
+      error -> error
+    end
+  end
+
+  @doc "Stop a subscription renewing. The period already paid for is not refunded."
+  @spec cancel_subscription(String.t(), String.t()) :: :ok | {:error, term()}
+  def cancel_subscription(id, reason) do
+    with {:ok, token} <- access_token(),
+         {:ok, %{status: status}} when status in 200..299 <-
+           post("/v1/billing/subscriptions/#{id}/cancel", %{reason: reason}, token) do
+      :ok
+    else
+      {:ok, %{status: status, body: body}} ->
+        Logger.error("paypal cancel_subscription failed #{status}: #{inspect(body)}")
+        {:error, {:paypal, status, body}}
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  The PayPal billing plan for a seat, creating it the first time it is needed.
+
+  PayPal models a subscription price as a product plus a plan, both created once
+  and referenced by id afterwards. The row is keyed on the price, so raising the
+  seat price creates a new plan rather than silently billing the old amount —
+  and existing subscribers stay on the plan they agreed to, which is how PayPal
+  works and also how it ought to work.
+  """
+  @spec ensure_seat_plan() :: {:ok, PayPalPlan.t()} | {:error, term()}
+  def ensure_seat_plan do
+    key = "seat-#{Plans.seat_usd()}-month"
+
+    case Repo.get_by(PayPalPlan, key: key) do
+      %PayPalPlan{} = plan -> {:ok, plan}
+      nil -> create_seat_plan(key)
+    end
+  end
+
+  defp create_seat_plan(key) do
+    with {:ok, token} <- access_token(),
+         {:ok, product_id} <- ensure_product(token),
+         {:ok, %{status: status, body: plan}} when status in 200..299 <-
+           post(
+             "/v1/billing/plans",
+             %{
+               product_id: product_id,
+               name: "CSuiteFinder seat",
+               description:
+                 "One seat: $#{Plans.seat_usd()} of lookup credit each month. Unused credit does not roll over.",
+               billing_cycles: [
+                 %{
+                   frequency: %{interval_unit: "MONTH", interval_count: 1},
+                   tenure_type: "REGULAR",
+                   sequence: 1,
+                   # 0 = forever, until cancelled.
+                   total_cycles: 0,
+                   pricing_scheme: %{
+                     fixed_price: %{
+                       currency_code: "USD",
+                       value: :erlang.float_to_binary(Plans.seat_usd() / 1, decimals: 2)
+                     }
+                   }
+                 }
+               ],
+               payment_preferences: %{
+                 auto_bill_outstanding: true,
+                 setup_fee_failure_action: "CANCEL",
+                 payment_failure_threshold: 2
+               },
+               # Seats are billed per unit, so the plan price multiplies by
+               # `quantity` on the subscription.
+               quantity_supported: true
+             },
+             token
+           ) do
+      %PayPalPlan{}
+      |> PayPalPlan.changeset(%{
+        key: key,
+        paypal_product_id: product_id,
+        paypal_plan_id: plan["id"],
+        amount_micro: Plans.seat_micro(),
+        raw: plan
+      })
+      |> Repo.insert()
+    else
+      {:ok, %{status: status, body: body}} ->
+        Logger.error("paypal create_plan failed #{status}: #{inspect(body)}")
+        {:error, {:paypal, status, body}}
+
+      error ->
+        error
+    end
+  end
+
+  defp ensure_product(token) do
+    case post(
+           "/v1/catalogs/products",
+           %{
+             name: "CSuiteFinder",
+             description: "Work email and phone lookups",
+             type: "SERVICE",
+             category: "SOFTWARE"
+           },
+           token
+         ) do
+      {:ok, %{status: status, body: %{"id" => id}}} when status in 200..299 -> {:ok, id}
+      {:ok, %{status: status, body: body}} -> {:error, {:paypal, status, body}}
+      error -> error
+    end
+  end
+
+  @doc "The link a customer opens to approve an order or a subscription."
+  @spec approve_link(map()) :: String.t() | nil
+  def approve_link(%{"links" => links}) when is_list(links) do
+    Enum.find_value(links, fn
+      %{"rel" => "approve", "href" => href} -> href
+      %{"rel" => "payer-action", "href" => href} -> href
+      _ -> nil
+    end)
+  end
+
+  def approve_link(_), do: nil
+
   # ------------------------------------------------------------------- client
 
   defp access_token do
@@ -229,6 +405,14 @@ defmodule CsuiteFinder.Billing.PayPal do
     Req.post(
       url: base_url() <> path,
       json: body,
+      headers: [{"authorization", "Bearer " <> token}],
+      receive_timeout: 30_000
+    )
+  end
+
+  defp get(path, token) do
+    Req.get(
+      url: base_url() <> path,
       headers: [{"authorization", "Bearer " <> token}],
       receive_timeout: 30_000
     )

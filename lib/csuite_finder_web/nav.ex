@@ -9,7 +9,7 @@ defmodule CsuiteFinderWeb.Nav do
 
   @links [
     {:teams, "/teams", "For sales teams"},
-    {:developers, "/#developers", "For developers"},
+    {:developers, "/developers", "For developers"},
     {:pricing, "/#pricing", "Pricing"}
   ]
 

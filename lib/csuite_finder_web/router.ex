@@ -90,6 +90,10 @@ defmodule CsuiteFinderWeb.Router do
     get "/billing/usage", BillingController, :usage
     post "/billing/topup", BillingController, :topup
     post "/billing/capture", BillingController, :capture
+
+    get "/billing/subscription", BillingController, :subscription
+    post "/billing/subscribe", BillingController, :subscribe
+    post "/billing/subscription/cancel", BillingController, :unsubscribe
   end
 
   # /ops names every upstream we buy from and prices our margin. It is operator
@@ -130,6 +134,7 @@ defmodule CsuiteFinderWeb.Router do
     get "/", PageController, :index
     get "/account", AccountController, :index
     get "/teams", PageController, :teams
+    get "/developers", PageController, :developers
     get "/start", PageController, :start
     get "/llms.txt", PageController, :llms
   end

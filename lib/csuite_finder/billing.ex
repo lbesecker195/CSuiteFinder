@@ -5,6 +5,18 @@ defmodule CsuiteFinder.Billing do
   The balance is checked *before* the upstream call, because a provider charge
   we cannot bill on to anyone is a straight loss. It is debited after, and only
   for answers we actually produced.
+
+  ## Two pools
+
+  An account holds credit it **bought** (`balance_micro`, permanent) and credit
+  it was **given** (`granted_micro`, expiring — a seat's monthly allowance or
+  the free trial). Spending draws down the granted pool first. That order is not
+  arbitrary: granted credit is the credit with a deadline, so spending it first
+  is the only order that never destroys value the customer paid for.
+
+  An expired grant is not deleted, only ignored — every read of it goes through
+  the same `NOW()` comparison, so a row left behind by a lapsed subscription
+  cannot be spent by anything.
   """
 
   import Ecto.Query
@@ -12,6 +24,47 @@ defmodule CsuiteFinder.Billing do
   alias CsuiteFinder.Accounts.{Account, ApiKey}
   alias CsuiteFinder.Billing.{Pricing, UsageEvent}
   alias CsuiteFinder.Repo
+
+  # A grant with no expiry is open-ended; one with an expiry counts only until
+  # it passes. Written once and reused so no code path can disagree about what
+  # an account can actually spend.
+  @live_grant "CASE WHEN granted_expires_at IS NULL OR granted_expires_at > NOW() THEN granted_micro ELSE 0 END"
+
+  @doc """
+  Granted credit this account can still spend, in micro-USD.
+
+  Zero once the grant has lapsed, whatever the column says.
+  """
+  @spec live_grant_micro(Account.t()) :: non_neg_integer()
+  def live_grant_micro(%Account{granted_micro: micro, granted_expires_at: expires_at}) do
+    cond do
+      micro <= 0 -> 0
+      is_nil(expires_at) -> micro
+      DateTime.compare(expires_at, DateTime.utc_now()) == :gt -> micro
+      true -> 0
+    end
+  end
+
+  @doc "Everything this account can spend right now: bought plus unexpired grant."
+  @spec available_micro(Account.t()) :: non_neg_integer()
+  def available_micro(%Account{balance_micro: balance} = account) do
+    balance + live_grant_micro(account)
+  end
+
+  @doc """
+  The account's money, split the way a customer would want it explained.
+  """
+  @spec balances(Account.t()) :: map()
+  def balances(%Account{} = account) do
+    granted = live_grant_micro(account)
+
+    %{
+      available_usd: Pricing.usd(account.balance_micro + granted),
+      purchased_usd: Pricing.usd(account.balance_micro),
+      granted_usd: Pricing.usd(granted),
+      granted_expires_at: (granted > 0 && account.granted_expires_at) || nil
+    }
+  end
 
   @doc """
   May this account call the endpoint?
@@ -34,22 +87,25 @@ defmodule CsuiteFinder.Billing do
 
   def ensure_funds(%Account{} = account, endpoint) do
     price = Pricing.charge_for(endpoint)
+    available = available_micro(account)
 
     cond do
-      account.balance_micro <= 0 ->
-        {:error, :insufficient_credit, refusal(account, price, :no_balance)}
+      available <= 0 ->
+        {:error, :insufficient_credit, refusal(account, available, price, :no_balance)}
 
-      account.balance_micro < price ->
-        {:error, :insufficient_credit, refusal(account, price, :cannot_afford)}
+      available < price ->
+        {:error, :insufficient_credit, refusal(account, available, price, :cannot_afford)}
 
       true ->
         :ok
     end
   end
 
-  defp refusal(account, price, reason) do
+  defp refusal(account, available, price, reason) do
     %{
-      balance_usd: Pricing.usd(account.balance_micro),
+      balance_usd: Pricing.usd(available),
+      purchased_usd: Pricing.usd(account.balance_micro),
+      granted_usd: Pricing.usd(live_grant_micro(account)),
       required_usd: Pricing.usd(price),
       metered: price > 0,
       reason: to_string(reason),
@@ -87,7 +143,9 @@ defmodule CsuiteFinder.Billing do
       %UsageEvent{}
       |> UsageEvent.changeset(%{
         account_id: account && account.id,
-        api_key_id: match?(%ApiKey{}, api_key) && api_key.id,
+        # `false` is not a foreign key: an anonymous or internal settle has no
+        # key, and that has to reach the changeset as nil.
+        api_key_id: if(match?(%ApiKey{}, api_key), do: api_key.id),
         endpoint: endpoint,
         cache_hit: Map.get(params, :cached, false),
         outcome: if(found?, do: "found", else: "not_found"),
@@ -101,20 +159,51 @@ defmodule CsuiteFinder.Billing do
     {:ok, event}
   end
 
+  # One statement, so two concurrent requests on the same key cannot both see
+  # enough credit and overdraw between them. The grant is drawn down first and
+  # the remainder comes out of the purchased balance; Postgres evaluates the
+  # right-hand sides against the pre-update row, so both terms see the same
+  # starting numbers.
   defp debit(%Account{id: id}, micro) do
-    {count, _} =
-      from(a in Account, where: a.id == ^id and a.balance_micro >= ^micro)
-      |> Repo.update_all(inc: [balance_micro: -micro])
+    %{num_rows: rows} =
+      Repo.query!(
+        """
+        UPDATE accounts
+           SET granted_micro = granted_micro - LEAST(#{@live_grant}, $2::bigint),
+               balance_micro = balance_micro - ($2::bigint - LEAST(#{@live_grant}, $2::bigint))
+         WHERE id = $1
+           AND balance_micro + #{@live_grant} >= $2::bigint
+        """,
+        [id, micro]
+      )
 
-    if count == 1, do: micro, else: 0
+    if rows == 1, do: micro, else: 0
   end
 
-  @doc "Credit an account (a captured purchase, or the trial), in micro-USD."
+  @doc "Credit an account with credit it bought. Permanent, in micro-USD."
   @spec credit(Account.t(), integer()) :: {:ok, Account.t()}
   def credit(%Account{id: id}, micro) when micro > 0 do
     {1, [account]} =
       from(a in Account, where: a.id == ^id, select: a)
       |> Repo.update_all(inc: [balance_micro: micro])
+
+    {:ok, account}
+  end
+
+  @doc """
+  Give an account expiring credit — a seat's month, or the free trial.
+
+  The grant **replaces** whatever grant came before it rather than adding to it.
+  That is what "does not roll over" means: a seat buys a month of capacity, not
+  a savings account, and month thirteen looks exactly like month one. Purchased
+  credit is untouched, so a customer who tops up on top of a seat keeps every
+  dollar they paid for.
+  """
+  @spec grant(Account.t(), integer(), DateTime.t() | nil) :: {:ok, Account.t()}
+  def grant(%Account{id: id}, micro, expires_at) when micro >= 0 do
+    {1, [account]} =
+      from(a in Account, where: a.id == ^id, select: a)
+      |> Repo.update_all(set: [granted_micro: micro, granted_expires_at: expires_at])
 
     {:ok, account}
   end

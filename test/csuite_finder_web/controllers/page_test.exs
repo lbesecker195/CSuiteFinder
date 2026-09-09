@@ -8,25 +8,50 @@ defmodule CsuiteFinderWeb.PageTest do
       html = conn |> get(~p"/") |> html_response(200)
 
       assert html =~ "CSuiteFinder"
-      assert html =~ "/csuitefinder/register"
+      assert html =~ ~s|href="/teams"|
+      assert html =~ ~s|href="/developers"|
     end
 
-    test "shows the live pricing rather than numbers typed into markup",
-         %{conn: conn} do
+    test "prices the seat from Plans rather than from markup", %{conn: conn} do
       html = conn |> get(~p"/") |> html_response(200)
 
-      # Both halves of the business, both rendered from their own module.
-      assert html =~ "$" <> fmt(Pricing.price_usd("email.find"))
-      assert html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
-      assert html =~ "$" <> delimited(CsuiteFinder.Billing.Plans.seat_usd())
+      assert html =~ "$" <> delimited(Plans.seat_usd())
       assert html =~ "free credit"
     end
 
-    test "documents every billable endpoint", %{conn: conn} do
+    test "leaves per-lookup pricing to the developer page", %{conn: conn} do
+      # The home page's job is to sort a visitor into one of two products. A
+      # salesperson who sees $0.0025 next to $999 does the arithmetic and reads
+      # the seat as a rip-off, which is the wrong conversation to start on the
+      # first screen — the unit prices belong where they are the offer.
       html = conn |> get(~p"/") |> html_response(200)
 
+      refute html =~ "$" <> fmt(Pricing.price_usd("email.find"))
+      refute html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
+    end
+  end
+
+  describe "GET /developers" do
+    test "renders the API page", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      assert html =~ "CSuiteFinder"
+      assert html =~ "/csuitefinder/register"
+    end
+
+    test "shows the live per-lookup pricing", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      assert html =~ "$" <> fmt(Pricing.price_usd("email.find"))
+      assert html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
+      assert html =~ "never expires"
+    end
+
+    test "documents every billable endpoint", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+
       for endpoint <- Map.keys(Pricing.list()) do
-        assert html =~ endpoint, "landing page does not mention #{endpoint}"
+        assert html =~ endpoint, "developer page does not mention #{endpoint}"
       end
     end
   end
@@ -77,7 +102,7 @@ defmodule CsuiteFinderWeb.PageTest do
       Application.put_env(:csuite_finder, :ga_measurement_id, "G-TESTID")
       on_exit(fn -> Application.put_env(:csuite_finder, :ga_measurement_id, nil) end)
 
-      for path <- ["/", "/teams", "/start", "/account"] do
+      for path <- ["/", "/teams", "/developers", "/start", "/account"] do
         html = build_conn() |> get(path) |> html_response(200)
         assert html =~ "googletagmanager.com/gtag/js?id=G-TESTID", "#{path} is untagged"
         assert html =~ "gtag('config', 'G-TESTID')"
@@ -97,7 +122,7 @@ defmodule CsuiteFinderWeb.PageTest do
       html = conn |> get(~p"/") |> html_response(200)
 
       assert html =~ ~s|href="/teams"|
-      assert html =~ ~s|href="#developers"|
+      assert html =~ ~s|href="/developers"|
     end
 
     test "/teams prices a seat from Plans", %{conn: conn} do
@@ -116,8 +141,21 @@ defmodule CsuiteFinderWeb.PageTest do
       # steers them rather than taking the money.
       html = conn |> get(~p"/teams") |> html_response(200)
 
-      assert html =~ "use credit"
-      assert html =~ "cheaper per lookup"
+      assert html =~ "buy credit instead"
+      assert html =~ ~s|href="/developers"|
+    end
+
+    test "/teams says the monthly credit does not roll over", %{conn: conn} do
+      # A customer who discovers this at renewal feels cheated. It is stated on
+      # the page, in the plan box, and in the comparison table.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ "does not roll over"
+      assert html =~ "$#{delimited(Plans.seat_usd())} of lookup credit"
+
+      for caveat <- Plans.seat().caveats do
+        assert html =~ caveat
+      end
     end
   end
 
@@ -128,7 +166,7 @@ defmodule CsuiteFinderWeb.PageTest do
 
         assert html =~ ~s|class="sitenav"|, "#{path} has no nav"
 
-        for href <- ["/teams", "/#developers", "/#pricing", "/account"] do
+        for href <- ["/teams", "/developers", "/#pricing", "/account"] do
           assert html =~ ~s|href="#{href}"|, "#{path} is missing #{href}"
         end
       end
@@ -148,9 +186,9 @@ defmodule CsuiteFinderWeb.PageTest do
     test "the pricing link has something to land on", %{conn: conn} do
       html = conn |> get(~p"/") |> html_response(200)
       assert html =~ ~s|id="pricing"|
-      # Docs left the nav but must stay reachable from the page itself.
-      assert html =~ ~s|id="developers"|
-      assert html =~ ~s|href="#developers"|
+      # The nav's Pricing item lands on the audience fork, which is where both
+      # prices are stated; the per-lookup detail is one click further on.
+      assert html =~ ~s|href="/developers"|
     end
   end
 
@@ -199,7 +237,7 @@ defmodule CsuiteFinderWeb.PageTest do
 
   describe "the developer endpoint reference" do
     test "says what each endpoint does, not just its shape", %{conn: conn} do
-      html = conn |> get(~p"/") |> html_response(200)
+      html = conn |> get(~p"/developers") |> html_response(200)
 
       assert html =~ "What it does"
       # Every documented route needs a description, or the column is decoration.
@@ -209,14 +247,14 @@ defmodule CsuiteFinderWeb.PageTest do
     end
 
     test "the table can scroll rather than forcing the page to", %{conn: conn} do
-      html = conn |> get(~p"/") |> html_response(200)
+      html = conn |> get(~p"/developers") |> html_response(200)
       assert html =~ ~s|class="table-scroll endpoints"|
     end
 
     test "does not advertise the cache bypass", %{conn: conn} do
       # A refresh costs us an upstream call and earns the same as a cache hit,
       # so it is not something to put in front of customers.
-      for path <- ["/", "/start"] do
+      for path <- ["/", "/developers", "/start"] do
         refute conn |> get(path) |> html_response(200) =~ "refresh=true"
       end
 
@@ -266,7 +304,7 @@ defmodule CsuiteFinderWeb.PageTest do
     test "no public surface still talks about tokens", %{conn: conn} do
       # The only surviving "token" is PayPal's own query parameter, which is
       # their name for an order id and nothing to do with our pricing.
-      for path <- ["/", "/start", "/account"] do
+      for path <- ["/", "/developers", "/start", "/account"] do
         html = conn |> get(path) |> html_response(200)
         stripped = String.replace(html, ~r/\?token=|params\.get\("token"\)|order id back as/, "")
         refute stripped =~ ~r/\btokens\b/i, "#{path} still mentions tokens"
@@ -276,13 +314,14 @@ defmodule CsuiteFinderWeb.PageTest do
     end
 
     test "the headline prices appear where a buyer looks", %{conn: conn} do
-      html = conn |> get(~p"/") |> html_response(200)
-
-      # Rendered from Pricing and Plans, not typed into the markup, so the page
+      # Rendered from Pricing and Plans, not typed into the markup, so a page
       # cannot advertise a number the invoice disagrees with.
-      assert html =~ "$" <> fmt(Pricing.price_usd("email.find")) <> "/ea"
-      assert html =~ "$" <> fmt(Pricing.price_usd("phone.find")) <> "/ea"
-      assert html =~ "$" <> delimited(CsuiteFinder.Billing.Plans.seat_usd())
+      developers = conn |> get(~p"/developers") |> html_response(200)
+      assert developers =~ "$" <> fmt(Pricing.price_usd("email.find"))
+      assert developers =~ "$" <> fmt(Pricing.price_usd("phone.find"))
+
+      teams = build_conn() |> get(~p"/teams") |> html_response(200)
+      assert teams =~ "$" <> delimited(Plans.seat_usd())
     end
   end
 
@@ -301,8 +340,8 @@ defmodule CsuiteFinderWeb.PageTest do
       refute body =~ "localhost"
     end
 
-    test "the home page and /start agree with it", %{conn: conn} do
-      for path <- ["/", "/start"] do
+    test "the developer page and /start agree with it", %{conn: conn} do
+      for path <- ["/developers", "/start"] do
         html = conn |> get(path) |> html_response(200)
         assert html =~ "https://csuitefinder.test", "#{path} printed a different base URL"
         refute html =~ "localhost", "#{path} printed a localhost URL"

@@ -23,6 +23,11 @@ defmodule CsuiteFinderWeb.PageController do
 
   EEx.function_from_file(:defp, :render_teams, @teams_template, [:assigns])
 
+  @developers_template Path.join(:code.priv_dir(:csuite_finder), "templates/developers.html.eex")
+  @external_resource @developers_template
+
+  EEx.function_from_file(:defp, :render_developers, @developers_template, [:assigns])
+
   @start_template Path.join(:code.priv_dir(:csuite_finder), "templates/start.html.eex")
   @external_resource @start_template
 
@@ -52,11 +57,21 @@ defmodule CsuiteFinderWeb.PageController do
         Map.merge(assigns(conn), %{
           seat_usd: delimit(seat.usd_per_month),
           seat_includes: seat.includes,
+          seat_caveats: seat.caveats,
+          seat_emails: delimit(seat.lookups.emails),
+          seat_phones: delimit(seat.lookups.phones),
           comparison: Plans.comparison(),
           contact_email: contact_email()
         })
       )
     )
+  end
+
+  @doc "GET /developers — the API, its prices and its reference."
+  def developers(conn, _params) do
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_resp(200, render_developers(assigns(conn)))
   end
 
   defp contact_email do
@@ -94,6 +109,7 @@ defmodule CsuiteFinderWeb.PageController do
       phone_price: format(Pricing.price_usd("phone.find")),
       min_bundle: delimit(Pricing.min_bundle_usd()),
       trial_usd: "$" <> format(Pricing.trial_usd()),
+      trial_months: Pricing.trial_months(),
       bundles:
         for b <- Pricing.bundles() do
           %{

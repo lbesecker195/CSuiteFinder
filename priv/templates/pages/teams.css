@@ -1,0 +1,35 @@
+  /* Rules specific to this page. Anything shared with the rest of the
+     site lives in partials/base.css and is emitted before this. */
+  .plan { background: var(--surface); border: 2px solid var(--accent); border-radius: 14px; padding: 30px; margin-bottom: 16px; }
+  .plan .price { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+  .plan .per { color: var(--muted); font-size: 15px; margin-left: 4px; }
+  .plan .gets { font-size: 17px; margin: 14px 0 0; }
+  .plan .gets strong { color: var(--accent); }
+  .plan ul { list-style: none; padding: 0; margin: 22px 0 0; }
+  .plan li { padding: 9px 0 9px 28px; position: relative; border-bottom: 1px solid var(--border); }
+  .plan li:last-child { border-bottom: none; }
+  .plan li::before { content: "\2713"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .caveats { list-style: none; padding: 0; margin: 18px 0 0; }
+  .caveats li { padding: 7px 0 7px 26px; position: relative; color: var(--muted); font-size: 14.5px; }
+  .caveats li::before { content: "\2022"; position: absolute; left: 8px; color: var(--faint); }
+
+  .compare table { min-width: 640px; }
+  .compare th:first-child { width: 26%; }
+  .compare .seat { background: var(--accent-soft); }
+
+  .switch { display: flex; gap: 10px; margin: 0 0 26px; flex-wrap: wrap; }
+  .switch a {
+    padding: 11px 20px; border-radius: 9px; text-decoration: none; font-weight: 600;
+    font-size: 15px; border: 1px solid var(--border); color: var(--muted); background: var(--surface);
+  }
+  .switch a.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .does { display: grid; gap: 0; margin-bottom: 18px; }
+  .does .item {
+    display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: 18px;
+    padding: 15px 0; border-bottom: 1px solid var(--border); align-items: baseline;
+  }
+  .does .item:last-child { border-bottom: none; }
+  .does .item strong { font-size: 15.5px; }
+  .does .item span { color: var(--muted); font-size: 14.5px; }
+  @media (max-width: 620px) { .does .item { grid-template-columns: 1fr; gap: 4px; } }

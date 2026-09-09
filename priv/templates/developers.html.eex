@@ -1,0 +1,223 @@
+<%= CsuiteFinderWeb.Layout.head(
+      title: "For developers — CSuiteFinder API",
+      description: "A JSON API for work emails and direct phone numbers. $#{@email_price} an email, $#{@phone_price} a phone, billed only for answers. #{@trial_usd} of free credit to start.",
+      nav: :developers,
+      css: CsuiteFinderWeb.Layout.page_css(:developers),
+      wrap_class: "wrap-wide"
+    ) %>
+<header>
+  <h1>One endpoint, one price.</h1>
+  <p class="lede">
+    A plain JSON API over HTTPS for work emails and direct phone numbers. No SDK, no seat
+    licence, no sales call. You pay for answers — a lookup that finds nothing is free.
+  </p>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
+    <a class="btn btn-ghost" href="/llms.txt">llms.txt</a>
+  </div>
+  <p class="cta-note">
+    Buying seats for a sales team instead? <a href="/teams">That's the other plan →</a>
+  </p>
+</header>
+
+<h2 class="section-label" id="pricing">Pricing</h2>
+
+<p class="quiet" style="margin-top:-6px">
+  You pay for what we find: <strong>$<%= @email_price %> an email address</strong> and
+  <strong>$<%= @phone_price %> a phone number</strong>, whether you resolve one person from a
+  name or discover a roomful from a domain. Deliverability checks, identity lookups, company
+  data and email formats are all included with any balance.
+</p>
+
+<div class="bundle-grid">
+  <div class="bundle-card">
+    <span class="amt">$<%= @email_price %></span>
+    <span class="rate">per work email found</span>
+  </div>
+  <div class="bundle-card">
+    <span class="amt">$<%= @phone_price %></span>
+    <span class="rate">per phone number found</span>
+  </div>
+  <div class="bundle-card">
+    <span class="amt">$0</span>
+    <span class="rate">per lookup that finds nothing</span>
+  </div>
+</div>
+
+<p class="quiet">
+  Credit you buy <strong>never expires</strong> and a dollar buys a dollar of it. Purchases
+  start at $<%= @min_bundle %> and go through PayPal. Start with
+  <strong><%= @trial_usd %> of free credit</strong> — real lookups, not a preview. Trial
+  credit lasts <%= @trial_months %> month.
+</p>
+
+<h2 class="section-label">Getting a key</h2>
+
+<pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \
+  -H 'content-type: application/json' \
+  -d '{"email": "you@company.com"}'</code></pre>
+
+<p class="quiet">
+  Send the key as <code>Authorization: Bearer &lt;key&gt;</code> on every request. Prefer a
+  browser? <a href="/account">Your account page</a> does the same thing, plus balance and billing.
+</p>
+
+<h3 class="sub-label">Example</h3>
+
+<pre><code>curl -H "Authorization: Bearer $CSF_KEY" \
+  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"
+
+{
+  "email": "jhuang@nvidia.com",
+  "full_name": "Jensen Huang",
+  "domain": "nvidia.com",
+  "found": true,
+  "confidence": 0.937638
+}</code></pre>
+
+<h2 class="section-label">Endpoints</h2>
+
+<div class="table-scroll endpoints">
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Parameters</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/people</code></td>
+      <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
+      <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. $<%= @phone_price %> per person.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/company/people</code></td>
+      <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
+      <td>The same sweep, email addresses only. $<%= @email_price %> per person.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/find</code></td>
+      <td><code>full_name</code> + <code>domain</code>, or <code>email</code></td>
+      <td>A direct phone number, with line type. $<%= @phone_price %>.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/valid</code></td><td><code>phone</code></td>
+      <td>Is the number real? Line type, carrier, region and every format.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/name</code></td><td><code>phone</code></td>
+      <td>Whose number is this — from numbers we have already found for you.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/enrich</code></td><td><code>phone</code></td>
+      <td>The person behind a number: name, title, employer, address.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/company</code></td><td><code>phone</code></td>
+      <td>Which company a number belongs to.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/find</code></td>
+      <td><code>full_name</code>, <code>domain</code>, <code>email</code><span class="label"> (optional)</span></td>
+      <td>A name and a company become that person's work email. The optional <code>email</code> is a colleague's address at the same company.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td>
+      <td>Is this mailbox real? Returns deliverable, undeliverable, risky or unknown, with the MX and SMTP signals behind it.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td>
+      <td>The person behind an address — name, job title, seniority, department, employer, location.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/name</code></td><td><code>email</code></td>
+      <td>Just the identity: name, title, employer. The narrow form of enrich.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td>
+      <td>How a company formats its addresses, with every alternative and how common each is.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> or <code>domain</code></td>
+      <td>Which company an address belongs to — name, domain, website, LinkedIn.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code> or <code>domain</code></td>
+      <td>The full company profile: industry, headcount, founding year, location.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p class="quiet">
+  Every endpoint also accepts <code>GET</code> with a query string. The optional
+  <code>email</code> on <code>/email/find</code> is a colleague's address at the same company:
+  give us one address there and we can resolve the rest.
+</p>
+
+<h3 class="sub-label">Per-endpoint cost</h3>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Endpoint</th><th class="num">Price</th></tr></thead>
+  <tbody>
+    <%= for {endpoint, usd, label} <- @price_rows do %>
+    <tr>
+      <td><code><%= endpoint %></code></td>
+      <td class="num"><%= if usd > 0, do: "$" <> label, else: "included" %></td>
+    </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>
+
+<h3 class="sub-label">Managing your account</h3>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Path</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET /csuitefinder/billing/balance</code></td><td>Your balance and the full price list</td></tr>
+    <tr><td><code>GET /csuitefinder/billing/usage?days=30</code></td><td>Calls, cache hits and spend per endpoint</td></tr>
+    <tr><td><code>GET /csuitefinder/keys</code></td><td>Your API keys — mint a spare, revoke an old one</td></tr>
+    <tr><td><code>POST /csuitefinder/billing/topup</code></td><td>Buy credit — returns a PayPal approval link</td></tr>
+    <tr><td><code>GET /csuitefinder/health</code></td><td>Service status</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 class="section-label">Using it with an AI agent</h2>
+
+<p class="quiet">
+  The fastest way in — <a href="/start"><strong>the full walkthrough is here</strong></a>.
+  If you work with Claude, ChatGPT, Cursor or any coding agent, you do not have to
+  explain this API to it. Point it at our
+  <a href="/llms.txt"><code>llms.txt</code></a> and it will know every endpoint,
+  parameter and price — the file is generated from the live service, so what it
+  reads is what you are charged.
+</p>
+
+<p class="quiet"><strong>Paste this to your agent:</strong></p>
+
+<pre><code>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API.
+Register for a key, then find the work email for each person in my list.
+Verify every address before you give it to me.</code></pre>
+
+<p class="quiet">
+  It will register itself, take the <%= @trial_usd %> of free credit and start working. If your
+  agent supports remembering instructions, drop the same URL into its project rules
+  or <code>AGENTS.md</code> and it will keep the API available for later.
+</p>
+
+<div class="note">
+  <strong>Worth telling your agent:</strong> you can start from a name <em>or</em> from a
+  domain. <code>/email/find</code> resolves someone you can already name;
+  <code>/company/people</code> is the one that builds the list. Agents that only learn the
+  first waste turns hunting for a search endpoint they have already been given.
+</div>
+
+<p style="margin-top:26px">
+  <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
+</p>
+
+<%= CsuiteFinderWeb.Layout.footer() %>
+
+</div>
+</body>
+</html>

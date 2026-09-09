@@ -8,7 +8,7 @@ defmodule CsuiteFinderWeb.BillingController do
   require Logger
 
   alias CsuiteFinder.Billing
-  alias CsuiteFinder.Billing.{PayPal, Pricing}
+  alias CsuiteFinder.Billing.{PayPal, Plans, Pricing, Subscription, Subscriptions}
 
   action_fallback CsuiteFinderWeb.FallbackController
 
@@ -19,11 +19,21 @@ defmodule CsuiteFinderWeb.BillingController do
         json(conn, %{authenticated: false, terms: Pricing.terms()})
 
       account ->
+        balances = Billing.balances(account)
+
         json(conn, %{
           account_id: account.id,
           email: account.email,
-          balance_usd: Pricing.usd(account.balance_micro),
-          on_free_trial: not is_nil(account.trial_granted_at) and account.balance_micro > 0,
+          # `balance_usd` stays the headline number — everything spendable —
+          # because that is the field callers already read. The split is
+          # alongside it, so a customer can see which dollars have a deadline.
+          balance_usd: balances.available_usd,
+          purchased_usd: balances.purchased_usd,
+          granted_usd: balances.granted_usd,
+          granted_expires_at: balances.granted_expires_at,
+          on_free_trial:
+            not is_nil(account.trial_granted_at) and account.balance_micro == 0 and
+              balances.granted_usd > 0,
           status: account.status,
           prices_usd: Pricing.list_usd(),
           terms: Pricing.terms()
@@ -123,6 +133,124 @@ defmodule CsuiteFinderWeb.BillingController do
   def capture(conn, _params),
     do: conn |> put_status(:bad_request) |> json(%{error: "missing paypal_order_id"})
 
+  # ------------------------------------------------------ seat subscriptions
+
+  @doc "GET /csuitefinder/billing/subscription — the account's seat plan, if any."
+  def subscription(conn, _params) do
+    with {:ok, account} <- authed(conn) do
+      json(conn, %{
+        seat: seat_terms(),
+        subscription: subscription_view(Subscriptions.for_account(account))
+      })
+    end
+  end
+
+  @doc "POST /csuitefinder/billing/subscribe — start a monthly seat subscription."
+  def subscribe(conn, params) do
+    with {:ok, account} <- authed(conn),
+         {:ok, seats} <- seats(params["seats"]),
+         {:ok, subscription, approve_url} <-
+           Subscriptions.start(account, seats,
+             return_url: params["return_url"] || "",
+             cancel_url: params["cancel_url"] || ""
+           ) do
+      json(conn, %{
+        subscription: subscription_view(subscription),
+        approve_url: approve_url,
+        # Said here as well as on the page, because this is the response an
+        # integrator reads when they wire the flow up themselves.
+        notice:
+          "Nothing is charged until the payer approves. Each payment grants " <>
+            "$#{Plans.seat_usd()} of credit per seat, which expires at the end of the month."
+      })
+    else
+      {:error, :invalid_seats} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{
+          error: "invalid_seats",
+          message: "`seats` must be a whole number from 1 to #{Subscriptions.max_seats()}."
+        })
+
+      {:error, :paypal_not_configured} ->
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{
+          error: "paypal_not_configured",
+          message: "Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
+        })
+
+      {:error, {:paypal, _status, _body} = reason} ->
+        Logger.warning("paypal subscribe failed: #{inspect(reason)}")
+
+        conn
+        |> put_status(:bad_gateway)
+        |> json(%{
+          error: "subscribe_failed",
+          message: "The subscription could not be created. Nothing was charged."
+        })
+
+      other ->
+        other
+    end
+  end
+
+  @doc "POST /csuitefinder/billing/subscription/cancel"
+  def unsubscribe(conn, _params) do
+    with {:ok, account} <- authed(conn),
+         {:ok, subscription} <- Subscriptions.cancel(account) do
+      json(conn, %{
+        subscription: subscription_view(subscription),
+        notice:
+          "Cancelled. The month you have already paid for runs to its end; " <>
+            "credit you bought outright is not affected."
+      })
+    else
+      {:error, reason} when reason in [:no_subscription, :not_active] ->
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "no_active_subscription"})
+
+      other ->
+        other
+    end
+  end
+
+  defp seat_terms do
+    seat = Plans.seat()
+
+    %{
+      usd_per_month: seat.usd_per_month,
+      credit_usd_per_month: seat.credit_usd,
+      rolls_over: false,
+      max_seats: Subscriptions.max_seats()
+    }
+  end
+
+  defp subscription_view(nil), do: nil
+
+  defp subscription_view(%Subscription{} = s) do
+    %{
+      id: s.paypal_subscription_id,
+      status: s.status,
+      seats: s.seats,
+      credit_usd_per_month: Pricing.usd(s.grant_micro_per_period),
+      current_period_end: s.current_period_end
+    }
+  end
+
+  defp seats(nil), do: {:ok, 1}
+  defp seats(n) when is_integer(n), do: {:ok, n}
+
+  defp seats(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} -> {:ok, n}
+      _ -> {:error, :invalid_seats}
+    end
+  end
+
+  defp seats(_), do: {:error, :invalid_seats}
+
   @doc """
   POST /csuitefinder/billing/webhook
 
@@ -156,6 +284,38 @@ defmodule CsuiteFinderWeb.BillingController do
     case order_id_from(resource) do
       nil -> :ok
       order_id -> PayPal.capture_order(order_id)
+    end
+  end
+
+  # Each payment on a subscription grants that month's credit. This is the event
+  # that means money actually moved, which is why the grant hangs off it rather
+  # than off activation.
+  defp handle_event(%{"event_type" => "PAYMENT.SALE.COMPLETED", "resource" => resource}) do
+    case resource["billing_agreement_id"] do
+      id when is_binary(id) -> Subscriptions.record_payment(id, resource["id"])
+      _ -> :ok
+    end
+  end
+
+  # A subscription with no trial period is charged on activation, and PayPal
+  # does not always send the sale event for that first charge before this one.
+  # Granting here too is safe: a grant replaces rather than accumulates, so the
+  # customer ends up with exactly one month either way.
+  defp handle_event(%{"event_type" => "BILLING.SUBSCRIPTION.ACTIVATED", "resource" => resource}) do
+    case resource["id"] do
+      id when is_binary(id) ->
+        Subscriptions.record_payment(id, resource["id"], Subscriptions.next_billing(resource))
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp handle_event(%{"event_type" => "BILLING.SUBSCRIPTION." <> change, "resource" => resource})
+       when change in ~w(CANCELLED SUSPENDED EXPIRED) do
+    case resource["id"] do
+      id when is_binary(id) -> Subscriptions.set_status(id, change, resource)
+      _ -> :ok
     end
   end
 

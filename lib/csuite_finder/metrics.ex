@@ -349,7 +349,23 @@ defmodule CsuiteFinder.Metrics do
   @spec accounts_stats(DateTime.t()) :: map()
   def accounts_stats(since) do
     total = Repo.aggregate(Account, :count, :id)
-    outstanding = to_int(Repo.aggregate(Account, :sum, :balance_micro))
+    # What we still owe in lookups. Expired grants are excluded: nobody can
+    # spend them, so counting them would overstate the liability.
+    outstanding =
+      from(a in Account,
+        select:
+          sum(
+            a.balance_micro +
+              fragment(
+                "CASE WHEN ? IS NULL OR ? > NOW() THEN ? ELSE 0 END",
+                a.granted_expires_at,
+                a.granted_expires_at,
+                a.granted_micro
+              )
+          )
+      )
+      |> Repo.one()
+      |> to_int()
 
     active =
       from(e in UsageEvent,
@@ -361,7 +377,8 @@ defmodule CsuiteFinder.Metrics do
 
     on_trial =
       from(a in Account,
-        where: not is_nil(a.trial_granted_at) and a.balance_micro > 0,
+        where: not is_nil(a.trial_granted_at) and a.granted_micro > 0,
+        where: is_nil(a.granted_expires_at) or a.granted_expires_at > ^DateTime.utc_now(),
         where:
           a.id not in subquery(
             from(p in Payment, where: p.status == "credited", select: p.account_id)

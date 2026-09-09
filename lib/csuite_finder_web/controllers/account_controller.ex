@@ -15,7 +15,7 @@ defmodule CsuiteFinderWeb.AccountController do
 
   use CsuiteFinderWeb, :controller
 
-  alias CsuiteFinder.Billing.Pricing
+  alias CsuiteFinder.Billing.{Plans, Pricing}
 
   require EEx
 
@@ -34,6 +34,8 @@ defmodule CsuiteFinderWeb.AccountController do
   defp assigns do
     %{
       minimum_usd_label: delimit(Pricing.min_bundle_usd()),
+      seat_usd: Plans.seat_usd(),
+      seat_usd_label: delimit(Plans.seat_usd()),
       email_price:
         :erlang.float_to_binary(Pricing.price_usd("email.find"), [:compact, decimals: 4]),
       phone_price:

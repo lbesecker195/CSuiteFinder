@@ -1,0 +1,12 @@
+  /* Rules specific to this page. Anything shared with the rest of the
+     site lives in partials/base.css and is emitted before this. */
+  .bundle-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 14px; }
+  .bundle-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; }
+  .bundle-card .amt { font-size: 27px; font-weight: 700; letter-spacing: -.02em; display: block; }
+  .bundle-card .rate { font-size: 12.5px; color: var(--faint); margin-top: 8px; display: block; }
+
+  /* The endpoint reference is a four-column table and needs the room; its own
+     .table-scroll wrapper handles anything narrower. */
+  .endpoints table { min-width: 820px; }
+  .endpoints td:nth-child(4) { color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .endpoints td:nth-child(1) { white-space: nowrap; color: var(--muted); font-size: 13px; }

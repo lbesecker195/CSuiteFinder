@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<%= CsuiteFinderWeb.Analytics.tag() %>
+<title><%= @title %></title>
+<%= if @description do %><meta name="description" content="<%= @description %>">
+<% end %><%= if @robots do %><meta name="robots" content="<%= @robots %>">
+<% end %><%= if @refresh do %><meta http-equiv="refresh" content="<%= @refresh %>">
+<% end %><style>
+<%= CsuiteFinderWeb.Layout.base_css() %>
+<%= CsuiteFinderWeb.Nav.css() %>
+<%= @css %>
+</style>
+</head>
+<body>
+<div class="<%= @wrap_class %>">
+<%= if @nav, do: CsuiteFinderWeb.Nav.render(@nav) %>

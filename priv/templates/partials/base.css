@@ -1,0 +1,139 @@
+  /* --------------------------------------------------------------------
+     The site's one stylesheet. Every page includes it through
+     CsuiteFinderWeb.Layout, so a colour or a button changes in one place.
+     Page-specific rules go in that page's own `css:` block, not here.
+     -------------------------------------------------------------------- */
+  :root {
+    --bg: #fbfaf8;
+    --surface: #ffffff;
+    --border: #e4e0d9;
+    --text: #1c1a17;
+    --muted: #6b6560;
+    --faint: #98918a;
+    --accent: #b8541f;
+    --accent-soft: #fdf1e8;
+    --code-bg: #f5f2ee;
+    --ok: #2f6b45;
+    --good: #2f6b45;
+    --good-soft: #eaf3ed;
+    --bad: #a32b1c;
+    --bad-soft: #fbecea;
+    --bar: #d8d2c8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161513;
+      --surface: #1e1d1a;
+      --border: #33302b;
+      --text: #ece8e2;
+      --muted: #a09990;
+      --faint: #756e66;
+      --accent: #e8834a;
+      --accent-soft: #2a1d14;
+      --code-bg: #131210;
+      --ok: #7bbd93;
+      --good: #7bbd93;
+      --good-soft: #17251c;
+      --bad: #e8796a;
+      --bad-soft: #2a1613;
+      --bar: #3a362f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+  .wrap-narrow { max-width: 760px; margin: 0 auto; padding: 0 24px 80px; }
+  .wrap-wide { max-width: 1080px; margin: 0 auto; padding: 0 24px 72px; }
+  header { padding: 72px 0 40px; }
+  .logo {
+    font-weight: 700; letter-spacing: -0.02em; font-size: 15px;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 28px;
+  }
+  h1 {
+    font-size: clamp(32px, 6vw, 52px); line-height: 1.08;
+    letter-spacing: -0.03em; margin: 0 0 20px; font-weight: 700;
+  }
+  .lede { font-size: clamp(17px, 2.4vw, 20px); color: var(--muted); max-width: 62ch; margin: 0 0 32px; }
+  h2 { font-size: 17px; margin: 28px 0 8px; letter-spacing: -0.01em; }
+  h3 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--muted); font-weight: 600; margin: 64px 0 20px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  p { margin: 0 0 16px; }
+  a { color: var(--accent); }
+  code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.88em; background: var(--code-bg);
+    padding: 2px 6px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px; overflow-x: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px; line-height: 1.6; margin: 0 0 20px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  ul { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+
+  /* Headings here carry a visual role rather than a level, so section and card
+     headings name their look explicitly. That keeps the document outline
+     correct without restyling the sheet. */
+  .section-label { font-size: 13px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--muted); font-weight: 600; margin: 56px 0 18px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border); }
+  .card-title { font-size: 16.5px; text-transform: none; letter-spacing: -.01em;
+    color: var(--text); font-weight: 700; margin: 0 0 6px; padding: 0; border: none; }
+  .sub-label { font-size: 17px; text-transform: none; letter-spacing: -.01em;
+    color: var(--text); font-weight: 700; margin: 30px 0 10px; padding: 0; border: none; }
+
+  .step { display: flex; gap: 16px; align-items: baseline; margin-bottom: 8px; }
+  .step-n {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font-size: 13px; font-weight: 700;
+    position: relative; top: 4px;
+  }
+  .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 8px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card .big { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; display: block; }
+  .card .label { font-size: 13px; color: var(--muted); }
+
+  .table-scroll { overflow-x: auto; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 480px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+  td code { white-space: nowrap; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 0 0 20px;
+    font-size: 15px;
+  }
+  .note strong { color: var(--accent); }
+  .quiet { color: var(--muted); font-size: 14.5px; }
+
+  .btn { display: inline-block; padding: 13px 22px; border-radius: 9px; font-weight: 600;
+    text-decoration: none; font-size: 15.5px; border: 1px solid transparent; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-ghost { border-color: var(--border); color: var(--text); background: var(--surface); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 0 0 14px; }
+  .cta-note { font-size: 13.5px; color: var(--faint); }
+
+  footer {
+    margin-top: 72px; padding: 28px 0 56px;
+    border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
+  }

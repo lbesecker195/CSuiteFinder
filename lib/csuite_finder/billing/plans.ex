@@ -4,30 +4,28 @@ defmodule CsuiteFinder.Billing.Plans do
 
   Two ways to buy the same data, aimed at people who want different things:
 
-    * **Credit** (developers): pay per answer, $0.0025 an address and $0.025 a
-      number, and think about cost. Suits a script that runs a thousand lookups
-      and wants the bill to reflect that.
+    * **Credit** (developers): buy a balance, spend it per answer, $0.0025 an
+      address and $0.025 a number. Bought credit never expires.
 
-    * **A seat** (sales, founders): $999 a month per person, lookups included,
-      and never think about cost again. Suits someone who wants to work rather
-      than watch a meter.
+    * **A seat** (sales, founders): $999 a month per person, which puts $999 of
+      credit in the account every month. Suits someone who wants the app and a
+      predictable invoice rather than a meter to watch.
 
-  The seat carries a fair-use ceiling rather than being literally unlimited. A
-  person cannot research more than a few hundred prospects a month; a script
-  behind one seat could run a million lookups and turn a $999 subscription into
-  a $2,500 loss. The ceiling sits far above any human's use and well below that
-  — stated plainly, because an "unlimited" plan with a secret limit is worse
-  than a stated one.
+  A seat's dollar is the same dollar credit buys — the price of a lookup does
+  not change with how you paid for it. What differs is the lifetime: **a seat's
+  monthly credit does not roll over.** Each renewal replaces the allowance
+  rather than stacking on it, so an unused month is spent capacity, not banked
+  capacity. That is what makes the subscription a subscription; if it
+  accumulated, a customer could pay for a year, use nothing, and then run
+  $12,000 of lookups in a week against one month's revenue.
+
+  Anything bought outright sits in a separate pool and is untouched by that —
+  see `CsuiteFinder.Billing` for how the two are spent.
   """
 
   alias CsuiteFinder.Billing.Pricing
 
   @seat_usd_per_month 999
-
-  # Lookups a seat includes each month. Roughly twenty a working day sustained,
-  # which no salesperson reaches — it is there to bound automated use, not to
-  # ration real work.
-  @fair_use_lookups 5_000
 
   @doc "Price of one seat, per month, in USD."
   @spec seat_usd() :: pos_integer()
@@ -37,38 +35,63 @@ defmodule CsuiteFinder.Billing.Plans do
   @spec seat_micro() :: pos_integer()
   def seat_micro, do: Pricing.micro(@seat_usd_per_month)
 
-  @doc "Lookups included per seat per month."
-  @spec fair_use_lookups() :: pos_integer()
-  def fair_use_lookups, do: @fair_use_lookups
+  @doc """
+  Credit a seat grants each month, in micro-USD.
+
+  Equal to the price. A seat is not a discount and not a markup — it is the
+  same credit on a subscription, with an app around it.
+  """
+  @spec seat_grant_micro() :: pos_integer()
+  def seat_grant_micro, do: seat_micro()
 
   @doc """
-  What a seat's fair use costs us at list price, in micro-USD.
+  When a seat's grant, made now, lapses.
 
-  Worth keeping visible internally: a seat is sold on the app around the data,
-  not on the data, and the two numbers are nowhere near each other. If a
-  customer only wants the feed, credit is cheaper for them and we should say so
-  — a seat sold to someone who wanted an API churns in a month.
+  One month, matching the billing period: the next payment replaces it, and a
+  cancelled subscription stops granting rather than needing to be clawed back.
   """
-  @spec seat_allowance_micro() :: pos_integer()
-  def seat_allowance_micro, do: @fair_use_lookups * Pricing.charge_for("phone.find")
+  @spec seat_grant_expires_at(DateTime.t()) :: DateTime.t()
+  def seat_grant_expires_at(from \\ DateTime.utc_now()) do
+    DateTime.shift(from, month: 1)
+  end
+
+  @doc "What one seat's monthly credit buys, in lookups, at list price."
+  @spec seat_lookups() :: map()
+  def seat_lookups do
+    %{
+      emails: div(seat_grant_micro(), Pricing.charge_for("email.find")),
+      phones: div(seat_grant_micro(), Pricing.charge_for("phone.find"))
+    }
+  end
 
   @doc """
   What a seat includes, for the pricing page.
 
-  Everything here is derived from the same constants the billing uses, so the
-  page cannot advertise an allowance the code does not honour.
+  Derived from the same constants the billing uses, so the page cannot
+  advertise an allowance the code does not honour.
   """
   @spec seat() :: map()
   def seat do
+    lookups = seat_lookups()
+
     %{
       usd_per_month: @seat_usd_per_month,
-      fair_use_lookups: @fair_use_lookups,
+      credit_usd: @seat_usd_per_month,
+      lookups: lookups,
       includes: [
+        "$#{delimit(@seat_usd_per_month)} of credit every month — around #{delimit(lookups.emails)} work emails, or #{delimit(lookups.phones)} phone numbers",
         "Every lookup: work emails, phone numbers, deliverability, enrichment and company data",
-        "Fair use of #{delimit(@fair_use_lookups)} lookups a month — far more than a person researches",
         "The browser app, no API key or terminal required",
         "Your team's own lookups, kept and searchable",
         "Email support"
+      ],
+      # Said plainly rather than in a footnote. A customer who discovers this at
+      # renewal feels cheated; one who is told up front is buying a month of
+      # capacity and knows it.
+      caveats: [
+        "Unused credit does not roll over — each month starts at $#{delimit(@seat_usd_per_month)}.",
+        "Credit you buy outright never expires, and a seat does not touch it.",
+        "Cancel any time; the month you have paid for runs to its end."
       ]
     }
   end
@@ -79,9 +102,25 @@ defmodule CsuiteFinder.Billing.Plans do
     [
       %{
         question: "How you pay",
-        seat: "$#{@seat_usd_per_month} a month, per person",
+        seat: "$#{delimit(@seat_usd_per_month)} a month, per person",
+        credit: "Up front, from $#{delimit(Pricing.min_bundle_usd())}"
+      },
+      %{
+        question: "What that buys",
+        seat: "$#{delimit(@seat_usd_per_month)} of credit each month",
+        credit: "A dollar of credit per dollar paid"
+      },
+      %{
+        question: "When it expires",
+        seat: "At the end of the month — it does not roll over",
+        credit: "Never"
+      },
+      %{
+        question: "What a lookup costs",
+        seat:
+          "The same: $#{fmt(Pricing.price_usd("email.find"))} an email, $#{fmt(Pricing.price_usd("phone.find"))} a phone",
         credit:
-          "Per answer: $#{fmt(Pricing.price_usd("email.find"))} an email, $#{fmt(Pricing.price_usd("phone.find"))} a phone"
+          "$#{fmt(Pricing.price_usd("email.find"))} an email, $#{fmt(Pricing.price_usd("phone.find"))} a phone"
       },
       %{
         question: "How you use it",
@@ -90,13 +129,8 @@ defmodule CsuiteFinder.Billing.Plans do
       },
       %{
         question: "Best for",
-        seat: "Sales teams and founders doing outreach",
+        seat: "Sales teams and founders doing outreach every month",
         credit: "Engineers building lookups into a product"
-      },
-      %{
-        question: "What happens at volume",
-        seat: "Included, up to fair use",
-        credit: "You pay for exactly what you use, with no floor"
       }
     ]
   end

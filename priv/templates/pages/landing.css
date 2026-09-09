@@ -1,0 +1,35 @@
+  /* Rules specific to this page. Anything shared with the rest of the
+     site lives in partials/base.css and is emitted before this. */
+
+  /* The two doors. This page's only job is to send a visitor down one of two
+     paths, so the choice gets the weight — full-height cards, priced, clickable
+     end to end rather than a link buried in a paragraph. */
+  .doors { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
+  .door {
+    display: flex; flex-direction: column; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 26px;
+    text-decoration: none; color: var(--text); transition: .14s;
+  }
+  .door:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .door .tag {
+    display: inline-block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .07em; font-weight: 700; color: var(--accent); margin-bottom: 10px;
+  }
+  .door-title {
+    font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 12px;
+    text-transform: none; color: var(--text); padding: 0; border: none;
+  }
+  .door .price { font-size: 30px; font-weight: 700; letter-spacing: -.03em; display: block; margin-bottom: 14px; }
+  .door .price .per { font-size: 14px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-left: 7px; }
+  .door p { color: var(--muted); font-size: 14.5px; flex: 1; }
+  .door .go { color: var(--accent); font-weight: 600; font-size: 14.5px; }
+
+  .does { display: grid; gap: 0; margin-bottom: 18px; }
+  .does .item {
+    display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: 18px;
+    padding: 15px 0; border-bottom: 1px solid var(--border); align-items: baseline;
+  }
+  .does .item:last-child { border-bottom: none; }
+  .does .item strong { font-size: 15.5px; }
+  .does .item span { color: var(--muted); font-size: 14.5px; }
+  @media (max-width: 620px) { .does .item { grid-template-columns: 1fr; gap: 4px; } }

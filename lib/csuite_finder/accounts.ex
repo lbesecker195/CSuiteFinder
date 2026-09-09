@@ -36,6 +36,9 @@ defmodule CsuiteFinder.Accounts do
 
   `trial_granted_at` is the guard against re-registering the same address for
   another free grant — the trial is per account, once.
+
+  The trial is granted, not sold, so it expires (see `Pricing.trial_months/0`).
+  Anything the account buys later lands in the permanent pool and outlives it.
   """
   @spec register(map()) ::
           {:ok, %{account: Account.t(), api_key: String.t(), credit_granted_micro: integer()}}
@@ -55,10 +58,11 @@ defmodule CsuiteFinder.Accounts do
   end
 
   defp grant_trial(%Account{trial_granted_at: nil} = account, micro) do
-    {:ok, account} = Billing.credit(account, micro)
+    now = DateTime.utc_now()
+    {:ok, account} = Billing.grant(account, micro, Pricing.trial_expires_at(now))
 
     account
-    |> Account.changeset(%{trial_granted_at: DateTime.utc_now()})
+    |> Account.changeset(%{trial_granted_at: now})
     |> Repo.update()
   end
 

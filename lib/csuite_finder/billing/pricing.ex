@@ -52,8 +52,11 @@ defmodule CsuiteFinder.Billing.Pricing do
   # no bonus, nothing to reconcile later.
   @bundles [1_000, 2_000, 3_000]
 
-  # Credit granted to a new account, with no card and no commitment.
+  # Credit granted to a new account, with no card and no commitment. It is a
+  # grant, so it expires: a trial is an invitation to try the thing this month,
+  # not a dollar someone can hold indefinitely and spend in two years.
   @trial_micro 1_000_000
+  @trial_months 1
 
   @doc "Charge for an endpoint, in micro-USD."
   @spec charge_for(String.t()) :: non_neg_integer()
@@ -78,6 +81,16 @@ defmodule CsuiteFinder.Billing.Pricing do
   @doc "The free trial grant, in USD."
   @spec trial_usd() :: float()
   def trial_usd, do: usd(@trial_micro)
+
+  @doc "How long the free trial lasts, in months."
+  @spec trial_months() :: pos_integer()
+  def trial_months, do: @trial_months
+
+  @doc "When a trial granted now would lapse."
+  @spec trial_expires_at(DateTime.t()) :: DateTime.t()
+  def trial_expires_at(from \\ DateTime.utc_now()) do
+    DateTime.shift(from, month: @trial_months)
+  end
 
   @doc "Smallest purchase, in USD."
   @spec min_bundle_usd() :: pos_integer()
@@ -150,13 +163,15 @@ defmodule CsuiteFinder.Billing.Pricing do
       prices_usd: list_usd(),
       minimum_purchase_usd: @min_bundle_usd,
       free_trial_usd: trial_usd(),
+      free_trial_months: @trial_months,
       purchase_amounts_usd: @bundles,
       billing_rules: [
         "Charged per answer: $#{:erlang.float_to_binary(usd(@prices["email.find"]), [:compact, decimals: 4])} an email address, $#{:erlang.float_to_binary(usd(@prices["phone.find"]), [:compact, decimals: 4])} a phone number.",
         "Everything else is included, but still needs a positive balance.",
         "A lookup that finds nothing is free.",
         "A cached answer costs the same as a fresh one.",
-        "Inferred (unverified) enrichment results are never billed."
+        "Inferred (unverified) enrichment results are never billed.",
+        "Credit you buy never expires. Credit you are given — the trial, or a seat's monthly allowance — expires at the end of its term."
       ]
     }
   end
