@@ -30,6 +30,14 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  defp delimited(n) do
+    n
+    |> Integer.to_string()
+    |> String.reverse()
+    |> String.replace(~r/(\d{3})(?=\d)/, "\\1,")
+    |> String.reverse()
+  end
+
   describe "GET /account" do
     test "renders the account page", %{conn: conn} do
       html = conn |> get(~p"/account") |> html_response(200)
@@ -42,12 +50,14 @@ defmodule CsuiteFinderWeb.PageTest do
     test "prices the bundles from the live constants", %{conn: conn} do
       html = conn |> get(~p"/account") |> html_response(200)
 
-      # $1,000 minimum at $0.0025 a token.
-      assert html =~ "$1,000"
-      assert html =~ "400,000 tokens"
-      # and the multiples of it we offer
-      assert html =~ "$5,000"
-      assert html =~ "$25,000"
+      # Every bundle Pricing sells, with the token count it will actually credit.
+      for b <- Pricing.bundles() do
+        assert html =~ "$" <> delimited(b.usd)
+        assert html =~ delimited(b.tokens) <> " tokens"
+      end
+
+      assert html =~ "1,000,000 tokens"
+      assert html =~ "better rate"
       assert html =~ to_string(Pricing.trial_tokens())
     end
 

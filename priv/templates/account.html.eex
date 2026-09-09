@@ -118,6 +118,21 @@
       <button id="signin">Continue</button>
     </div>
   </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 4px;font-size:17px">Lost your key?</h3>
+    <p class="muted" style="margin-bottom:16px">
+      We only ever store a hash of it, so we can't send the old one back — but your account and
+      its tokens are safe. We'll email you a link that issues a replacement.
+    </p>
+    <div class="row">
+      <div>
+        <label for="recoveremail">Your registered email</label>
+        <input type="email" id="recoveremail" placeholder="you@company.com" autocomplete="email">
+      </div>
+      <button id="recover" class="ghost">Email me a link</button>
+    </div>
+  </div>
 </section>
 
 <!-- ── the key, shown once ─────────────────────────────────────────────── -->
@@ -130,6 +145,7 @@
   <div class="keybox mono" id="newkeyvalue"></div>
   <div class="row">
     <button id="copykey">Copy key</button>
+    <button id="downloadkey" class="ghost">Download as file</button>
     <button id="gotkey" class="ghost">I've saved it — continue</button>
   </div>
 </section>
@@ -150,15 +166,17 @@
 
   <h2>Buy tokens</h2>
   <p class="muted" style="margin-top:-6px">
-    Tokens cost $<%= @token_price_label %> each and never expire.
-    Bundles start at $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then straight back here.
+    Tokens never expire, and larger bundles carry a better rate. Bundles start at
+    $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then straight back here.
   </p>
   <div class="bundles" id="bundles">
     <%= for b <- @bundles do %>
     <button class="bundle" data-usd="<%= b.usd %>">
       <span class="price">$<%= b.usd_label %></span>
       <span class="tokens"><%= b.tokens_label %> tokens</span>
-      <span class="finds"><%= b.finds_label %> email lookups</span>
+      <span class="finds">
+        $<%= b.rate_label %> per token<%= if b.best_value, do: " · better rate" %>
+      </span>
     </button>
     <% end %>
   </div>
@@ -173,12 +191,21 @@
     </div>
   </div>
 
-  <h2>Your key</h2>
+  <h2>Your keys</h2>
   <div class="card">
-    <div class="keybox mono" id="maskedkey"></div>
-    <p class="muted" style="margin:0">
-      Stored in this browser only — never sent anywhere but this API, and cleared when you sign out.
-      Send it as <code>Authorization: Bearer &lt;key&gt;</code> from your own code.
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Key</th><th>Label</th><th>Last used</th><th></th></tr></thead>
+        <tbody id="keys"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button id="newkeybtn" class="ghost">Create another key</button>
+    </div>
+    <p class="muted" style="margin:14px 0 0">
+      Keep a spare somewhere safe and losing one stops being a problem. The key you are signed in
+      with is stored in this browser only, never sent anywhere but this API, and cleared when you
+      sign out. Send it as <code>Authorization: Bearer &lt;key&gt;</code> from your own code.
     </p>
   </div>
 </section>
@@ -243,7 +270,6 @@
       ? commas(finds) + " more email lookups. Everything else is included."
       : "Out of tokens — buy a bundle below to carry on.";
     $("whoami").textContent = b.email || "";
-    $("maskedkey").textContent = key.slice(0, 14) + "…" + key.slice(-4);
   }
 
   function renderUsage(u) {
@@ -268,6 +294,7 @@
       show("signedin");
       renderBalance(res.body);
       api("/billing/usage?days=30").then(function (u) { if (u.ok) renderUsage(u.body); });
+      loadKeys();
     });
   }
 
@@ -316,8 +343,99 @@
     }, function () { say("Copy failed — select the key and copy it manually.", "err"); });
   });
 
+  $("downloadkey").addEventListener("click", function () {
+    var text = "CSuiteFinder API key\n" + $("newkeyvalue").textContent + "\n\n" +
+               "Send it as: Authorization: Bearer <key>\n";
+    var url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+    var a = document.createElement("a");
+    a.href = url; a.download = "csuitefinder-api-key.txt";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
   $("gotkey").addEventListener("click", function () { say(""); refresh(); });
   $("signout").addEventListener("click", function () { signOut("Signed out."); });
+
+  // ---- keys ---------------------------------------------------------------
+  function loadKeys() {
+    api("/keys").then(function (res) {
+      var body = $("keys");
+      if (!res.ok) { body.innerHTML = '<tr><td colspan="4" class="muted">Could not load keys.</td></tr>'; return; }
+      body.innerHTML = (res.body.keys || []).map(function (k) {
+        var used = k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : "never";
+        var state = k.revoked
+          ? '<span class="muted">revoked</span>'
+          : (k.current
+              ? '<span class="muted">in use here</span>'
+              : '<button class="ghost revoke" data-id="' + k.id + '">Revoke</button>');
+        return "<tr><td><code>" + k.prefix + "…</code></td>" +
+               "<td>" + (k.label || "") + "</td>" +
+               '<td class="muted">' + used + "</td>" +
+               '<td class="num">' + state + "</td></tr>";
+      }).join("") || '<tr><td colspan="4" class="muted">No keys.</td></tr>';
+
+      body.querySelectorAll(".revoke").forEach(function (b) {
+        b.addEventListener("click", function () {
+          if (!window.confirm("Revoke this key? Anything using it stops working immediately.")) return;
+          b.disabled = true;
+          api("/keys/" + b.getAttribute("data-id"), { method: "DELETE" }).then(function (r) {
+            say(r.ok ? "Key revoked." : "Could not revoke that key.", r.ok ? "ok" : "err");
+            loadKeys();
+          });
+        });
+      });
+    });
+  }
+
+  $("newkeybtn").addEventListener("click", function () {
+    var btn = this; btn.disabled = true;
+    api("/keys", { method: "POST", body: {} }).then(function (res) {
+      btn.disabled = false;
+      if (!res.ok) { say("Could not create a key.", "err"); return; }
+      // Show it on the same one-time screen the first key uses, so the "save
+      // this now" warning is never skipped for a second key.
+      $("newkeyvalue").textContent = res.body.api_key;
+      show("newkey");
+      say("New key created. The one you are signed in with still works.", "ok");
+    });
+  });
+
+  // ---- recovery -----------------------------------------------------------
+  $("recover").addEventListener("click", function () {
+    var email = $("recoveremail").value.trim();
+    if (!email) { say("Enter the email you registered with.", "err"); return; }
+    var btn = this; btn.disabled = true; say("Sending…", "info");
+
+    fetch(API + "/keys/recover", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, body: b }; });
+    }).then(function (res) {
+      btn.disabled = false;
+      say(res.body.message || (res.ok ? "Check your email." : "Could not send that link."),
+          res.ok ? "ok" : "err");
+    });
+  });
+
+  function handleRecovery(token) {
+    say("Issuing a new key…", "info");
+    fetch(API + "/keys/issue", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: token })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (b) { return { ok: r.ok, body: b }; });
+    }).then(function (res) {
+      window.history.replaceState({}, "", window.location.pathname);
+      if (!res.ok) { show("signedout"); say(res.body.message || "That link is not valid.", "err"); return; }
+      key = res.body.api_key; save(key);
+      $("newkeyvalue").textContent = key;
+      show("newkey");
+      say("New key issued for " + res.body.email + ". Your balance is untouched.", "ok");
+    });
+  }
 
   // ---- buy ----------------------------------------------------------------
   document.querySelectorAll(".bundle").forEach(function (btn) {
@@ -379,9 +497,14 @@
 
   // ---- boot ---------------------------------------------------------------
   key = load();
-  var returning = handleReturn();
-  if (key) { if (!returning) refresh(); }
-  else { show("signedout"); }
+  var recoverToken = new URLSearchParams(window.location.search).get("recover");
+  if (recoverToken) {
+    handleRecovery(recoverToken);
+  } else {
+    var returning = handleReturn();
+    if (key) { if (!returning) refresh(); }
+    else { show("signedout"); }
+  }
 })();
 </script>
 </body>

@@ -32,26 +32,24 @@ defmodule CsuiteFinderWeb.AccountController do
   end
 
   defp assigns do
-    minimum = Pricing.min_bundle_usd()
-    per_find = Pricing.charge_for("email.find")
-
-    # Offered bundles. The first is the minimum; the rest are round multiples
-    # rather than invented discount tiers — the token price is flat, and a fake
-    # "save 20%" on a flat rate would be a lie.
+    # Pricing owns the bundles. Recomputing them here is how a page and an
+    # invoice drift apart — this would advertise one token count while the
+    # capture credited another.
     bundles =
-      for usd <- [minimum, minimum * 5, minimum * 25] do
-        tokens = Pricing.tokens_for_usd(usd)
-
+      for b <- Pricing.bundles() do
         %{
-          usd: usd,
-          usd_label: delimit(usd),
-          tokens_label: delimit(tokens),
-          finds_label: delimit(div(tokens, max(per_find, 1)))
+          usd: b.usd,
+          usd_label: delimit(b.usd),
+          tokens_label: delimit(b.tokens),
+          finds_label: delimit(b.finds),
+          rate_label:
+            :erlang.float_to_binary(b.micro_per_token / 1_000_000, [:compact, decimals: 4]),
+          best_value: b.micro_per_token < Pricing.micro_per_token()
         }
       end
 
     %{
-      minimum_usd_label: delimit(minimum),
+      minimum_usd_label: delimit(Pricing.min_bundle_usd()),
       token_price_label:
         :erlang.float_to_binary(Pricing.token_price_usd(), [:compact, decimals: 4]),
       trial_tokens: Pricing.trial_tokens(),

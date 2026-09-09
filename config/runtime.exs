@@ -191,3 +191,20 @@ config :csuite_finder, CsuiteFinder.Billing.PayPal,
   client_id: System.get_env("PAYPAL_CLIENT_ID"),
   client_secret: System.get_env("PAYPAL_CLIENT_SECRET"),
   webhook_id: System.get_env("PAYPAL_WEBHOOK_ID")
+
+# --- Email (optional) -----------------------------------------------------
+# Only used to send an API-key recovery link. With SMTP_HOST unset the mailer
+# stays a local sink and the recovery endpoint says so plainly.
+if System.get_env("SMTP_HOST") do
+  config :csuite_finder, CsuiteFinder.Mailer,
+    adapter: Swoosh.Adapters.SMTP,
+    relay: System.get_env("SMTP_HOST"),
+    port: String.to_integer(System.get_env("SMTP_PORT") || "587"),
+    username: System.get_env("SMTP_USERNAME"),
+    password: System.get_env("SMTP_PASSWORD"),
+    ssl: System.get_env("SMTP_SSL") in ~w(true 1),
+    tls: :always,
+    auth: :always,
+    from_address: System.get_env("MAIL_FROM") || "no-reply@csuitefinder.com",
+    from_name: System.get_env("MAIL_FROM_NAME") || "CSuiteFinder"
+end

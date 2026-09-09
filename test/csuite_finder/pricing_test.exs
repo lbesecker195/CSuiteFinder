@@ -8,7 +8,7 @@ defmodule CsuiteFinder.PricingTest do
     assert Pricing.micro_per_token() == 2_500
   end
 
-  test "a dollar buys 400 tokens" do
+  test "a dollar is worth 400 tokens at list price" do
     assert Pricing.tokens_for_usd(1) == 400
     assert Pricing.usd_for_tokens(400) == 1.0
   end
@@ -18,8 +18,38 @@ defmodule CsuiteFinder.PricingTest do
     assert {:ok, 400_000} = Pricing.validate_bundle(1_000)
   end
 
-  test "bundles above the minimum are accepted" do
-    assert {:ok, 1_000_000} = Pricing.validate_bundle(2_500)
+  describe "volume tiers" do
+    test "the offered bundles are $1k/400k, $2k/1M and $3k/1.5M" do
+      assert [
+               %{usd: 1_000, tokens: 400_000},
+               %{usd: 2_000, tokens: 1_000_000},
+               %{usd: 3_000, tokens: 1_500_000}
+             ] = Enum.map(Pricing.bundles(), &Map.take(&1, [:usd, :tokens]))
+    end
+
+    test "$2,000 and above is priced at $0.002 a token" do
+      assert Pricing.tokens_for_purchase(2_000) == 1_000_000
+      assert Pricing.tokens_for_purchase(3_000) == 1_500_000
+      assert Pricing.tokens_for_purchase(5_000) == 2_500_000
+    end
+
+    test "below $2,000 stays at the $0.0025 list rate" do
+      assert Pricing.tokens_for_purchase(1_000) == 400_000
+      assert Pricing.tokens_for_purchase(1_500) == 600_000
+    end
+
+    test "more money never buys fewer tokens" do
+      amounts = [1_000, 1_500, 1_999, 2_000, 2_500, 3_000, 10_000]
+      tokens = Enum.map(amounts, &Pricing.tokens_for_purchase/1)
+      assert tokens == Enum.sort(tokens)
+    end
+
+    test "a purchase is credited at the tier, not the list rate" do
+      # The bug this guards: crediting $2,000 through the flat list rate would
+      # hand over 800,000 tokens instead of the 1,000,000 that was quoted.
+      assert Pricing.tokens_for_purchase(2_000) > Pricing.tokens_for_usd(2_000)
+      assert {:ok, 1_000_000} = Pricing.validate_bundle(2_000)
+    end
   end
 
   test "a purchase under the minimum is refused with the terms" do

@@ -124,7 +124,9 @@ defmodule CsuiteFinder.Billing.PayPal do
   defp credit_once(payment, capture_id, amount_micro, response) do
     # Tokens are derived from what PayPal actually captured, never from what the
     # client asked for — a tampered amount buys exactly the tokens it paid for.
-    tokens = Pricing.tokens_for_usd(amount_micro / 1_000_000)
+    # Priced through the volume tiers, so a buyer above the first tier is
+    # credited what they were quoted rather than a flat-rate undercount.
+    tokens = Pricing.tokens_for_purchase(amount_micro / 1_000_000)
 
     Repo.transaction(fn ->
       account = Repo.get!(Account, payment.account_id)

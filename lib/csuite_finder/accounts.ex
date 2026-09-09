@@ -124,5 +124,116 @@ defmodule CsuiteFinder.Accounts do
     key |> ApiKey.changeset(%{revoked_at: DateTime.utc_now()}) |> Repo.update()
   end
 
+  # ---------------------------------------------------------- key management
+
+  @doc "Every key ever issued for an account, newest first."
+  @spec list_api_keys(Account.t()) :: [ApiKey.t()]
+  def list_api_keys(%Account{id: id}) do
+    Repo.all(from k in ApiKey, where: k.account_id == ^id, order_by: [desc: k.id])
+  end
+
+  @doc "One of this account's keys, or nil. Scoped so an id cannot reach another account's key."
+  @spec get_api_key(Account.t(), integer() | String.t()) :: ApiKey.t() | nil
+  def get_api_key(%Account{id: account_id}, id) do
+    case Integer.parse(to_string(id)) do
+      {key_id, _} ->
+        Repo.one(from k in ApiKey, where: k.id == ^key_id and k.account_id == ^account_id)
+
+      :error ->
+        nil
+    end
+  end
+
+  # ------------------------------------------------------------- recovery
+
+  # A recovery link is valid for half an hour: long enough to walk to another
+  # machine, short enough that a forwarded email goes stale.
+  @recovery_max_age 1_800
+  @recovery_salt "api-key-recovery"
+
+  @doc "How long a recovery link stays valid, in minutes."
+  @spec recovery_valid_minutes() :: pos_integer()
+  def recovery_valid_minutes, do: div(@recovery_max_age, 60)
+
+  @doc """
+  Email a link that will mint a replacement key.
+
+  `link_fun` receives the signed token and returns the URL to put in the mail.
+
+  Returns `{:ok, :sent}` whether or not the address is registered. Answering
+  differently would turn this endpoint into a way to test which emails have
+  accounts, and the caller has no legitimate use for the distinction.
+  """
+  @spec request_key_recovery(String.t(), (String.t() -> String.t())) ::
+          {:ok, :sent} | {:error, :mail_not_configured}
+  def request_key_recovery(email, link_fun) when is_binary(email) do
+    if CsuiteFinder.Mailer.configured?() do
+      case Repo.get_by(Account, email: String.downcase(String.trim(email))) do
+        %Account{status: "active"} = account -> deliver_recovery(account, link_fun)
+        _ -> :ok
+      end
+
+      {:ok, :sent}
+    else
+      {:error, :mail_not_configured}
+    end
+  end
+
+  defp deliver_recovery(account, link_fun) do
+    stamp = DateTime.utc_now()
+
+    {:ok, account} =
+      account |> Account.changeset(%{key_recovery_at: stamp}) |> Repo.update()
+
+    token =
+      Phoenix.Token.sign(
+        CsuiteFinderWeb.Endpoint,
+        @recovery_salt,
+        {account.id, DateTime.to_unix(stamp, :microsecond)}
+      )
+
+    account
+    |> CsuiteFinder.Mail.KeyRecovery.build(link_fun.(token), recovery_valid_minutes())
+    |> CsuiteFinder.Mailer.deliver()
+  end
+
+  @doc """
+  Redeem a recovery token for a brand-new key.
+
+  Single-use: the token carries the timestamp stamped on the account when the
+  link was sent, and redeeming clears it. A replay — or any older outstanding
+  link — then fails to match, which is what a bare signed token cannot do on
+  its own.
+  """
+  @spec issue_key_from_recovery(String.t()) ::
+          {:ok, Account.t(), String.t()} | {:error, :invalid | :expired}
+  def issue_key_from_recovery(token) when is_binary(token) do
+    case Phoenix.Token.verify(CsuiteFinderWeb.Endpoint, @recovery_salt, token,
+           max_age: @recovery_max_age
+         ) do
+      {:ok, {account_id, stamp_micro}} ->
+        redeem(account_id, stamp_micro)
+
+      {:error, :expired} ->
+        {:error, :expired}
+
+      {:error, _} ->
+        {:error, :invalid}
+    end
+  end
+
+  def issue_key_from_recovery(_), do: {:error, :invalid}
+
+  defp redeem(account_id, stamp_micro) do
+    with %Account{key_recovery_at: %DateTime{} = stamp} = account <- Repo.get(Account, account_id),
+         true <- DateTime.to_unix(stamp, :microsecond) == stamp_micro do
+      {:ok, account} = account |> Account.changeset(%{key_recovery_at: nil}) |> Repo.update()
+      {:ok, plaintext, _key} = create_api_key(account, "recovered #{Date.utc_today()}")
+      {:ok, account, plaintext}
+    else
+      _ -> {:error, :invalid}
+    end
+  end
+
   defp hash(value), do: :crypto.hash(:sha256, value) |> Base.encode16(case: :lower)
 end

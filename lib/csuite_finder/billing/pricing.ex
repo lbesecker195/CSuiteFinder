@@ -15,11 +15,24 @@ defmodule CsuiteFinder.Billing.Pricing do
       the lookups where we spend $0.02 and find nothing.
   """
 
-  # Micro-USD per token: $0.0025.
+  # Micro-USD per token at list price: $0.0025.
   @micro_per_token 2_500
 
   # The smallest bundle we sell, in USD.
   @min_bundle_usd 1_000
+
+  # Volume tiers, richest first. A purchase is priced at the best tier its
+  # amount reaches, so $2,000 buys 1,000,000 tokens rather than the 800,000 a
+  # flat rate would give. Ordering matters: `tokens_for_purchase/1` takes the
+  # first tier whose floor the amount clears.
+  @tiers [
+    %{min_usd: 3_000, micro_per_token: 2_000},
+    %{min_usd: 2_000, micro_per_token: 2_000},
+    %{min_usd: @min_bundle_usd, micro_per_token: @micro_per_token}
+  ]
+
+  # The bundles offered on the account page.
+  @bundles [1_000, 2_000, 3_000]
 
   # Tokens granted to a new account, with no card and no commitment: $1.00.
   @trial_tokens 400
@@ -62,9 +75,43 @@ defmodule CsuiteFinder.Billing.Pricing do
   @spec charge_for(String.t()) :: non_neg_integer()
   def charge_for(endpoint), do: Map.get(@prices, endpoint, 0)
 
-  @doc "How many tokens `usd` buys."
+  @doc """
+  How many tokens `usd` buys, at the best volume tier the amount reaches.
+
+  This — not the list rate — is what a purchase must be credited at. Deriving
+  the credit from a flat rate would silently under-pay every customer who buys
+  above the first tier.
+  """
+  @spec tokens_for_purchase(number()) :: non_neg_integer()
+  def tokens_for_purchase(usd) do
+    tier = Enum.find(@tiers, List.last(@tiers), &(usd >= &1.min_usd))
+    trunc(usd * 1_000_000 / tier.micro_per_token)
+  end
+
+  @doc """
+  How many tokens `usd` is worth at the LIST rate.
+
+  Used to value a balance, never to price a purchase — see `tokens_for_purchase/1`.
+  """
   @spec tokens_for_usd(number()) :: non_neg_integer()
   def tokens_for_usd(usd), do: trunc(usd * 1_000_000 / @micro_per_token)
+
+  @doc "The bundles offered for sale, cheapest first."
+  @spec bundles() :: [map()]
+  def bundles do
+    for usd <- @bundles do
+      tokens = tokens_for_purchase(usd)
+
+      %{
+        usd: usd,
+        tokens: tokens,
+        # Effective per-token price at this size, so the saving is stated as a
+        # fact rather than as a marketing percentage.
+        micro_per_token: round(usd * 1_000_000 / tokens),
+        finds: div(tokens, max(charge_for("email.find"), 1))
+      }
+    end
+  end
 
   @doc "What `tokens` are worth, in USD."
   @spec usd_for_tokens(integer()) :: float()
@@ -80,7 +127,7 @@ defmodule CsuiteFinder.Billing.Pricing do
           {:ok, integer()} | {:error, :below_minimum, map()}
   def validate_bundle(usd) when is_number(usd) do
     if usd >= @min_bundle_usd do
-      {:ok, tokens_for_usd(usd)}
+      {:ok, tokens_for_purchase(usd)}
     else
       {:error, :below_minimum,
        %{minimum_usd: @min_bundle_usd, requested_usd: usd, tokens_per_usd: tokens_for_usd(1)}}
@@ -102,7 +149,8 @@ defmodule CsuiteFinder.Billing.Pricing do
     %{
       token_price_usd: token_price_usd(),
       minimum_bundle_usd: @min_bundle_usd,
-      tokens_per_minimum_bundle: tokens_for_usd(@min_bundle_usd),
+      tokens_per_minimum_bundle: tokens_for_purchase(@min_bundle_usd),
+      bundles: bundles(),
       free_trial_tokens: @trial_tokens,
       free_trial_usd: usd_for_tokens(@trial_tokens),
       prices_in_tokens: @prices,

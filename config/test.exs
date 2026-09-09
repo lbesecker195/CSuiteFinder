@@ -38,3 +38,8 @@ config :csuite_finder, CsuiteFinder.Treg.Client,
 
 # Exercise the real auth path in tests.
 config :csuite_finder, :require_api_key, true
+
+# Tests capture email in the process mailbox instead of sending it.
+config :csuite_finder, CsuiteFinder.Mailer,
+  adapter: Swoosh.Adapters.Test,
+  from_address: "no-reply@csuitefinder.test"

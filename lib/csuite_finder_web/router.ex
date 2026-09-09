@@ -54,6 +54,10 @@ defmodule CsuiteFinderWeb.Router do
   scope "/csuitefinder", CsuiteFinderWeb do
     pipe_through [:api, :authenticated]
 
+    get "/keys", KeyController, :index
+    post "/keys", KeyController, :create
+    delete "/keys/:id", KeyController, :delete
+
     get "/billing/balance", BillingController, :balance
     get "/billing/usage", BillingController, :usage
     post "/billing/topup", BillingController, :topup
@@ -75,6 +79,8 @@ defmodule CsuiteFinderWeb.Router do
 
     post "/billing/webhook", BillingController, :webhook
     post "/register", RegistrationController, :create
+    post "/keys/recover", KeyController, :recover
+    post "/keys/issue", KeyController, :issue
     get "/health", HealthController, :index
     get "/pricing", PageController, :pricing
   end
