@@ -86,6 +86,7 @@ defmodule CsuiteFinderWeb.EmailController do
       endpoint: conn.assigns[:endpoint_name],
       found: Map.get(result, :found, false),
       cached: Map.get(result, :cached, false),
+      duration_ms: CsuiteFinderWeb.Plugs.Timing.elapsed_ms(conn),
       provider_cost_micro: get_in(result, [:cost, :provider_micro]) || 0,
       request: request
     })

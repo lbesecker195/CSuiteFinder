@@ -103,6 +103,15 @@ defmodule CsuiteFinderWeb.AdminController do
   def pct(value) when is_number(value),
     do: :erlang.float_to_binary(value * 100, decimals: 1) <> "%"
 
+  @doc "Render a duration, or an em dash when nothing was measured."
+  def ms(nil), do: "—"
+
+  def ms(value) when is_number(value) and value >= 1000,
+    do: :erlang.float_to_binary(value / 1000, [:compact, decimals: 1]) <> " s"
+
+  def ms(value) when is_number(value), do: "#{round(value)} ms"
+  def ms(_), do: "—"
+
   @doc false
   def usd(value) when is_number(value) do
     "$" <> :erlang.float_to_binary(value / 1, decimals: 2)

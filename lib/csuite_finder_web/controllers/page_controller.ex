@@ -18,11 +18,41 @@ defmodule CsuiteFinderWeb.PageController do
 
   EEx.function_from_file(:defp, :render_landing, @template, [:assigns])
 
+  @start_template Path.join(:code.priv_dir(:csuite_finder), "templates/start.html.eex")
+  @external_resource @start_template
+
+  EEx.function_from_file(:defp, :render_start, @start_template, [:assigns])
+
+  @llms_template Path.join(:code.priv_dir(:csuite_finder), "templates/llms.txt.eex")
+  @external_resource @llms_template
+
+  EEx.function_from_file(:defp, :render_llms, @llms_template, [:assigns])
+
   @doc "GET /"
   def index(conn, _params) do
     conn
     |> put_resp_content_type("text/html")
     |> send_resp(200, render_landing(assigns(conn)))
+  end
+
+  @doc "GET /start"
+  def start(conn, _params) do
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_resp(200, render_start(assigns(conn)))
+  end
+
+  @doc """
+  GET /llms.txt
+
+  The agent-facing description of this API, generated from the same pricing the
+  invoice uses — so an agent reading it is quoted what it will actually be
+  charged. Served as text/plain so it renders in a terminal and a browser alike.
+  """
+  def llms(conn, _params) do
+    conn
+    |> put_resp_content_type("text/plain")
+    |> send_resp(200, render_llms(assigns(conn)))
   end
 
   @doc "GET /csuitefinder/pricing"
@@ -35,9 +65,20 @@ defmodule CsuiteFinderWeb.PageController do
       base_url: base_url(conn),
       token_price: format(Pricing.token_price_usd()),
       min_bundle: delimit(Pricing.min_bundle_usd()),
-      min_bundle_tokens: delimit(Pricing.tokens_for_usd(Pricing.min_bundle_usd())),
       trial_tokens: Pricing.trial_tokens(),
       trial_usd: "$" <> format(Pricing.usd_for_tokens(Pricing.trial_tokens())),
+      # Pricing owns the bundles; recomputing them here is how a page and an
+      # invoice drift apart.
+      bundles:
+        for b <- Pricing.bundles() do
+          %{
+            usd: delimit(b.usd),
+            tokens: delimit(b.tokens),
+            finds: delimit(b.finds),
+            rate: format(b.micro_per_token / 1_000_000),
+            best_value: b.micro_per_token < Pricing.micro_per_token()
+          }
+        end,
       price_rows:
         prices
         |> Enum.sort_by(fn {endpoint, _} -> endpoint end)

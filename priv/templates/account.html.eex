@@ -75,13 +75,14 @@
   footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);
          color:var(--faint);font-size:13px}
   [hidden]{display:none !important}
-</style>
+<%= CsuiteFinderWeb.Nav.css() %></style>
 </head>
 <body>
 <div class="wrap">
 
+<%= CsuiteFinderWeb.Nav.render(:account) %>
+
 <header>
-  <a class="logo" href="/">CSuiteFinder</a>
   <button id="signout" class="ghost" hidden>Sign out</button>
 </header>
 
@@ -201,7 +202,8 @@
 </section>
 
 <footer>
-  <a href="/">Home</a> · <a href="/csuitefinder/pricing">pricing</a> · <a href="/csuitefinder/health">status</a>
+  <a href="/">Home</a> · <a href="/start">Get started</a> · <a href="/llms.txt">llms.txt</a> ·
+  <a href="/csuitefinder/pricing">pricing</a> · <a href="/csuitefinder/health">status</a>
 </footer>
 
 </div>

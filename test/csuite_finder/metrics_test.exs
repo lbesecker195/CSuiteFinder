@@ -13,7 +13,8 @@ defmodule CsuiteFinder.MetricsTest do
           outcome: "found",
           cache_hit: false,
           provider_cost_micro: 0,
-          charged_tokens: 1
+          charged_tokens: 1,
+          duration_ms: 100
         },
         attrs
       )
@@ -108,6 +109,50 @@ defmodule CsuiteFinder.MetricsTest do
       # A quiet day is a zero, not a missing point.
       assert Enum.all?(series, &is_integer(&1.requests))
       assert hd(series).requests == 0
+    end
+  end
+
+  describe "latency" do
+    test "reports what callers waited, split by cache" do
+      event(%{cache_hit: true, duration_ms: 10})
+      event(%{cache_hit: true, duration_ms: 20})
+      event(%{cache_hit: false, duration_ms: 800})
+
+      l = Metrics.latency(since())
+
+      # Averaging these together would mostly measure the hit rate, not our speed.
+      assert l.cached_ms == 15
+      assert l.cached_calls == 2
+      assert l.fresh_ms == 800
+      assert l.fresh_calls == 1
+    end
+
+    test "headline carries an average and a p95" do
+      for ms <- [10, 20, 30, 40, 2_000], do: event(%{duration_ms: ms})
+
+      h = Metrics.headline(since())
+
+      assert h.avg_ms == 420
+      assert h.p95_ms == 2_000
+    end
+
+    test "unmeasured latency stays nil rather than reading as instant" do
+      # A 0 here would render as "0 ms" and look like the fastest endpoint we have.
+      event(%{duration_ms: nil})
+
+      assert Metrics.headline(since()).avg_ms == nil
+      assert Metrics.latency(since()).cached_ms == nil
+    end
+
+    test "per-endpoint rows carry the cached/fresh split" do
+      event(%{endpoint: "email.find", cache_hit: true, duration_ms: 12})
+      event(%{endpoint: "email.find", cache_hit: false, duration_ms: 900})
+
+      row = Metrics.by_endpoint(since()) |> Enum.find(&(&1.endpoint == "email.find"))
+
+      assert row.avg_cached_ms == 12
+      assert row.avg_fresh_ms == 900
+      assert row.avg_ms == 456
     end
   end
 

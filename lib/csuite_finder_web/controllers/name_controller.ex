@@ -35,6 +35,7 @@ defmodule CsuiteFinderWeb.NameController do
         endpoint: conn.assigns[:endpoint_name],
         found: row.found and row.source == "provider",
         cached: lookup.cached,
+        duration_ms: CsuiteFinderWeb.Plugs.Timing.elapsed_ms(conn),
         provider_cost_micro: lookup.spent_micro,
         request: %{email: email}
       })

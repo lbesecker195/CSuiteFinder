@@ -104,62 +104,251 @@
     margin-top: 72px; padding: 28px 0 56px;
     border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
   }
-</style>
+
+  /* --- audience-led sections ------------------------------------------- */
+  /* The base h2/h3 rules in this sheet carry visual roles rather than
+     hierarchy, so section and card headings name their look explicitly.
+     That keeps the document outline correct without restyling the sheet. */
+  .section-label{font-size:13px;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:600;margin:56px 0 18px;padding-bottom:10px;
+    border-bottom:1px solid var(--border)}
+  .card-title{font-size:16.5px;text-transform:none;letter-spacing:-.01em;
+    color:var(--text);font-weight:700;margin:0 0 6px;padding:0;border:none}
+  .sub-label{font-size:17px;text-transform:none;letter-spacing:-.01em;
+    color:var(--text);font-weight:700;margin:30px 0 10px;padding:0;border:none}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+  .btn{display:inline-block;padding:13px 22px;border-radius:9px;font-weight:600;
+       text-decoration:none;font-size:15.5px;border:1px solid transparent}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.07)}
+  .btn-ghost{border-color:var(--border);color:var(--text);background:var(--surface)}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .cta-note{font-size:13.5px;color:var(--faint)}
+  .who{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+  .who .card p{margin:0;font-size:14.5px;color:var(--muted)}
+  .who .card .tag{display:inline-block;font-size:11px;text-transform:uppercase;
+    letter-spacing:.07em;font-weight:700;color:var(--accent);margin-bottom:9px}
+  .does{display:grid;gap:0;margin-bottom:18px}
+  .does .item{display:grid;grid-template-columns:minmax(180px,1fr) 2fr;gap:18px;
+    padding:15px 0;border-bottom:1px solid var(--border);align-items:baseline}
+  .does .item:last-child{border-bottom:none}
+  .does .item strong{font-size:15.5px}
+  .does .item span{color:var(--muted);font-size:14.5px}
+  @media (max-width:620px){.does .item{grid-template-columns:1fr;gap:4px}}
+  .bundle-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    margin-bottom:14px}
+  .bundle-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:20px;position:relative}
+  .bundle-card.best{border-color:var(--accent)}
+  .bundle-card .amt{font-size:27px;font-weight:700;letter-spacing:-.02em;display:block}
+  .bundle-card .qty{font-size:14px;color:var(--text);margin-top:4px;display:block}
+  .bundle-card .rate{font-size:12.5px;color:var(--faint);margin-top:8px;display:block}
+  .bundle-card .flag{position:absolute;top:-9px;right:14px;background:var(--accent);color:#fff;
+    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    padding:3px 9px;border-radius:99px}
+  .dev{border-top:1px solid var(--border);margin-top:56px;padding-top:8px}
+  .quiet{color:var(--muted);font-size:14.5px}
+<%= CsuiteFinderWeb.Nav.css() %></style>
 </head>
 <body>
 <div class="wrap">
 
+<%= CsuiteFinderWeb.Nav.render(nil) %>
+
 <header>
-  <div class="logo">CSuiteFinder</div>
-  <h1>Find anyone's work email from a name and a domain.</h1>
+  <h1>Reach the decision-maker, not the contact form.</h1>
   <p class="lede">
-    One token per email found. Deliverability, enrichment, patterns, names and
-    company data are all included.
-    Start with <strong><%= @trial_tokens %> free tokens</strong> — <%= @trial_tokens %> emails,
-    no card, no call.
+    You know the person you need — a VP of Engineering, a founder, a Head of Procurement.
+    CSuiteFinder turns their name and their company into a verified work email address,
+    so your message lands in an inbox instead of a support queue.
   </p>
-  <pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \
-  -H 'content-type: application/json' \
-  -d '{"email": "you@company.com"}'</code></pre>
-  <p style="margin-top:-4px">
-    Prefer a browser? <a href="/account"><strong>Open your account</strong></a> to register,
-    check your balance and buy tokens without touching a header.
-  </p>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="/start">Get started — <%= @trial_tokens %> free lookups</a>
+    <a class="btn btn-ghost" href="#developers">Read the API docs</a>
+  </div>
+  <p class="cta-note">No card, no call, no demo. Your first <%= @trial_tokens %> lookups are on us.</p>
 </header>
 
-<h2>Register in one call</h2>
+<h2 class="section-label">Who it's for</h2>
 
-<div class="step"><span class="step-n">1</span><div><strong>Sign up.</strong> Post your email to <code>/csuitefinder/register</code>. You get an API key and <%= @trial_tokens %> tokens (<%= @trial_usd %>) straight back — good for <%= @trial_tokens %> emails.</div></div>
-<div class="step"><span class="step-n">2</span><div><strong>Save the key.</strong> It is shown once and stored only as a hash — we cannot recover it for you.</div></div>
-<div class="step"><span class="step-n">3</span><div><strong>Call the API.</strong> Send the key as <code>Authorization: Bearer &lt;key&gt;</code> on every request.</div></div>
-<div class="step"><span class="step-n">4</span><div><strong>Buy tokens when you're ready.</strong> Bundles start at $<%= @min_bundle %>, paid through PayPal.</div></div>
-
-<p>The registration response looks like this:</p>
-
-<pre><code>{
-  "account_id": 42,
-  "api_key": "csf_live_…",
-  "api_key_notice": "Store this key now — it is shown once…",
-  "tokens_granted": <%= @trial_tokens %>,
-  "token_balance": <%= @trial_tokens %>
-}</code></pre>
-
-<h2>Pricing</h2>
-
-<div class="cards">
+<div class="who">
   <div class="card">
-    <span class="big">1 token</span>
-    <span class="label">per email found ($<%= @token_price %>)</span>
+    <span class="tag">Sales</span>
+    <h3 class="card-title">Get past the gatekeeper</h3>
+    <p>
+      You've built a target list and you know the titles you need. Turn those names into
+      deliverable addresses — and check each one before you send, so bounces never touch
+      your domain's reputation.
+    </p>
   </div>
   <div class="card">
-    <span class="big">$<%= @min_bundle %>+</span>
-    <span class="label">bundles, <%= @min_bundle_tokens %> tokens</span>
+    <span class="tag">Founders</span>
+    <h3 class="card-title">Reach investors and first customers</h3>
+    <p>
+      Warm intros run out. When you need to reach a partner at a fund, a design partner or
+      an early hire directly, you usually have the name and the company and nothing else.
+      That's exactly the gap this fills.
+    </p>
   </div>
   <div class="card">
-    <span class="big">FREE</span>
-    <span class="label"><%= @trial_tokens %> free trial tokens (<%= @trial_usd %>)</span>
+    <span class="tag">Developers</span>
+    <h3 class="card-title">One endpoint, one token</h3>
+    <p>
+      A plain JSON API with no SDK to install and no seat licence. Register with a
+      <code>POST</code> and you have a key. <a href="#developers">Jump to the docs →</a>
+    </p>
   </div>
 </div>
+
+<h2 class="section-label">How it works</h2>
+
+<div class="step"><span class="step-n">1</span><div><strong>Tell us who.</strong> A full name and the company's domain — <em>Jensen Huang</em> at <em>nvidia.com</em>. That's the whole input.</div></div>
+<div class="step"><span class="step-n">2</span><div><strong>Get the address.</strong> We work out how that company formats its email and build the person's address from it.</div></div>
+<div class="step"><span class="step-n">3</span><div><strong>Check before you send.</strong> Confirm the mailbox is real and deliverable, and see who and what is behind it — all included, no extra charge.</div></div>
+
+<div class="note" style="margin-top:22px">
+  <strong>To be clear about what this is:</strong> CSuiteFinder finds the address of someone you
+  can already name. It is not a prospect database and it will not build your target list for
+  you — bring the names, and we'll get you the inbox.
+</div>
+
+<h2 class="section-label">What you can do</h2>
+
+<div class="does">
+  <div class="item"><strong>Find an email</strong><span>A name and a company domain become a work email address.</span></div>
+  <div class="item"><strong>Check it's deliverable</strong><span>Confirm the mailbox is real before you send, so bounces don't hurt your sender reputation.</span></div>
+  <div class="item"><strong>Identify an address</strong><span>Given an email, find out whose it is — name, job title, employer.</span></div>
+  <div class="item"><strong>Learn a company's format</strong><span>See how a company builds its addresses, and apply it to anyone else there.</span></div>
+  <div class="item"><strong>Look up the company</strong><span>Industry, headcount, founding year and location behind any work address.</span></div>
+</div>
+
+<h2 class="section-label" id="pricing">Pricing</h2>
+
+<p class="quiet" style="margin-top:-6px">
+  You pay for emails found — <strong>one token each</strong>. Deliverability checks, identity
+  lookups, company data and email formats are all included with any balance. A lookup that finds
+  nothing is free.
+</p>
+
+<div class="bundle-grid">
+  <%= for b <- @bundles do %>
+  <div class="bundle-card<%= if b.best_value, do: " best" %>">
+    <%= if b.best_value do %><span class="flag">Better rate</span><% end %>
+    <span class="amt">$<%= b.usd %></span>
+    <span class="qty"><%= b.tokens %> tokens</span>
+    <span class="rate">$<%= b.rate %> per email found · <%= b.finds %> lookups</span>
+  </div>
+  <% end %>
+</div>
+
+<p class="quiet">
+  Tokens never expire. Bundles start at $<%= @min_bundle %> and are paid through PayPal.
+  Start with <strong><%= @trial_tokens %> free tokens</strong> (<%= @trial_usd %>) to try it
+  properly first — that's <%= @trial_tokens %> real lookups, not a preview.
+</p>
+
+<p style="margin-top:22px">
+  <a class="btn btn-primary" href="/account">Create your free account</a>
+</p>
+
+<h2 class="section-label">Why the addresses are good</h2>
+
+<p class="quiet">
+  Most companies build every employee's address the same way. We work out that format once and
+  apply it — which is why a lookup costs a fraction of a cent instead of the several cents a
+  per-person database charges, and why the second person you look up at a company is usually
+  instant.
+</p>
+<p class="quiet">
+  Every address can then be verified against the live mailbox before you use it. Checking is
+  included, and it is the single best thing you can do for your domain's deliverability:
+  a bounced cold email costs you far more than the lookup did.
+</p>
+
+<h2 class="section-label">Using it with an AI agent</h2>
+
+<p class="quiet">
+  The fastest way in — <a href="/start"><strong>the full walkthrough is here</strong></a>.
+  If you work with Claude, ChatGPT, Cursor or any coding agent, you do not have to
+  explain this API to it. Point it at our
+  <a href="/llms.txt"><code>llms.txt</code></a> and it will know every endpoint,
+  parameter and price — the file is generated from the live service, so what it
+  reads is what you are charged.
+</p>
+
+<p class="quiet"><strong>Paste this to your agent:</strong></p>
+
+<pre><code>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API.
+Register for a key, then find the work email for each person in my list.
+Verify every address before you give it to me.</code></pre>
+
+<p class="quiet">
+  It will register itself, get <%= @trial_tokens %> free lookups and start working. If your
+  agent supports remembering instructions, drop the same URL into its project rules
+  or <code>AGENTS.md</code> and it will keep the API available for later.
+</p>
+
+<div class="note">
+  <strong>One thing worth telling your agent:</strong> this finds the address of someone
+  you can name — it is not a prospect database and will not build your list. Agents that
+  assume otherwise waste turns hunting for a search endpoint that does not exist. The
+  <code>llms.txt</code> says so plainly, which is most of why it is worth pointing at.
+</div>
+
+<!-- ── developers ──────────────────────────────────────────────────────── -->
+<div class="dev" id="developers">
+<h2 class="section-label">For developers</h2>
+
+<p class="quiet">
+  A JSON API over HTTPS. No SDK, no seat licence. Register and you have a key:
+</p>
+
+<pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \
+  -H 'content-type: application/json' \
+  -d '{"email": "you@company.com"}'</code></pre>
+
+<p class="quiet">
+  Send the key as <code>Authorization: Bearer &lt;key&gt;</code> on every request. Prefer a
+  browser? <a href="/account">Your account page</a> does the same thing, plus balance and billing.
+</p>
+
+<h3 class="sub-label">Endpoints</h3>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Parameters</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><code>/csuitefinder/email/find</code></td><td><code>full_name</code>, <code>domain</code>, <code>email</code><span class="label"> (optional)</span></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> — which company this is</td></tr>
+    <tr><td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code> or <code>domain</code> — the full profile</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="quiet">
+  Every endpoint also accepts <code>GET</code> with a query string, and <code>refresh=true</code>
+  to force a re-check. The optional <code>email</code> on <code>/email/find</code> is a
+  colleague's address at the same company: give us one address there and we can resolve the rest.
+</p>
+
+<h3 class="sub-label">Example</h3>
+
+<pre><code>curl -H "Authorization: Bearer $CSF_KEY" \
+  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"
+
+{
+  "email": "jhuang@nvidia.com",
+  "full_name": "Jensen Huang",
+  "domain": "nvidia.com",
+  "found": true,
+  "confidence": 0.937638
+}</code></pre>
+
+<h3 class="sub-label">Per-endpoint cost</h3>
 
 <div class="table-scroll">
 <table>
@@ -176,50 +365,7 @@
 </table>
 </div>
 
-<div class="note">
-  <strong>You pay for emails found — nothing else.</strong> One token per
-  resolved address. Deliverability, enrichment, patterns, names and both company
-  endpoints are included with any balance. A find that resolves nothing is free, and
-  unverified guesses are never billed.
-</div>
-
-<p>
-  Included endpoints still need a positive token balance to call — a balance is
-  what makes you a customer. They just don't spend it.
-</p>
-
-<h2>Endpoints</h2>
-
-<div class="table-scroll">
-<table>
-  <thead><tr><th>Method</th><th>Path</th><th>Parameters</th></tr></thead>
-  <tbody>
-    <tr><td>POST</td><td><code>/csuitefinder/email/find</code></td><td><code>full_name</code>, <code>domain</code>, <code>email (optional)</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/email/pattern</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> (honestly, any)</td></tr>
-    <tr><td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code></td></tr>
-  </tbody>
-</table>
-</div>
-
-<h3>Example</h3>
-
-<pre><code>curl -H "Authorization: Bearer $CSF_KEY" \
-  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"
-
-{
-  "email": "jhuang@nvidia.com",
-  "full_name": "Jensen Huang",
-  "domain": "nvidia.com",
-  "found": true,
-  "confidence": 0.937638
-}</code></pre>
-
-
-<h2>Managing your account</h2>
+<h3 class="sub-label">Managing your account</h3>
 
 <div class="table-scroll">
 <table>
@@ -227,19 +373,19 @@
   <tbody>
     <tr><td><code>GET /csuitefinder/billing/balance</code></td><td>Token balance and the full price list</td></tr>
     <tr><td><code>GET /csuitefinder/billing/usage?days=30</code></td><td>Calls, cache hits and tokens spent per endpoint</td></tr>
+    <tr><td><code>GET /csuitefinder/keys</code></td><td>Your API keys — mint a spare, revoke an old one</td></tr>
     <tr><td><code>POST /csuitefinder/billing/topup</code></td><td>Buy a bundle — returns a PayPal approval link</td></tr>
     <tr><td><code>GET /csuitefinder/health</code></td><td>Service status</td></tr>
   </tbody>
 </table>
 </div>
-
-<pre><code>curl -X POST <%= @base_url %>/csuitefinder/billing/topup \
-  -H "Authorization: Bearer $CSF_KEY" \
-  -H 'content-type: application/json' \
-  -d '{"amount_usd": <%= @min_bundle %>}'</code></pre>
+</div>
 
 <footer>
-  <a href="/account">Your account</a> · <a href="/csuitefinder/pricing">pricing as JSON</a> ·
+  <a href="/start">Get started</a> ·
+  <a href="/account">Your account</a> ·
+  <a href="/llms.txt">llms.txt</a> ·
+  <a href="/csuitefinder/pricing">pricing as JSON</a> ·
   <a href="/csuitefinder/health">status</a>
 </footer>
 

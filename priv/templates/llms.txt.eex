@@ -1,0 +1,168 @@
+# CSuiteFinder — work-email lookup API
+
+> Turn a person's name and their company's domain into their work email address,
+> then verify it, identify who is behind an address, and look up the company.
+> Self-serve: one POST gets you a key and <%= @trial_tokens %> free lookups.
+
+This file is for AI agents. It is generated from the live service, so the prices
+below are the prices you will be charged. Everything here is callable now.
+
+Base URL: <%= @base_url %>/csuitefinder
+Human docs: <%= @base_url %>/
+Live rate card (no key needed): <%= @base_url %>/csuitefinder/pricing
+
+## What this is, and is not
+
+It resolves an address for someone you can already NAME. Give it "Jensen Huang"
+and "nvidia.com" and it returns his work email.
+
+It is **not** a prospect database and has no people-search endpoint. It will not
+tell you who the VP of Sales at a company is, or return a list of employees. If
+you do not have a name, this API cannot help — get the name elsewhere first.
+
+## Getting a key
+
+```bash
+curl -X POST <%= @base_url %>/csuitefinder/register \
+  -H 'content-type: application/json' \
+  -d '{"email": "you@company.com"}'
+```
+
+Returns `api_key` once and never again — only a hash is stored, so it cannot be
+resent. New accounts get <%= @trial_tokens %> tokens (<%= @trial_usd %>) free.
+
+Send it on every request:
+
+```
+Authorization: Bearer <key>
+```
+
+`X-API-Key: <key>` also works. The key never rides in the URL path.
+
+## Pricing
+
+One token = $<%= @token_price %>. **Only `/email/find` spends tokens** — 1 token per
+address resolved, and nothing when it resolves nothing. Every other endpoint is
+included, but still needs a positive balance (an empty account gets HTTP 402).
+
+<%= for b <- @bundles do %>- $<%= b.usd %> → <%= b.tokens %> tokens ($<%= b.rate %>/token)
+<% end %>
+Bundles start at $<%= @min_bundle %>, paid through PayPal. Tokens do not expire.
+
+## Endpoints
+
+All accept GET (query string) or POST (JSON body). Add `refresh=true` to force a
+re-check instead of using a stored answer.
+
+### POST /csuitefinder/email/find — 1 token
+
+Resolve a name + company domain to a work email. **The only billable endpoint.**
+
+- `full_name` (required) — "Jensen Huang". Handles "Huang, Jensen" and accents.
+- `domain` (required) — "nvidia.com". A scheme, `www.` and any path are stripped.
+- `email` (optional) — a colleague's known address at the same company. Given
+  one, the company's format is derived from it, which is the cheapest way to
+  resolve several people at one company.
+
+```bash
+curl -H "Authorization: Bearer $KEY" \
+  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"
+```
+
+```json
+{"email":"jhuang@nvidia.com","full_name":"Jensen Huang","domain":"nvidia.com",
+ "found":true,"confidence":0.937638}
+```
+
+`found: false` means no address was resolved — and you were not charged.
+
+### POST /csuitefinder/email/deliverable — included
+
+Check an address is real before sending. Verdict is one of `deliverable`,
+`undeliverable`, `risky`, `unknown`, plus the MX/SMTP/catch-all/disposable
+signals behind it.
+
+- `email` (required)
+
+**Call this before any outreach.** A bounce costs far more than the check, which
+is free.
+
+### POST /csuitefinder/email/enrich — included
+
+The person behind an address: name, job title, seniority, department, employer,
+location. `confidence` grades the answer.
+
+- `email` (required)
+
+### POST /csuitefinder/name/who — included
+
+Just the identity behind an address — name, title, employer. Same data and price
+as `/email/enrich`; use this when you want a name rather than a full record.
+
+- `email` (required)
+
+### POST /csuitefinder/email/pattern — included
+
+How a company formats its addresses, with every alternative and how common each
+is. Returns a readable form (`{first}.{last}`), the same in `[F].[L]` notation,
+a worked example, and a confidence score.
+
+- `email` (required) — any address at the company; only the domain is used.
+
+### POST /csuitefinder/company/find — included
+
+Which company an address belongs to: name, domain, website, LinkedIn.
+
+- `email` or `domain` (one required)
+
+### POST /csuitefinder/company/info — included
+
+The full company profile: industry, headcount, founding year, location,
+description.
+
+- `email` or `domain` (one required)
+
+A consumer mailbox (gmail.com and the like) is recognised and answered as "not a
+company domain" rather than returning the mail provider as the employer.
+
+## Account
+
+- `GET /csuitefinder/billing/balance` — token balance and price list (free; also
+  the endpoint to probe a key with — 200 valid, 401 invalid)
+- `GET /csuitefinder/billing/usage?days=30` — calls and tokens spent per endpoint
+- `GET /csuitefinder/keys` — list your keys; `POST` mints another, `DELETE /:id`
+  revokes one. Mint a spare: a lost key cannot be recovered.
+- `POST /csuitefinder/billing/topup` — buy a bundle, returns a PayPal approval URL
+- `GET /csuitefinder/health` — service status
+- `GET /csuitefinder/pricing` — the live rate card, no key required
+
+## A sensible agent workflow
+
+1. `POST /register` once, store the key.
+2. For each person, `GET /email/find?full_name=…&domain=…`.
+3. If `found`, `GET /email/deliverable?email=…` before you send anything.
+4. Only send to `deliverable`. Treat `undeliverable` as dead and `risky` as a
+   judgement call — `risky` usually means a catch-all domain that accepts
+   everything, so a delivery there proves nothing.
+5. `GET /billing/balance` to watch your spend; top up before you hit 0.
+
+Looking up several people at one company is much cheaper than one each: resolve
+the first, then pass that address as `email` on subsequent finds.
+
+## Errors
+
+| Status | Meaning |
+|---|---|
+| 400 | A required parameter is missing or malformed |
+| 401 | Missing or invalid API key |
+| 402 | Out of tokens — buy a bundle |
+| 404 | No such route |
+| 500 | The lookup failed. Nothing was charged. Retry. |
+
+## Rules
+
+- Verify before you send. It is free and it protects your sending domain.
+- This is business contact data for legitimate B2B outreach. Honour opt-outs and
+  whatever marketing law applies where you and your recipient are.
+- Do not use it to contact private individuals; consumer mailboxes are
+  deliberately not enriched.

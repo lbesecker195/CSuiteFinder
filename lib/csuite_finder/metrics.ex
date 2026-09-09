@@ -48,6 +48,7 @@ defmodule CsuiteFinder.Metrics do
       find_economics: find_economics(since),
       daily: daily(days),
       by_endpoint: by_endpoint(since),
+      latency: latency(since),
       cache: cache_stats(),
       accounts: accounts_stats(since),
       payments: payments_stats(),
@@ -70,7 +71,9 @@ defmodule CsuiteFinder.Metrics do
           cache_hits: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", e.cache_hit)),
           found: sum(fragment("CASE WHEN ? = 'found' THEN 1 ELSE 0 END", e.outcome)),
           provider_cost_micro: sum(e.provider_cost_micro),
-          tokens: sum(e.charged_tokens)
+          tokens: sum(e.charged_tokens),
+          avg_ms: avg(e.duration_ms),
+          p95_ms: fragment("percentile_disc(0.95) WITHIN GROUP (ORDER BY ?)", e.duration_ms)
         }
       )
       |> Repo.one()
@@ -84,7 +87,9 @@ defmodule CsuiteFinder.Metrics do
       provider_cost_usd: usd(row.provider_cost_micro),
       revenue_usd: usd(revenue_micro),
       margin_usd: usd(revenue_micro - row.provider_cost_micro),
-      margin_pct: ratio(revenue_micro - row.provider_cost_micro, revenue_micro)
+      margin_pct: ratio(revenue_micro - row.provider_cost_micro, revenue_micro),
+      avg_ms: row.avg_ms,
+      p95_ms: row.p95_ms
     })
   end
 
@@ -215,7 +220,11 @@ defmodule CsuiteFinder.Metrics do
         cache_hits: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", e.cache_hit)),
         found: sum(fragment("CASE WHEN ? = 'found' THEN 1 ELSE 0 END", e.outcome)),
         provider_cost_micro: sum(e.provider_cost_micro),
-        tokens: sum(e.charged_tokens)
+        tokens: sum(e.charged_tokens),
+        avg_ms: avg(e.duration_ms),
+        p95_ms: fragment("percentile_disc(0.95) WITHIN GROUP (ORDER BY ?)", e.duration_ms),
+        avg_cached_ms: fragment("avg(?) FILTER (WHERE ? = true)", e.duration_ms, e.cache_hit),
+        avg_fresh_ms: fragment("avg(?) FILTER (WHERE ? = false)", e.duration_ms, e.cache_hit)
       }
     )
     |> Repo.all()
@@ -230,6 +239,34 @@ defmodule CsuiteFinder.Metrics do
         metered: Pricing.metered?(row.endpoint)
       })
     end)
+  end
+
+  @doc """
+  What callers waited, split by whether the cache answered.
+
+  Averaging the two together mostly measures the hit rate rather than our own
+  speed, which is why they are reported apart.
+  """
+  @spec latency(DateTime.t()) :: map()
+  def latency(since) do
+    rows =
+      from(e in UsageEvent,
+        where: e.inserted_at >= ^since and not is_nil(e.duration_ms),
+        group_by: e.cache_hit,
+        select: %{cache_hit: e.cache_hit, calls: count(e.id), avg_ms: avg(e.duration_ms)}
+      )
+      |> Repo.all()
+      |> Enum.map(&zero_nils/1)
+
+    cached = Enum.find(rows, %{calls: 0, avg_ms: nil}, & &1.cache_hit)
+    fresh = Enum.find(rows, %{calls: 0, avg_ms: nil}, &(not &1.cache_hit))
+
+    %{
+      cached_ms: cached.avg_ms,
+      cached_calls: cached.calls,
+      fresh_ms: fresh.avg_ms,
+      fresh_calls: fresh.calls
+    }
   end
 
   @doc "Row counts and staleness per cache table."
@@ -312,12 +349,22 @@ defmodule CsuiteFinder.Metrics do
   # `Decimal` rather than an integer — and a Decimal in an arithmetic expression
   # raises. Everything counted here is whole units (requests, tokens, micro-USD),
   # so results are normalised to integers on the way out of every query.
+  # Latency stays nil when there is nothing to average: zeroing it would render
+  # as "0 ms", which reads as instant rather than as unmeasured.
+  @nilable ~w(avg_ms p95_ms avg_cached_ms avg_fresh_ms)a
+
   defp zero_nils(map) do
     Map.new(map, fn
       {:day, value} -> {:day, value}
+      {key, value} when key in @nilable -> {key, round_ms(value)}
       {key, value} -> {key, to_int(value)}
     end)
   end
+
+  defp round_ms(nil), do: nil
+  defp round_ms(%Decimal{} = d), do: d |> Decimal.to_float() |> round()
+  defp round_ms(value) when is_number(value), do: round(value)
+  defp round_ms(_), do: nil
 
   defp to_int(nil), do: 0
   defp to_int(%Decimal{} = decimal), do: Decimal.to_integer(decimal)

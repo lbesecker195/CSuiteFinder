@@ -54,6 +54,7 @@ defmodule CsuiteFinderWeb.CompanyController do
       endpoint: conn.assigns[:endpoint_name],
       found: row.found,
       cached: lookup.cached,
+      duration_ms: CsuiteFinderWeb.Plugs.Timing.elapsed_ms(conn),
       provider_cost_micro: lookup.spent_micro,
       request: %{input: value}
     })

@@ -3,6 +3,7 @@ defmodule CsuiteFinderWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug CsuiteFinderWeb.Plugs.Timing
   end
 
   pipeline :browser do
@@ -101,5 +102,7 @@ defmodule CsuiteFinderWeb.Router do
 
     get "/", PageController, :index
     get "/account", AccountController, :index
+    get "/start", PageController, :start
+    get "/llms.txt", PageController, :llms
   end
 end

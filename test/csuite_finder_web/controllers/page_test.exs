@@ -74,6 +74,93 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "site navigation" do
+    test "every page carries the same header links", %{conn: conn} do
+      for path <- ["/", "/start", "/account"] do
+        html = conn |> get(path) |> html_response(200)
+
+        assert html =~ ~s|class="sitenav"|, "#{path} has no nav"
+
+        for href <- ["/start", "/#pricing", "/#developers", "/account"] do
+          assert html =~ ~s|href="#{href}"|, "#{path} is missing #{href}"
+        end
+
+        assert html =~ "Sign in / Register"
+      end
+    end
+
+    test "the pricing link has something to land on", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+      assert html =~ ~s|id="pricing"|
+      assert html =~ ~s|id="developers"|
+    end
+  end
+
+  describe "GET /llms.txt" do
+    test "serves an agent-readable description as plain text", %{conn: conn} do
+      conn = get(conn, ~p"/llms.txt")
+
+      assert response_content_type(conn, :txt) =~ "text/plain"
+      body = response(conn, 200)
+
+      assert body =~ "# CSuiteFinder"
+      assert body =~ "/csuitefinder/email/find"
+      assert body =~ "Authorization: Bearer"
+    end
+
+    test "quotes the same prices the invoice uses", %{conn: conn} do
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      for b <- Pricing.bundles() do
+        assert body =~ "$" <> delimited(b.usd)
+        assert body =~ delimited(b.tokens) <> " tokens"
+      end
+
+      assert body =~ to_string(Pricing.trial_tokens())
+    end
+
+    test "says plainly that it is not a prospect database", %{conn: conn} do
+      # Agents otherwise waste turns hunting for a people-search endpoint that
+      # does not exist.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      assert body =~ "prospect database"
+      assert body =~ "no people-search endpoint"
+      assert body =~ "It resolves an address for someone you can already NAME"
+    end
+
+    test "names no supplier", %{conn: conn} do
+      body = conn |> get(~p"/llms.txt") |> response(200) |> String.downcase()
+
+      for term <- ~w(treg thecompaniesapi trykitt tomba hunter findymail leadmagic) do
+        refute String.contains?(body, term), "llms.txt mentioned #{term}"
+      end
+    end
+  end
+
+  describe "GET /start" do
+    test "renders the getting-started page", %{conn: conn} do
+      html = conn |> get(~p"/start") |> html_response(200)
+
+      assert html =~ "Get started"
+      assert html =~ "/llms.txt"
+      assert html =~ to_string(Pricing.trial_tokens())
+    end
+
+    test "offers a path for people without an assistant", %{conn: conn} do
+      html = conn |> get(~p"/start") |> html_response(200)
+
+      assert html =~ "In your browser"
+      assert html =~ ~s|href="/account"|
+      assert html =~ "curl"
+    end
+
+    test "is linked from the home page", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+      assert html =~ ~s|href="/start"|
+    end
+  end
+
   describe "GET /csuitefinder/pricing" do
     test "publishes the same terms as JSON", %{conn: conn} do
       body = conn |> get(~p"/csuitefinder/pricing") |> json_response(200)

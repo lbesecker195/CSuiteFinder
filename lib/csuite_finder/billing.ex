@@ -86,6 +86,7 @@ defmodule CsuiteFinder.Billing do
         outcome: if(found?, do: "found", else: "not_found"),
         provider_cost_micro: Map.get(params, :provider_cost_micro, 0),
         charged_tokens: charged,
+        duration_ms: Map.get(params, :duration_ms),
         request: Map.get(params, :request, %{})
       })
       |> Repo.insert!()

@@ -151,6 +151,11 @@
     <div class="sub">paid to treg</div>
   </div>
   <div class="card">
+    <div class="label">Response time</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.ms(@headline.avg_ms) %></div>
+    <div class="sub">p95 <%= CsuiteFinderWeb.AdminController.ms(@headline.p95_ms) %></div>
+  </div>
+  <div class="card">
     <div class="label">Gross margin</div>
     <div class="value <%= CsuiteFinderWeb.AdminController.tone(@headline.margin_usd) %>">
       <%= CsuiteFinderWeb.AdminController.usd(@headline.margin_usd) %>
@@ -202,6 +207,32 @@
   <% end %>
 </div>
 
+<h2>Response time</h2>
+
+<div class="panel">
+  <h3>What callers wait</h3>
+  <p class="hint">
+    End-to-end, from request to response — not just the upstream's share. Cached and
+    fresh answers are separated because averaging them hides the thing worth knowing:
+    a cached answer never leaves the building, so the blend moves with the hit rate
+    rather than with anything about our own speed.
+  </p>
+  <div class="split">
+    <div class="seg win">
+      <div class="n"><%= CsuiteFinderWeb.AdminController.ms(@latency.cached_ms) %></div>
+      <div class="k">cached · <%= CsuiteFinderWeb.AdminController.num(@latency.cached_calls) %> calls</div>
+    </div>
+    <div class="seg">
+      <div class="n"><%= CsuiteFinderWeb.AdminController.ms(@latency.fresh_ms) %></div>
+      <div class="k">fresh (upstream) · <%= CsuiteFinderWeb.AdminController.num(@latency.fresh_calls) %> calls</div>
+    </div>
+    <div class="seg">
+      <div class="n"><%= CsuiteFinderWeb.AdminController.ms(@headline.p95_ms) %></div>
+      <div class="k">p95 across everything</div>
+    </div>
+  </div>
+</div>
+
 <h2>Daily volume</h2>
 
 <div class="panel">
@@ -237,6 +268,7 @@
         <tr>
           <th>Endpoint</th><th></th>
           <th class="num">Calls</th><th class="num">Answered</th><th class="num">Cached</th>
+          <th class="num">Avg</th><th class="num">p95</th>
           <th class="num">Cost</th><th class="num">Revenue</th>
         </tr>
       </thead>
@@ -248,12 +280,14 @@
           <td class="num"><%= CsuiteFinderWeb.AdminController.num(row.calls) %></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.pct(row.found_rate) %></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.pct(row.cache_hit_rate) %></td>
+          <td class="num" title="cached <%= CsuiteFinderWeb.AdminController.ms(row.avg_cached_ms) %> · fresh <%= CsuiteFinderWeb.AdminController.ms(row.avg_fresh_ms) %>"><%= CsuiteFinderWeb.AdminController.ms(row.avg_ms) %></td>
+          <td class="num"><%= CsuiteFinderWeb.AdminController.ms(row.p95_ms) %></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.usd(row.provider_cost_usd) %></td>
           <td class="num"><%= CsuiteFinderWeb.AdminController.usd(row.revenue_usd) %></td>
         </tr>
         <% end %>
         <%= if @by_endpoint == [] do %>
-        <tr><td colspan="7" class="empty">No traffic in this window.</td></tr>
+        <tr><td colspan="9" class="empty">No traffic in this window.</td></tr>
         <% end %>
       </tbody>
     </table>
