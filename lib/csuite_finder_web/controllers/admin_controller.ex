@@ -2,9 +2,10 @@ defmodule CsuiteFinderWeb.AdminController do
   @moduledoc """
   The admin dashboard.
 
-  Charts are server-rendered SVG rather than a charting library: the page has no
-  external dependencies, renders with JavaScript disabled, and cannot break
-  because a CDN moved. Geometry is computed here so the template stays markup.
+  The daily-volume chart is drawn with Three.js in the browser. The server sends
+  the series and nothing else — no coordinates, no geometry — so there is one
+  description of the chart's shape rather than two that can drift apart. If
+  WebGL is unavailable the panel says so rather than rendering half a chart.
   """
 
   use CsuiteFinderWeb, :controller
@@ -52,47 +53,37 @@ defmodule CsuiteFinderWeb.AdminController do
     })
   end
 
-  # --- chart geometry -------------------------------------------------------
+  # --- chart data ----------------------------------------------------------
 
-  @chart_w 720
-  @chart_h 150
-
+  # The series as the browser needs it: one entry a day, in order, with the
+  # numbers and the label. Scaling and layout belong to whatever draws it.
   defp chart(daily) do
-    max_requests = daily |> Enum.map(& &1.requests) |> Enum.max(fn -> 0 end)
-    scale_max = max(max_requests, 1)
-    count = max(length(daily), 1)
-    slot = @chart_w / count
-    bar_w = max(slot * 0.62, 1.0)
-
-    bars =
-      daily
-      |> Enum.with_index()
-      |> Enum.map(fn {day, index} ->
-        total_h = day.requests / scale_max * @chart_h
-        cached_h = if day.requests > 0, do: day.cache_hits / scale_max * @chart_h, else: 0.0
-
-        %{
-          x: Float.round(index * slot + (slot - bar_w) / 2, 2),
-          width: Float.round(bar_w, 2),
-          y: Float.round(@chart_h - total_h, 2),
-          height: Float.round(total_h, 2),
-          cached_y: Float.round(@chart_h - cached_h, 2),
-          cached_height: Float.round(cached_h, 2),
-          label: Calendar.strftime(day.day, "%b %-d"),
-          requests: day.requests,
-          cache_hits: day.cache_hits
-        }
-      end)
-
     %{
-      width: @chart_w,
-      height: @chart_h,
-      bars: bars,
-      max: max_requests,
-      # Only a few labels fit; pick evenly spaced ones.
-      label_every: max(div(count, 8), 1)
+      max: daily |> Enum.map(& &1.requests) |> Enum.max(fn -> 0 end),
+      series:
+        Enum.map(daily, fn day ->
+          %{
+            label: Calendar.strftime(day.day, "%b %-d"),
+            requests: day.requests,
+            cached: day.cache_hits
+          }
+        end),
+      first: daily |> List.first() |> label_of(),
+      last: daily |> List.last() |> label_of()
     }
   end
+
+  defp label_of(nil), do: ""
+  defp label_of(day), do: Calendar.strftime(day.day, "%b %-d")
+
+  @doc """
+  The chart series as JSON, for the browser to draw.
+
+  Emitted into a `<script type="application/json">` block rather than an
+  attribute: the values are dates and integers, but a data island is the shape
+  that stays safe if that ever stops being true.
+  """
+  def series_json(%{series: series}), do: Jason.encode!(series)
 
   # --- formatting -----------------------------------------------------------
 

@@ -55,6 +55,9 @@ defmodule CsuiteFinderWeb.Layout do
     * `:robots` — a robots directive, e.g. `"noindex"`. Omitted when `nil`.
     * `:refresh` — seconds for a meta refresh (the admin dashboard uses it).
     * `:nav` — which nav item to mark current, or `false` for no nav at all.
+    * `:audience` — `:sales` or `:developer` when the page settles which half of
+      the business the visitor is in, omitted when it does not. See
+      `CsuiteFinderWeb.Nav`.
     * `:css` — this page's own CSS, appended after the shared sheet.
     * `:wrap_class` — `"wrap"` (default), `"wrap-narrow"` or `"wrap-wide"`.
   """
@@ -66,6 +69,7 @@ defmodule CsuiteFinderWeb.Layout do
       robots: Keyword.get(opts, :robots),
       refresh: Keyword.get(opts, :refresh),
       nav: Keyword.get(opts, :nav, nil) |> nav_key(),
+      audience: Keyword.get(opts, :audience),
       css: Keyword.get(opts, :css, ""),
       wrap_class: Keyword.get(opts, :wrap_class, "wrap")
     })
@@ -105,11 +109,13 @@ defmodule CsuiteFinderWeb.Layout do
   @doc """
   The site footer.
 
-  `:default` gives the links every marketing page carries. A list of
-  `{href, label}` pairs gives a page its own set — the admin dashboard's footer
-  is operator links, not customer ones.
+  Takes an audience, because the footer is a second place a salesperson can trip
+  over the developer offer: `llms.txt` and a JSON price list are not links that
+  belong under a seat plan. `:default` is the fork page, which shows both. A list
+  of `{href, label}` pairs gives a page its own set — the admin dashboard's
+  footer is operator links, not customer ones.
   """
-  @spec footer(:default | [{String.t(), String.t()}]) :: String.t()
+  @spec footer(:default | :sales | :developer | [{String.t(), String.t()}]) :: String.t()
   def footer(links \\ :default)
 
   def footer(:default) do
@@ -117,9 +123,28 @@ defmodule CsuiteFinderWeb.Layout do
       {"/", "Home"},
       {"/teams", "For sales teams"},
       {"/developers", "For developers"},
-      {"/start", "Get started"},
       {"/account", "Your account"},
+      {"/csuitefinder/health", "status"}
+    ])
+  end
+
+  def footer(:sales) do
+    footer([
+      {"/teams", "Home"},
+      {"/teams#pricing", "Pricing"},
+      {"/account", "Your account"},
+      {"/csuitefinder/health", "status"}
+    ])
+  end
+
+  def footer(:developer) do
+    footer([
+      {"/developers", "Home"},
+      {"/start", "Get started"},
+      {"/developers#pricing", "Pricing"},
       {"/llms.txt", "llms.txt"},
+      {"/csuitefinder/pricing", "pricing as JSON"},
+      {"/account", "Your account"},
       {"/csuitefinder/health", "status"}
     ])
   end

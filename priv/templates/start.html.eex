@@ -2,6 +2,7 @@
       title: "Get started — CSuiteFinder",
       description: "Point your agent at llms.txt and it knows every endpoint, parameter and price. #{@trial_usd} of free credit to start.",
       nav: :start,
+      audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:start)
     ) %>
 
@@ -132,7 +133,20 @@ curl -H "Authorization: Bearer $KEY" \
   <a class="btn btn-ghost" href="/llms.txt">Read llms.txt</a>
 </p>
 
-<%= CsuiteFinderWeb.Layout.footer() %>
+<!-- ── pricing ─────────────────────────────────────────────────────────────
+     Every page carries its own, because the nav's Pricing link is a bare
+     #pricing fragment that scrolls down the page the visitor is already on. -->
+<h2 class="section-label" id="pricing">Pricing</h2>
+
+<p class="quiet">
+  <strong>$<%= @email_price %></strong> per work email found and
+  <strong>$<%= @phone_price %></strong> per phone number found. Deliverability checks,
+  enrichment, company data and email formats are included with any balance, and a
+  lookup that finds nothing is free. Credit you buy never expires; purchases start at
+  $<%= @min_bundle %>. <a href="/developers#pricing">The full price list is here →</a>
+</p>
+
+<%= CsuiteFinderWeb.Layout.footer(:developer) %>
 
 </div>
 

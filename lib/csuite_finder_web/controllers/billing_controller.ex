@@ -7,7 +7,7 @@ defmodule CsuiteFinderWeb.BillingController do
 
   require Logger
 
-  alias CsuiteFinder.Billing
+  alias CsuiteFinder.{Accounts, Audience, Billing}
   alias CsuiteFinder.Billing.{PayPal, Plans, Pricing, Subscription, Subscriptions}
 
   action_fallback CsuiteFinderWeb.FallbackController
@@ -24,6 +24,9 @@ defmodule CsuiteFinderWeb.BillingController do
         json(conn, %{
           account_id: account.id,
           email: account.email,
+          # Everything the page renders hangs off this: which prices, which
+          # purchase path, which nav. See CsuiteFinder.Audience.
+          audience: account.audience,
           # `balance_usd` stays the headline number — everything spendable —
           # because that is the field callers already read. The split is
           # alongside it, so a customer can see which dollars have a deadline.
@@ -35,9 +38,25 @@ defmodule CsuiteFinderWeb.BillingController do
             not is_nil(account.trial_granted_at) and account.balance_micro == 0 and
               balances.granted_usd > 0,
           status: account.status,
-          prices_usd: Pricing.list_usd(),
-          terms: Pricing.terms()
+          # A per-answer price list is the developer's offer and the
+          # salesperson's distraction — $0.0025 read next to $999 makes the seat
+          # look absurd, and the seat is what they are here to buy.
+          prices_usd: if(Audience.developer?(account.audience), do: Pricing.list_usd()),
+          terms: Pricing.terms(account.audience)
         })
+    end
+  end
+
+  @doc """
+  POST /csuitefinder/billing/audience — move between the two halves.
+
+  Someone who signed up on the wrong side of the site should be able to say so
+  without opening a support ticket, and the whole UI keys off this one field.
+  """
+  def audience(conn, params) do
+    with {:ok, account} <- authed(conn),
+         {:ok, account} <- Accounts.set_audience(account, params["audience"]) do
+      json(conn, %{audience: account.audience, terms: Pricing.terms(account.audience)})
     end
   end
 
@@ -49,7 +68,29 @@ defmodule CsuiteFinderWeb.BillingController do
 
       account ->
         days = params |> Map.get("days", "30") |> to_int(30)
-        json(conn, Billing.usage_summary(account, days))
+
+        json(conn, usage_for(Billing.usage_summary(account, days), account.audience))
+    end
+  end
+
+  # A per-endpoint charge divided by the number of answers *is* the unit price,
+  # so the breakdown goes to developers only. A seat holder still gets what they
+  # actually want from this: how much they have done, and what it has used.
+  defp usage_for(summary, audience) do
+    if Audience.developer?(audience) do
+      summary
+    else
+      %{
+        since: summary.since,
+        totals: %{
+          calls: summary.totals.calls,
+          credit_used_usd: summary.totals.charged_usd
+        },
+        by_endpoint:
+          Enum.map(summary.by_endpoint, fn row ->
+            %{endpoint: row.endpoint, calls: row.calls, found: row.found}
+          end)
+      }
     end
   end
 

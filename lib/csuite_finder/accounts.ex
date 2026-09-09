@@ -16,6 +16,7 @@ defmodule CsuiteFinder.Accounts do
   import Ecto.Query
 
   alias CsuiteFinder.Accounts.{Account, ApiKey}
+  alias CsuiteFinder.Audience
   alias CsuiteFinder.Billing
   alias CsuiteFinder.Billing.Pricing
   alias CsuiteFinder.Repo
@@ -25,7 +26,28 @@ defmodule CsuiteFinder.Accounts do
   @doc "Create an account."
   @spec create_account(map()) :: {:ok, Account.t()} | {:error, Ecto.Changeset.t()}
   def create_account(attrs) do
-    %Account{} |> Account.changeset(attrs) |> Repo.insert()
+    # Only these three are settable at creation; a balance or a status arriving
+    # with a signup would be someone else's idea, not ours. The audience comes
+    # from a browser or an API caller, so it is normalised rather than trusted —
+    # an unrecognised value becomes the safe default instead of failing a signup
+    # over a typo.
+    %Account{}
+    |> Account.changeset(%{
+      email: field(attrs, :email),
+      name: field(attrs, :name),
+      audience: Audience.cast(field(attrs, :audience))
+    })
+    |> Repo.insert()
+  end
+
+  # Accepts either key style: the API hands us string keys, everything internal
+  # uses atoms.
+  defp field(attrs, key), do: Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key))
+
+  @doc "Move an account to the other half of the business."
+  @spec set_audience(Account.t(), String.t()) :: {:ok, Account.t()} | {:error, Ecto.Changeset.t()}
+  def set_audience(%Account{} = account, audience) do
+    account |> Account.changeset(%{audience: Audience.cast(audience)}) |> Repo.update()
   end
 
   @doc """

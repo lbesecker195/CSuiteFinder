@@ -13,14 +13,14 @@
   </p>
 </header>
 
-<h2 class="section-label" id="pricing">Which one are you?</h2>
+<h2 class="section-label">Which one are you?</h2>
 
 <p class="quiet" style="margin-top:-6px;margin-bottom:22px">
   Same data, two products. Pick the door that matches how you work.
 </p>
 
 <div class="doors">
-  <a class="door" href="/teams">
+  <a class="door" href="/teams" data-set-aud="sales">
     <span class="tag">Sales, founders and recruiters</span>
     <h3 class="door-title">I need to reach people</h3>
     <span class="price">$<%= @seat_usd %><span class="per">/month per seat</span></span>
@@ -31,7 +31,7 @@
     <span class="go">See the seat plan →</span>
   </a>
 
-  <a class="door" href="/developers">
+  <a class="door" href="/developers" data-set-aud="developer">
     <span class="tag">Engineers and agents</span>
     <h3 class="door-title">I need an API</h3>
     <span class="price">Usage-priced<span class="per">pay per answer</span></span>
@@ -73,13 +73,51 @@
   inbox rate: a bounced cold email costs you far more than the lookup did.
 </p>
 
-<div class="hero-cta" style="margin-top:26px">
-  <a class="btn btn-primary" href="/teams">For sales teams — $<%= @seat_usd %>/mo</a>
-  <a class="btn btn-ghost" href="/developers">For developers — the API</a>
+<h2 class="section-label" id="pricing">Pricing</h2>
+
+<!-- Two prices, one visitor. Whichever door they have already been through is
+     the one they see here; a first-time visitor sees the seat price, which is
+     the one that is safe to show anybody. -->
+<div data-aud="sales">
+  <div class="pricebox">
+    <span class="price">$<%= @seat_usd %><span class="per">per person, per month</span></span>
+    <p>
+      Every seat gets <strong>$<%= @seat_usd %> of lookup credit</strong> each month —
+      work emails, direct numbers, deliverability checks, company data. Unused credit
+      does not roll over. Cancel any time.
+    </p>
+    <a class="btn btn-primary" href="/teams">See the seat plan</a>
+  </div>
 </div>
+
+<div data-aud="developer" hidden>
+  <div class="pricebox">
+    <span class="price">Per answer<span class="per">nothing for a lookup that finds nothing</span></span>
+    <p>
+      Buy credit and spend it as you go. Credit you buy never expires, and a dollar
+      buys a dollar of it.
+    </p>
+    <a class="btn btn-primary" href="/developers">See the API and prices</a>
+  </div>
+</div>
+
+<p class="cta-note" style="margin-top:16px">
+  <span data-aud="sales">Building on this instead? <a href="/developers">The developer plan is here →</a></span>
+  <span data-aud="developer" hidden>Buying for a sales team instead? <a href="/teams">The seat plan is here →</a></span>
+</p>
 
 <%= CsuiteFinderWeb.Layout.footer() %>
 
 </div>
+
+<script>
+// Choosing a door is the choice. Recorded on the way out so the pricing below,
+// and every page after this one, is already the right half of the business.
+document.querySelectorAll("[data-set-aud]").forEach(function (el) {
+  el.addEventListener("click", function () {
+    window.csfSetAudience(el.getAttribute("data-set-aud"));
+  });
+});
+</script>
 </body>
 </html>

@@ -22,6 +22,9 @@ defmodule CsuiteFinder.Accounts.Account do
     field :granted_expires_at, :utc_datetime_usec
     field :trial_granted_at, :utc_datetime_usec
     field :status, :string, default: "active"
+    # Which half of the business this account is in. See CsuiteFinder.Audience:
+    # it decides which prices, which purchase path and which nav they see.
+    field :audience, :string, default: "sales"
 
     has_many :api_keys, CsuiteFinder.Accounts.ApiKey
 
@@ -37,12 +40,14 @@ defmodule CsuiteFinder.Accounts.Account do
       :granted_micro,
       :granted_expires_at,
       :trial_granted_at,
-      :status
+      :status,
+      :audience
     ])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
     |> update_change(:email, &String.downcase/1)
     |> validate_inclusion(:status, ~w(active suspended))
+    |> validate_inclusion(:audience, CsuiteFinder.Audience.all())
     |> unique_constraint(:email)
   end
 end

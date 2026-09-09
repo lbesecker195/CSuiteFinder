@@ -13,13 +13,18 @@ defmodule CsuiteFinderWeb.RegistrationController do
 
   @doc "POST /csuitefinder/register"
   def create(conn, params) do
-    case Accounts.register(%{email: params["email"], name: params["name"]}) do
+    case Accounts.register(%{
+           email: params["email"],
+           name: params["name"],
+           audience: params["audience"]
+         }) do
       {:ok, %{account: account, api_key: key, credit_granted_micro: granted}} ->
         conn
         |> put_status(:created)
         |> json(%{
           account_id: account.id,
           email: account.email,
+          audience: account.audience,
           api_key: key,
           # Said plainly, because there is no second chance to read it.
           api_key_notice:

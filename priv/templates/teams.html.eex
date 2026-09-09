@@ -2,6 +2,7 @@
       title: "For sales teams — CSuiteFinder",
       description: "$#{@seat_usd} per person per month, and every month that seat gets $#{@seat_usd} of lookup credit. Verified work emails and direct numbers for the people you need to reach.",
       nav: :teams,
+      audience: :sales,
       css: CsuiteFinderWeb.Layout.page_css(:teams)
     ) %>
 <header>
@@ -10,21 +11,54 @@
     Give a name and a company, get a verified work email and a direct number.
     No API key, no terminal, and no meter running while you work.
   </p>
-  <div class="switch">
-    <a class="on" href="/teams">For sales teams</a>
-    <a href="/developers">For developers</a>
+  <div class="hero-cta">
+    <a class="btn btn-primary" href="/account#pricing">Start a seat — $<%= @seat_usd %>/month</a>
+    <a class="btn btn-ghost" href="/account">Try it free first</a>
   </div>
+  <p class="cta-note">
+    <%= @trial_usd %> of credit, no card, good for <%= @trial_months %> month.
+    Run your own list through it before deciding anything.
+  </p>
 </header>
 
-<h2 class="section-label" id="pricing">One price per person</h2>
+<h2 class="section-label">What your team actually does with it</h2>
+
+<div class="does">
+  <div class="item"><strong>Work a target account</strong><span>Give us the company domain and get the people at it, filtered to executives — names, titles and addresses.</span></div>
+  <div class="item"><strong>Reach a named person</strong><span>You know who you need. We work out their address from how their company formats email.</span></div>
+  <div class="item"><strong>Get a direct number</strong><span>A mobile or direct line for the same person, with the carrier and line type.</span></div>
+  <div class="item"><strong>Check before you send</strong><span>Every address verified against the live mailbox, so bounces never touch your sending reputation.</span></div>
+  <div class="item"><strong>Know who called</strong><span>A number you were called from, matched back to the person and their company.</span></div>
+</div>
+
+<h2 class="section-label">Why the addresses are good</h2>
+
+<p class="quiet">
+  Over 95% of lookups resolve, and every address can be verified against the live
+  mailbox before anyone sends to it. That check is included, and it is the single
+  best thing you can do for your domain's inbox rate: a bounced cold email costs
+  you far more than the lookup did.
+</p>
+
+<h2 class="section-label">How the monthly credit works</h2>
+
+<div class="step"><span class="step-n">1</span><div><strong>You are billed $<%= @seat_usd %> a month per seat.</strong> Through PayPal, on the same day each month, until you stop it.</div></div>
+<div class="step"><span class="step-n">2</span><div><strong>Each payment tops the account up to $<%= @seat_usd %> a seat.</strong> That is what the lookups draw down — around <%= @seat_emails %> work emails, or <%= @seat_phones %> phone numbers, or any mix of the two.</div></div>
+<div class="step"><span class="step-n">3</span><div><strong>Whatever is left at the end of the month goes.</strong> The next payment starts you at $<%= @seat_usd %> again rather than $<%= @seat_usd %> plus the remainder.</div></div>
+<div class="step"><span class="step-n">4</span><div><strong>A lookup that finds nothing costs nothing.</strong> You are only ever charged for an answer.</div></div>
+
+<!-- ── pricing ─────────────────────────────────────────────────────────────
+     At the foot of the page on purpose: the nav's Pricing link is a bare
+     #pricing fragment, so it scrolls down this page rather than sending a
+     salesperson to the developer plan. -->
+<h2 class="section-label" id="pricing">Pricing</h2>
 
 <div class="plan">
   <div>
     <span class="price">$<%= @seat_usd %></span><span class="per">per person, per month</span>
   </div>
   <p class="gets">
-    Every seat gets <strong>$<%= @seat_usd %> of lookup credit</strong> each month —
-    a dollar of credit for a dollar paid, at the same prices everyone else pays.
+    Every seat gets <strong>$<%= @seat_usd %> of lookup credit</strong> each month.
   </p>
   <ul>
     <%= for item <- @seat_includes do %>
@@ -37,76 +71,22 @@
     <% end %>
   </ul>
   <p style="margin:24px 0 0">
-    <a class="btn btn-primary" href="/account#seats">Start a seat</a>
-    <a class="btn btn-ghost" href="/account">Try it free first</a>
-  </p>
-  <p class="cta-note" style="margin:10px 0 0">
-    <%= @trial_usd %> of credit, no card, good for <%= @trial_months %> month.
-    Run your own list through it before deciding anything.
+    <a class="btn btn-primary" href="/account#pricing">Start a seat</a>
+    <a class="btn btn-ghost" href="mailto:<%= @contact_email %>">Talk to us about a team</a>
   </p>
 </div>
-
-<h2 class="section-label">What your team actually does with it</h2>
-
-<div class="does">
-  <div class="item"><strong>Work a target account</strong><span>Give us the company domain and get the people at it, filtered to executives — names, titles and addresses.</span></div>
-  <div class="item"><strong>Reach a named person</strong><span>You know who you need. We work out their address from how their company formats email.</span></div>
-  <div class="item"><strong>Get a direct number</strong><span>A mobile or direct line for the same person, with the carrier and line type.</span></div>
-  <div class="item"><strong>Check before you send</strong><span>Every address verified against the live mailbox, so bounces never touch your sending reputation.</span></div>
-  <div class="item"><strong>Know who called</strong><span>A number you were called from, matched back to the person and their company.</span></div>
-</div>
-
-<h2 class="section-label">Seat or credit — which one</h2>
-
-<p class="quiet" style="margin-top:-6px">
-  The same data at the same per-lookup price. What differs is how you pay for it and
-  how long it lasts:
-</p>
-
-<div class="table-scroll compare">
-<table>
-  <thead>
-    <tr><th></th><th class="seat">A seat — $<%= @seat_usd %>/month</th><th>Credit — bought up front</th></tr>
-  </thead>
-  <tbody>
-    <%= for row <- @comparison do %>
-    <tr>
-      <td><strong><%= row.question %></strong></td>
-      <td class="seat"><%= row.seat %></td>
-      <td><%= row.credit %></td>
-    </tr>
-    <% end %>
-  </tbody>
-</table>
-</div>
-
-<div class="note">
-  <strong>If you can write code and only want the data, buy credit instead.</strong>
-  It is the same price per lookup, it never expires, and there is nothing to use up
-  by the end of the month. A seat buys the app around the data — the browser, the
-  saved work, someone to email — plus the credit to run it. We would rather say that
-  now than sell you a seat you cancel in a month.
-  <a href="/developers">See the developer plan →</a>
-</div>
-
-<h2 class="section-label">How the monthly credit works</h2>
-
-<div class="step"><span class="step-n">1</span><div><strong>You are billed $<%= @seat_usd %> a month per seat.</strong> Through PayPal, on the same day each month, until you stop it.</div></div>
-<div class="step"><span class="step-n">2</span><div><strong>Each payment tops the account up to $<%= @seat_usd %> a seat.</strong> That is what the lookups draw down — around <%= @seat_emails %> work emails, or <%= @seat_phones %> phone numbers, or any mix.</div></div>
-<div class="step"><span class="step-n">3</span><div><strong>Whatever is left at the end of the month goes.</strong> The next payment starts you at $<%= @seat_usd %> again rather than $<%= @seat_usd %> plus the remainder. If you routinely finish the month with credit to spare, buy credit outright instead — it keeps.</div></div>
-<div class="step"><span class="step-n">4</span><div><strong>Credit you bought is untouched by any of this.</strong> It sits in a separate balance that never expires, and it is spent only once the month's seat credit has run out.</div></div>
 
 <p class="quiet">
   Cancel any time — the month you have paid for runs to its end. There is no annual
   lock-in, because a tool worth keeping should not need one.
 </p>
 
-<p style="margin-top:22px">
-  <a class="btn btn-primary" href="/account#seats">Start a seat</a>
-  <a class="btn btn-ghost" href="mailto:<%= @contact_email %>">Talk to us about a team</a>
+<p class="quiet">
+  Building this into your own product rather than working in a browser? There is a
+  <a href="/developers">developer plan</a> priced per answer instead.
 </p>
 
-<%= CsuiteFinderWeb.Layout.footer() %>
+<%= CsuiteFinderWeb.Layout.footer(:sales) %>
 
 </div>
 </body>

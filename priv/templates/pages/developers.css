@@ -10,3 +10,7 @@
   .endpoints table { min-width: 820px; }
   .endpoints td:nth-child(4) { color: var(--muted); font-size: 14px; line-height: 1.5; }
   .endpoints td:nth-child(1) { white-space: nowrap; color: var(--muted); font-size: 13px; }
+
+  .compare table { min-width: 640px; }
+  .compare th:first-child { width: 26%; }
+  .compare .seat { background: var(--accent-soft); }

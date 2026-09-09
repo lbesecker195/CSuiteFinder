@@ -155,10 +155,45 @@ defmodule CsuiteFinder.Billing.Pricing do
   @spec billable?(String.t(), boolean()) :: boolean()
   def billable?(_endpoint, found?), do: found?
 
-  @doc "Everything a caller needs to understand what they are buying."
-  @spec terms() :: map()
-  def terms do
+  @doc """
+  Everything a caller needs to understand what they are buying.
+
+  Takes the audience, because the two halves of the business are quoted
+  differently and quoting both at once sells neither — see
+  `CsuiteFinder.Audience`. An unknown audience gets the seat terms, which are
+  the ones that are safe to show to anybody.
+  """
+  @spec terms(term()) :: map()
+  def terms(audience \\ CsuiteFinder.Audience.default())
+
+  def terms(audience) do
+    if CsuiteFinder.Audience.developer?(audience), do: developer_terms(), else: seat_terms()
+  end
+
+  defp seat_terms do
+    seat = CsuiteFinder.Billing.Plans.seat_usd()
+
     %{
+      currency: "USD",
+      audience: "sales",
+      seat_usd_per_month: seat,
+      credit_usd_per_month: seat,
+      credit_rolls_over: false,
+      free_trial_usd: trial_usd(),
+      free_trial_months: @trial_months,
+      billing_rules: [
+        "$#{seat} per person per month, billed monthly.",
+        "Each seat gets $#{seat} of lookup credit every month.",
+        "Unused credit does not roll over — every month starts at $#{seat}.",
+        "A lookup that finds nothing does not use any credit.",
+        "Cancel any time; the month you have paid for runs to its end."
+      ]
+    }
+  end
+
+  defp developer_terms do
+    %{
+      audience: "developer",
       currency: "USD",
       prices_usd: list_usd(),
       minimum_purchase_usd: @min_bundle_usd,

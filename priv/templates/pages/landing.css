@@ -33,3 +33,11 @@
   .does .item strong { font-size: 15.5px; }
   .does .item span { color: var(--muted); font-size: 14.5px; }
   @media (max-width: 620px) { .does .item { grid-template-columns: 1fr; gap: 4px; } }
+
+  .pricebox {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px; margin-bottom: 8px;
+  }
+  .pricebox .price { font-size: 40px; font-weight: 700; letter-spacing: -.03em; line-height: 1; display: block; }
+  .pricebox .price .per { display: block; font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: 0; margin-top: 8px; }
+  .pricebox p { color: var(--muted); margin: 18px 0; max-width: 60ch; }

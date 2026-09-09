@@ -2,6 +2,7 @@
       title: "For developers — CSuiteFinder API",
       description: "A JSON API for work emails and direct phone numbers. $#{@email_price} an email, $#{@phone_price} a phone, billed only for answers. #{@trial_usd} of free credit to start.",
       nav: :developers,
+      audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:developers),
       wrap_class: "wrap-wide"
     ) %>
@@ -19,37 +20,6 @@
     Buying seats for a sales team instead? <a href="/teams">That's the other plan →</a>
   </p>
 </header>
-
-<h2 class="section-label" id="pricing">Pricing</h2>
-
-<p class="quiet" style="margin-top:-6px">
-  You pay for what we find: <strong>$<%= @email_price %> an email address</strong> and
-  <strong>$<%= @phone_price %> a phone number</strong>, whether you resolve one person from a
-  name or discover a roomful from a domain. Deliverability checks, identity lookups, company
-  data and email formats are all included with any balance.
-</p>
-
-<div class="bundle-grid">
-  <div class="bundle-card">
-    <span class="amt">$<%= @email_price %></span>
-    <span class="rate">per work email found</span>
-  </div>
-  <div class="bundle-card">
-    <span class="amt">$<%= @phone_price %></span>
-    <span class="rate">per phone number found</span>
-  </div>
-  <div class="bundle-card">
-    <span class="amt">$0</span>
-    <span class="rate">per lookup that finds nothing</span>
-  </div>
-</div>
-
-<p class="quiet">
-  Credit you buy <strong>never expires</strong> and a dollar buys a dollar of it. Purchases
-  start at $<%= @min_bundle %> and go through PayPal. Start with
-  <strong><%= @trial_usd %> of free credit</strong> — real lookups, not a preview. Trial
-  credit lasts <%= @trial_months %> month.
-</p>
 
 <h2 class="section-label">Getting a key</h2>
 
@@ -151,22 +121,6 @@
   give us one address there and we can resolve the rest.
 </p>
 
-<h3 class="sub-label">Per-endpoint cost</h3>
-
-<div class="table-scroll">
-<table>
-  <thead><tr><th>Endpoint</th><th class="num">Price</th></tr></thead>
-  <tbody>
-    <%= for {endpoint, usd, label} <- @price_rows do %>
-    <tr>
-      <td><code><%= endpoint %></code></td>
-      <td class="num"><%= if usd > 0, do: "$" <> label, else: "included" %></td>
-    </tr>
-    <% end %>
-  </tbody>
-</table>
-</div>
-
 <h3 class="sub-label">Managing your account</h3>
 
 <div class="table-scroll">
@@ -212,11 +166,88 @@ Verify every address before you give it to me.</code></pre>
   first waste turns hunting for a search endpoint they have already been given.
 </div>
 
+<!-- ── pricing ─────────────────────────────────────────────────────────────
+     At the foot of the page on purpose: the nav's Pricing link is a bare
+     #pricing fragment, so it scrolls down whichever page the visitor is on
+     rather than crossing them over into the other audience's plan. -->
+<h2 class="section-label" id="pricing">Pricing</h2>
+
+<p class="quiet" style="margin-top:-6px">
+  You pay for what we find: <strong>$<%= @email_price %> an email address</strong> and
+  <strong>$<%= @phone_price %> a phone number</strong>, whether you resolve one person from a
+  name or discover a roomful from a domain. Deliverability checks, identity lookups, company
+  data and email formats are all included with any balance.
+</p>
+
+<div class="bundle-grid">
+  <div class="bundle-card">
+    <span class="amt">$<%= @email_price %></span>
+    <span class="rate">per work email found</span>
+  </div>
+  <div class="bundle-card">
+    <span class="amt">$<%= @phone_price %></span>
+    <span class="rate">per phone number found</span>
+  </div>
+  <div class="bundle-card">
+    <span class="amt">$0</span>
+    <span class="rate">per lookup that finds nothing</span>
+  </div>
+</div>
+
+<p class="quiet">
+  Credit you buy <strong>never expires</strong> and a dollar buys a dollar of it. Purchases
+  start at $<%= @min_bundle %> and go through PayPal. Start with
+  <strong><%= @trial_usd %> of free credit</strong> — real lookups, not a preview. Trial
+  credit lasts <%= @trial_months %> month.
+</p>
+
+<h3 class="sub-label">Per-endpoint cost</h3>
+
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Endpoint</th><th class="num">Price</th></tr></thead>
+  <tbody>
+    <%= for {endpoint, usd, label} <- @price_rows do %>
+    <tr>
+      <td><code><%= endpoint %></code></td>
+      <td class="num"><%= if usd > 0, do: "$" <> label, else: "included" %></td>
+    </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>
+
+<h3 class="sub-label">Seat plan, for comparison</h3>
+
+<p class="quiet">
+  If the people using this are working in a browser rather than writing code,
+  a <a href="/teams">seat</a> is $<%= @seat_usd %> a month per person and grants
+  $<%= @seat_usd %> of the same credit each month. Same prices per lookup; the
+  seat's credit expires at the end of the month, bought credit does not.
+</p>
+
+<div class="table-scroll compare">
+<table>
+  <thead>
+    <tr><th></th><th class="seat">A seat — $<%= @seat_usd %>/month</th><th>Credit — bought up front</th></tr>
+  </thead>
+  <tbody>
+    <%= for row <- @comparison do %>
+    <tr>
+      <td><strong><%= row.question %></strong></td>
+      <td class="seat"><%= row.seat %></td>
+      <td><%= row.credit %></td>
+    </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>
+
 <p style="margin-top:26px">
   <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
 </p>
 
-<%= CsuiteFinderWeb.Layout.footer() %>
+<%= CsuiteFinderWeb.Layout.footer(:developer) %>
 
 </div>
 </body>

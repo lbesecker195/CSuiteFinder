@@ -71,7 +71,10 @@ defmodule CsuiteFinderWeb.PageController do
   def developers(conn, _params) do
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(200, render_developers(assigns(conn)))
+    |> send_resp(
+      200,
+      render_developers(Map.put(assigns(conn), :comparison, Plans.comparison()))
+    )
   end
 
   defp contact_email do
@@ -98,8 +101,15 @@ defmodule CsuiteFinderWeb.PageController do
     |> send_resp(200, render_llms(assigns(conn)))
   end
 
-  @doc "GET /csuitefinder/pricing"
-  def pricing(conn, _params), do: json(conn, Pricing.terms())
+  @doc """
+  GET /csuitefinder/pricing
+
+  Documented in `llms.txt` and reached by code, so it answers with the
+  developer terms unless asked otherwise — the caller here is by definition
+  someone reading an API.
+  """
+  def pricing(conn, params),
+    do: json(conn, Pricing.terms(params["audience"] || "developer"))
 
   defp assigns(conn) do
     %{

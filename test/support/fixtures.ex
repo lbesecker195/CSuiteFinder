@@ -3,9 +3,21 @@ defmodule CsuiteFinder.Fixtures do
 
   alias CsuiteFinder.{Accounts, Billing}
 
+  @doc """
+  An account with a working key.
+
+  Defaults to the developer audience: these fixtures back the API tests, and the
+  API is the developer's half of the business. Pass `audience: "sales"` to
+  exercise what a seat holder sees.
+  """
   def account_with_key(opts \\ []) do
     email = Keyword.get(opts, :email, "acct#{System.unique_integer([:positive])}@test.com")
-    {:ok, account} = Accounts.create_account(%{email: email})
+
+    {:ok, account} =
+      Accounts.create_account(%{
+        email: email,
+        audience: Keyword.get(opts, :audience, "developer")
+      })
 
     account =
       case Keyword.get(opts, :usd, 10.0) do

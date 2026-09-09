@@ -85,14 +85,33 @@ defmodule CsuiteFinder.PricingTest do
     end
   end
 
-  describe "terms/0" do
-    test "publishes dollars, with no token vocabulary left" do
-      terms = Pricing.terms()
+  describe "terms/1" do
+    test "publishes dollars to a developer, with no token vocabulary left" do
+      terms = Pricing.terms("developer")
 
       assert terms.currency == "USD"
       assert terms.prices_usd["phone.find"] == 0.025
       assert terms.free_trial_usd == 1.0
       refute Jason.encode!(terms) =~ "token"
+    end
+
+    test "quotes a seat to a salesperson, and no per-answer price at all" do
+      # The whole point of splitting the audiences: a fraction of a cent read
+      # next to $999 makes the seat look absurd.
+      terms = Pricing.terms("sales")
+
+      assert terms.seat_usd_per_month == CsuiteFinder.Billing.Plans.seat_usd()
+      assert terms.credit_usd_per_month == CsuiteFinder.Billing.Plans.seat_usd()
+      assert terms.credit_rolls_over == false
+      refute Map.has_key?(terms, :prices_usd)
+      refute Jason.encode!(terms) =~ "0.0025"
+    end
+
+    test "an unknown audience gets the seat terms" do
+      # When in doubt, quote the price that is safe to show anybody.
+      for value <- [nil, "", "marketing", :wat, 42] do
+        assert Pricing.terms(value).audience == "sales"
+      end
     end
   end
 end

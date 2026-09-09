@@ -16,4 +16,4 @@
 </head>
 <body>
 <div class="<%= @wrap_class %>">
-<%= if @nav, do: CsuiteFinderWeb.Nav.render(@nav) %>
+<%= if @nav, do: CsuiteFinderWeb.Nav.render(@nav, @audience) %>

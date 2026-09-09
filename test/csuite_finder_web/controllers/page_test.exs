@@ -136,13 +136,15 @@ defmodule CsuiteFinderWeb.PageTest do
       end
     end
 
-    test "/teams says plainly when credit is the better buy", %{conn: conn} do
+    test "/teams steers a developer away without quoting them a unit price", %{conn: conn} do
       # A seat sold to someone who wanted an API churns in a month, so the page
-      # steers them rather than taking the money.
+      # still points them at the other plan — but a salesperson reading this
+      # page must not meet a per-answer price on the way past.
       html = conn |> get(~p"/teams") |> html_response(200)
 
-      assert html =~ "buy credit instead"
       assert html =~ ~s|href="/developers"|
+      refute html =~ "$" <> fmt(Pricing.price_usd("email.find"))
+      refute html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
     end
 
     test "/teams says the monthly credit does not roll over", %{conn: conn} do
@@ -160,16 +162,35 @@ defmodule CsuiteFinderWeb.PageTest do
   end
 
   describe "site navigation" do
-    test "every page carries the same header items", %{conn: conn} do
-      for path <- ["/", "/start", "/account"] do
+    test "every page carries a nav, and the pricing link stays on the page", %{conn: conn} do
+      # `#pricing` is a bare fragment on purpose: it scrolls down whichever page
+      # the visitor is on rather than crossing them into the other audience's
+      # plan, which is the one link that would undo the whole split.
+      for path <- ["/", "/teams", "/developers", "/start", "/account"] do
         html = conn |> get(path) |> html_response(200)
 
         assert html =~ ~s|class="sitenav"|, "#{path} has no nav"
-
-        for href <- ["/teams", "/developers", "/#pricing", "/account"] do
-          assert html =~ ~s|href="#{href}"|, "#{path} is missing #{href}"
-        end
+        assert html =~ ~s|href="#pricing"|, "#{path} has no in-page pricing link"
+        assert html =~ ~s|id="pricing"|, "#{path} has nothing for #pricing to land on"
+        assert html =~ ~s|href="/account"|, "#{path} is missing the account link"
       end
+    end
+
+    test "nav items are tagged with the audience they belong to", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert html =~ ~s|data-aud="sales"|
+      assert html =~ ~s|data-aud="developer"|
+      assert html =~ ~s|data-aud="any"|
+    end
+
+    test "a page that knows its audience records it for the pages that cannot",
+         %{conn: conn} do
+      # /account and / cannot know who is looking; /teams and /developers can,
+      # and saying so is what makes the rest of the site follow the visitor.
+      assert conn |> get(~p"/teams") |> html_response(200) =~ ~s|var FIXED = "sales"|
+      assert conn |> get(~p"/developers") |> html_response(200) =~ ~s|var FIXED = "developer"|
+      assert conn |> get(~p"/account") |> html_response(200) =~ "var FIXED = null"
     end
 
     test "the account item is rendered signed-out and swapped client-side", %{conn: conn} do

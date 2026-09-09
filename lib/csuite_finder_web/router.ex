@@ -91,6 +91,8 @@ defmodule CsuiteFinderWeb.Router do
     post "/billing/topup", BillingController, :topup
     post "/billing/capture", BillingController, :capture
 
+    post "/billing/audience", BillingController, :audience
+
     get "/billing/subscription", BillingController, :subscription
     post "/billing/subscribe", BillingController, :subscribe
     post "/billing/subscription/cancel", BillingController, :unsubscribe

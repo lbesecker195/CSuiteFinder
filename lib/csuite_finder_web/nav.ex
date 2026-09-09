@@ -3,58 +3,137 @@ defmodule CsuiteFinderWeb.Nav do
   The site header, defined once and rendered into each page.
 
   These pages are separate EEx templates with no layout between them, so without
-  this the nav would exist in three places and drift the first time a link
-  changed. `current` marks the active item.
+  this the nav would exist in five places and drift the first time a link
+  changed.
+
+  ## The nav is audience-aware
+
+  A salesperson and a developer are sold different things at different prices
+  (see `CsuiteFinder.Audience`), and a header offering both is how a salesperson
+  ends up reading a per-answer price list. So every item is tagged with the
+  audience it belongs to and the rest are removed in the browser.
+
+  Where the audience is known from the page itself — `/teams` is sales,
+  `/developers` is not — the server says so and the page also *remembers* it, so
+  the pages that cannot know (the account page, the fork) follow the visitor
+  rather than guessing. When nothing is remembered the visitor is treated as
+  sales, which is the price that is safe to show anybody.
+
+  `Pricing` is deliberately a bare `#pricing` fragment: every page carries its
+  own pricing section at the foot, so the link scrolls down the page the visitor
+  is already on instead of sending them to the other audience's page.
   """
 
+  alias CsuiteFinder.Audience
+
+  # {key, href, label, audience} — audience `:any` shows to everyone.
   @links [
-    {:teams, "/teams", "For sales teams"},
-    {:developers, "/developers", "For developers"},
-    {:pricing, "/#pricing", "Pricing"}
+    {:teams, "/teams", "Seats", :sales},
+    {:developers, "/developers", "The API", :developer},
+    {:start, "/start", "Get started", :developer},
+    {:pricing, "#pricing", "Pricing", :any}
   ]
 
-  # The key the account page stores in the visitor's browser. Its presence is
-  # what decides whether the last nav item reads "Register / Log in" or
-  # "Dashboard".
+  # What the account page stores in the visitor's browser. The key decides
+  # whether the last nav item reads "Register / Log in" or "Dashboard"; the
+  # audience decides which of the other items survive.
   @key_store "csf_api_key"
+  @audience_store "csf_audience"
 
   @doc """
-  The header markup. `current` is the key of the page being rendered, or `nil`.
+  The header markup.
+
+  `current` is the key of the page being rendered, or `nil`. `audience` is
+  `:sales` or `:developer` when the page itself settles the question, and `nil`
+  when it does not — in which case the browser's remembered audience decides,
+  defaulting to sales.
 
   Returns a raw string: these templates are plain EEx with no HTML escaping, and
   everything here is a literal — no caller input reaches it.
   """
-  @spec render(atom()) :: String.t()
-  def render(current \\ nil) do
+  @spec render(atom(), :sales | :developer | nil) :: String.t()
+  def render(current \\ nil, audience \\ nil) do
     items =
-      Enum.map_join(@links, "\n", fn {key, href, label} ->
+      Enum.map_join(@links, "\n", fn {key, href, label, for_audience} ->
         active = if key == current, do: ~s( class="on"), else: ""
-        ~s(      <a href="#{href}"#{active}>#{label}</a>)
+        ~s(      <a href="#{href}" data-aud="#{for_audience}"#{active}>#{label}</a>)
       end)
 
     """
     <nav class="sitenav">
-      <a class="brand" href="/">CSuiteFinder</a>
+      <a class="brand" href="#{home_for(audience)}">CSuiteFinder</a>
       <div class="navlinks">
     #{items}
         <a class="navcta" href="/account" id="nav-account">Register / Log in</a>
       </div>
     </nav>
+    #{script(audience)}
+    """
+  end
+
+  defp home_for(:developer), do: "/developers"
+  defp home_for(:sales), do: "/teams"
+  defp home_for(_), do: "/"
+
+  # Rendered as the sales nav and narrowed in the browser, so a visitor with
+  # scripting off or storage blocked still gets a working header showing the
+  # prices that are safe to show anybody.
+  defp script(audience) do
+    fixed = if audience in [:sales, :developer], do: ~s("#{audience}"), else: "null"
+
+    """
     <script>
-    // Someone who already has a key is not registering again — they want their
-    // dashboard. The key lives only in this browser, so the swap has to happen
-    // here rather than server-side. Rendered signed-out first, so a browser
-    // that blocks storage still shows a sensible label instead of nothing.
     (function () {
+      var FIXED = #{fixed};
+      var DEFAULT = "#{Audience.default()}";
+      var audience = FIXED;
+
       try {
+        // A page that knows its own audience is also the moment to record it:
+        // arriving on /developers is what makes you a developer everywhere else.
+        if (FIXED) localStorage.setItem("#{@audience_store}", FIXED);
+        else audience = localStorage.getItem("#{@audience_store}");
         if (localStorage.getItem("#{@key_store}")) {
           document.getElementById("nav-account").textContent = "Dashboard";
         }
       } catch (e) {}
+
+      window.csfAudience = function () {
+        if (FIXED) return FIXED;
+        try { return localStorage.getItem("#{@audience_store}") || DEFAULT; }
+        catch (e) { return DEFAULT; }
+      };
+
+      window.csfSetAudience = function (value) {
+        if (value !== "sales" && value !== "developer") return;
+        try { localStorage.setItem("#{@audience_store}", value); } catch (e) {}
+        window.csfApplyAudience(value);
+      };
+
+      window.csfApplyAudience = function (value) {
+        var a = value || DEFAULT;
+        document.querySelectorAll("[data-aud]").forEach(function (el) {
+          var want = el.getAttribute("data-aud");
+          el.hidden = (want !== "any" && want !== a);
+        });
+      };
+
+      window.csfApplyAudience(audience || DEFAULT);
+
+      // The nav is parsed before the rest of the page, so the first pass only
+      // reaches the header. Everything else — a pricing block, a purchase path,
+      // a table column — is tagged the same way and narrowed once it exists.
+      document.addEventListener("DOMContentLoaded", function () {
+        window.csfApplyAudience(window.csfAudience());
+      });
     })();
     </script>
     """
   end
+
+  @doc "The browser key the visitor's audience is remembered under."
+  @spec audience_store() :: String.t()
+  def audience_store, do: @audience_store
 
   @doc "Styles for the header, injected into each page's stylesheet."
   @spec css() :: String.t()
