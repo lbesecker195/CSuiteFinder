@@ -131,7 +131,7 @@
     <button class="bundle" data-usd="<%= b.usd %>">
       <span class="price">$<%= b.usd_label %></span>
       <span class="credit">$<%= b.usd_label %> of credit</span>
-      <span class="finds"><%= b.emails_label %> emails, or <%= b.phones_label %> phone numbers</span>
+      <span class="finds"><%= b.emails_label %> work email addresses</span>
     </button>
     <% end %>
   </div>
@@ -231,10 +231,9 @@
     $("balanceusd").textContent = "of credit";
     renderSplit(b);
     var perEmail = (b.prices_usd && b.prices_usd["email.find"]) || 0.0025;
-    var perPhone = (b.prices_usd && b.prices_usd["phone.find"]) || 0.025;
     $("findsleft").textContent = usd > 0
-      ? commas(Math.floor(usd / perEmail)) + " more email addresses, or " +
-        commas(Math.floor(usd / perPhone)) + " phone numbers. Everything else is included."
+      ? commas(Math.floor(usd / perEmail)) + " more work email addresses. " +
+        "Deliverability checks, identity lookups and company data are included."
       : "Out of credit — buy more below to carry on.";
     $("whoami").textContent = b.email || "";
   }

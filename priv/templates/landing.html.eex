@@ -1,6 +1,6 @@
 <%= CsuiteFinderWeb.Layout.head(
       title: "CSuiteFinder — reach the decision-maker",
-      description: "Turn a name and a company into a verified work email address or a direct phone number. $#{@seat_usd} a month per seat for sales teams, or a usage-priced API for developers.",
+      description: "Turn a name and a company into a verified work email address. $#{@seat_usd} a month per seat for sales teams, or a usage-priced API for developers.",
       nav: :none,
       css: CsuiteFinderWeb.Layout.page_css(:landing)
     ) %>
@@ -9,7 +9,7 @@
   <p class="lede">
     You know the person you need — a VP of Engineering, a founder, a Head of Procurement.
     CSuiteFinder turns their name and their company into a verified work email address
-    and a direct phone number.
+
   </p>
 </header>
 
@@ -26,7 +26,7 @@
     <span class="price">$<%= @seat_usd %><span class="per">/month per seat</span></span>
     <p>
       Work in the browser. Search a company, get the room — names, titles, deliverable
-      addresses and direct numbers. No API key, no terminal, no meter to watch.
+      deliverable addresses. No API key, no terminal, no meter to watch.
     </p>
     <span class="go">See the seat plan →</span>
   </a>
@@ -53,10 +53,8 @@
 <div class="does">
   <div class="item"><strong>Find the people at a company</strong><span>A domain in, named people out — with titles, departments and addresses. Filter to executives for the C-suite.</span></div>
   <div class="item"><strong>Find an email</strong><span>A name and a company domain become a work email address.</span></div>
-  <div class="item"><strong>Find a phone number</strong><span>A direct line or mobile for the same person, with the carrier and line type — and we remember whose it is.</span></div>
   <div class="item"><strong>Check it's deliverable</strong><span>Confirm the mailbox is real before you send, so bounces don't hurt your sender reputation.</span></div>
   <div class="item"><strong>Identify an address</strong><span>Given an email, find out whose it is — name, job title, employer.</span></div>
-  <div class="item"><strong>Identify a number</strong><span>A phone number you were called from, matched back to the person and their company.</span></div>
   <div class="item"><strong>Learn a company's format</strong><span>See how a company builds its addresses, and apply it to anyone else there.</span></div>
   <div class="item"><strong>Look up the company</strong><span>Industry, headcount, founding year and location behind any work address.</span></div>
 </div>
@@ -83,7 +81,7 @@
     <span class="price">$<%= @seat_usd %><span class="per">per person, per month</span></span>
     <p>
       Every seat gets <strong>$<%= @seat_usd %> of lookup credit</strong> each month —
-      work emails, direct numbers, deliverability checks, company data. Unused credit
+      work emails, deliverability checks, identity lookups, company data. Unused credit
       does not roll over. Cancel any time.
     </p>
     <a class="btn btn-primary" href="/teams">See the seat plan</a>

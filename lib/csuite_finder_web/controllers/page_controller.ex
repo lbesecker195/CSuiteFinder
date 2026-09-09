@@ -60,7 +60,6 @@ defmodule CsuiteFinderWeb.PageController do
           seat_includes: seat.includes,
           seat_caveats: seat.caveats,
           seat_emails: delimit(seat.lookups.emails),
-          seat_phones: delimit(seat.lookups.phones),
           comparison: Plans.comparison(),
           contact_email: contact_email(),
           sheet: SampleSheet.rows(),

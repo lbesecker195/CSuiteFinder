@@ -1,6 +1,6 @@
 <%= CsuiteFinderWeb.Layout.head(
       title: "For developers — CSuiteFinder API",
-      description: "A JSON API for work emails and direct phone numbers. $#{@email_price} an email, $#{@phone_price} a phone, billed only for answers. #{@trial_usd} of free credit to start.",
+      description: "A JSON API for verified work email addresses. $#{@email_price} an address, billed only for answers. #{@trial_usd} of free credit to start.",
       nav: :developers,
       audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:developers),
@@ -9,7 +9,7 @@
 <header>
   <h1>One endpoint, one price.</h1>
   <p class="lede">
-    A plain JSON API over HTTPS for work emails and direct phone numbers. No SDK, no seat
+    A plain JSON API over HTTPS for verified work email addresses. No SDK, no seat
     licence, no sales call. You pay for answers — a lookup that finds nothing is free.
   </p>
   <div class="hero-cta">
@@ -173,20 +173,16 @@ Verify every address before you give it to me.</code></pre>
 <h2 class="section-label" id="pricing">Pricing</h2>
 
 <p class="quiet" style="margin-top:-6px">
-  You pay for what we find: <strong>$<%= @email_price %> an email address</strong> and
-  <strong>$<%= @phone_price %> a phone number</strong>, whether you resolve one person from a
-  name or discover a roomful from a domain. Deliverability checks, identity lookups, company
-  data and email formats are all included with any balance.
+  You pay for what we find: <strong>$<%= @email_price %> an email address</strong>, whether
+  you resolve one person from a name or discover a roomful from a domain. Deliverability
+  checks, identity lookups, company data and email formats are all included with any
+  balance. Every endpoint's own price is listed below.
 </p>
 
 <div class="bundle-grid">
   <div class="bundle-card">
     <span class="amt">$<%= @email_price %></span>
     <span class="rate">per work email found</span>
-  </div>
-  <div class="bundle-card">
-    <span class="amt">$<%= @phone_price %></span>
-    <span class="rate">per phone number found</span>
   </div>
   <div class="bundle-card">
     <span class="amt">$0</span>

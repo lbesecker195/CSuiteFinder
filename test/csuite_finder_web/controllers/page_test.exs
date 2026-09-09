@@ -158,6 +158,7 @@ defmodule CsuiteFinderWeb.PageTest do
       # typed, so it cannot drift from the plan.
       assert html =~ ~s|class="sheet"|
       assert html =~ "Rows <strong>#{delimited(Plans.seat_lookups().emails)}</strong> / month"
+      assert html =~ "<td>Deliverable</td>"
 
       for row <- CsuiteFinderWeb.SampleSheet.rows() do
         assert html =~ row.name, "the sheet is missing #{row.name}"
@@ -189,6 +190,34 @@ defmodule CsuiteFinderWeb.PageTest do
       raws = CsuiteFinderWeb.SampleSheet.rows() |> Enum.map(& &1.raw) |> Enum.frequencies()
 
       assert raws == %{accept_all: 6, confirmed: 2, rejected: 2}
+    end
+
+    test "phone numbers are not sold anywhere in the copy", %{conn: conn} do
+      # The endpoints exist and stay documented, but nothing on the site offers
+      # a phone number to a buyer: coverage for the people these pages are about
+      # is poor enough that promising one sells a disappointment. Guarded here
+      # because a sentence like that grows back the first time someone edits the
+      # hero.
+      for path <- ["/", "/teams", "/account", "/start"] do
+        html = conn |> get(path) |> html_response(200)
+
+        refute html =~ ~r/phone/i, "#{path} still sells phone numbers"
+        refute html =~ ~r/direct (number|line)/i, "#{path} still sells direct numbers"
+      end
+    end
+
+    test "but the phone endpoints stay documented for developers", %{conn: conn} do
+      # Removing the copy is a positioning decision, not a deprecation. An agent
+      # or an integrator reading the reference must still find these.
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      for path <- ~w(/csuitefinder/phone/find /csuitefinder/phone/valid
+                     /csuitefinder/phone/name /csuitefinder/phone/enrich
+                     /csuitefinder/phone/company) do
+        assert html =~ path, "the developer reference dropped #{path}"
+      end
+
+      assert conn |> get(~p"/llms.txt") |> response(200) =~ "/csuitefinder/phone/find"
     end
 
     test "the sheet publishes no working address", %{conn: conn} do

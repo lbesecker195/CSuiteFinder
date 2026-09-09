@@ -79,8 +79,8 @@ defmodule CsuiteFinder.Billing.Plans do
       credit_usd: @seat_usd_per_month,
       lookups: lookups,
       includes: [
-        "$#{delimit(@seat_usd_per_month)} of credit every month — around #{delimit(lookups.emails)} work emails, or #{delimit(lookups.phones)} phone numbers",
-        "Every lookup: work emails, phone numbers, deliverability, enrichment and company data",
+        "$#{delimit(@seat_usd_per_month)} of credit every month — around #{delimit(lookups.emails)} work email addresses",
+        "Every lookup: work emails, deliverability, enrichment and company data",
         "Works with ChatGPT, Claude or any AI assistant — your team asks in plain English",
         "Everything you look up is kept, so asking again answers instantly",
         "Email support"
@@ -117,10 +117,8 @@ defmodule CsuiteFinder.Billing.Plans do
       },
       %{
         question: "What a lookup costs",
-        seat:
-          "The same: $#{fmt(Pricing.price_usd("email.find"))} an email, $#{fmt(Pricing.price_usd("phone.find"))} a phone",
-        credit:
-          "$#{fmt(Pricing.price_usd("email.find"))} an email, $#{fmt(Pricing.price_usd("phone.find"))} a phone"
+        seat: "The same: $#{fmt(Pricing.price_usd("email.find"))} a work email address",
+        credit: "$#{fmt(Pricing.price_usd("email.find"))} a work email address"
       },
       %{
         question: "How you use it",

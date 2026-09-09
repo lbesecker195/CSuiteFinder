@@ -38,16 +38,13 @@ defmodule CsuiteFinderWeb.AccountController do
       seat_usd_label: delimit(Plans.seat_usd()),
       email_price:
         :erlang.float_to_binary(Pricing.price_usd("email.find"), [:compact, decimals: 4]),
-      phone_price:
-        :erlang.float_to_binary(Pricing.price_usd("phone.find"), [:compact, decimals: 4]),
       trial_usd: :erlang.float_to_binary(Pricing.trial_usd(), [:compact, decimals: 2]),
       bundles:
         for b <- Pricing.bundles() do
           %{
             usd: b.usd,
             usd_label: delimit(b.usd),
-            emails_label: delimit(b.emails),
-            phones_label: delimit(b.phones)
+            emails_label: delimit(b.emails)
           }
         end
     }

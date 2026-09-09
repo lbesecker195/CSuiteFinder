@@ -27,10 +27,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       deliverability check doing its job in public, and worth chasing: both
       suggest the address we built for that company is wrong.
 
-  The phone column is empty because no provider we route to holds a direct
-  number for any of these ten. That is true of the C-suite at companies this
-  size generally; numbers do resolve further down the org chart. It is shown
-  rather than hidden for the same reason as the red rows.
   """
 
   @generated_on ~D[2026-09-09]
@@ -43,7 +39,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Ryan McInerney",
       company: "Visa",
       email: "rm••••••••@visa.com",
-      phone: nil,
       status: :deliverable,
       raw: :accept_all
     },
@@ -51,7 +46,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Michael Miebach",
       company: "Mastercard",
       email: "mi•••••_mi•••••@mastercard.com",
-      phone: nil,
       status: :deliverable,
       raw: :confirmed
     },
@@ -59,7 +53,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Alex Chriss",
       company: "PayPal",
       email: "ac•••••@paypal.com",
-      phone: nil,
       status: :deliverable,
       raw: :accept_all
     },
@@ -67,7 +60,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Stephen Squeri",
       company: "American Express",
       email: "st•••••.sq••••@americanexpress.com",
-      phone: nil,
       status: :undeliverable,
       raw: :rejected
     },
@@ -75,7 +67,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Stephanie Ferris",
       company: "FIS",
       email: "st•••••••.fe••••@fisglobal.com",
-      phone: nil,
       status: :deliverable,
       raw: :accept_all
     },
@@ -83,7 +74,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Cameron Bready",
       company: "Global Payments",
       email: "ca•••••.br••••@globalpayments.com",
-      phone: nil,
       status: :deliverable,
       raw: :accept_all
     },
@@ -91,7 +81,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Richard Fairbank",
       company: "Capital One",
       email: "ri•••••.fa••••••@capitalone.com",
-      phone: nil,
       status: :deliverable,
       raw: :accept_all
     },
@@ -99,7 +88,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Sasan Goodarzi",
       company: "Intuit",
       email: "sa•••_go••••••@intuit.com",
-      phone: nil,
       status: :deliverable,
       raw: :confirmed
     },
@@ -107,7 +95,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Michael Rhodes",
       company: "Fiserv",
       email: "mi•••••.rh••••@fiserv.com",
-      phone: nil,
       status: :deliverable,
       raw: :accept_all
     },
@@ -115,7 +102,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       name: "Michael Shepherd",
       company: "Discover",
       email: "mi•••••••••••••@discover.com",
-      phone: nil,
       status: :undeliverable,
       raw: :rejected
     }

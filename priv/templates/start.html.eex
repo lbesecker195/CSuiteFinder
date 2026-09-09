@@ -60,7 +60,7 @@
     <div class="asks">
       <div class="ask">
         <span class="who">Sales</span>
-        <p>"Here are 40 names and their companies. Get me verified emails and phone numbers for the ones that check out and save it to prospects.csv"</p>
+        <p>"Here are 40 names and their companies. Get me verified work emails for the ones that check out and save it to prospects.csv"</p>
       </div>
       <div class="ask">
         <span class="who">Founders</span>
@@ -123,8 +123,8 @@ curl -H "Authorization: Bearer $KEY" \
 
 <p class="quiet">
   Your first <strong><%= @trial_usd %> of credit are free</strong> (<%= @trial_usd %> of credit) —
-  real lookups, not a limited preview. After that you pay <strong>$<%= @email_price %> per email address</strong>
-  and <strong>$<%= @phone_price %> per phone number</strong>, and nothing at all for deliverability checks, identity lookups, company
+  real lookups, not a limited preview. After that you pay <strong>$<%= @email_price %> per email address</strong>,
+  and nothing at all for deliverability checks, identity lookups, company
   data or email formats. A lookup that finds nothing is free.
 </p>
 
@@ -139,8 +139,7 @@ curl -H "Authorization: Bearer $KEY" \
 <h2 class="section-label" id="pricing">Pricing</h2>
 
 <p class="quiet">
-  <strong>$<%= @email_price %></strong> per work email found and
-  <strong>$<%= @phone_price %></strong> per phone number found. Deliverability checks,
+  <strong>$<%= @email_price %></strong> per work email found. Deliverability checks,
   enrichment, company data and email formats are included with any balance, and a
   lookup that finds nothing is free. Credit you buy never expires; purchases start at
   $<%= @min_bundle %>. <a href="/developers#pricing">The full price list is here →</a>
