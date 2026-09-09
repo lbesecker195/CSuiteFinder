@@ -448,7 +448,11 @@ Verify every address before you give it to me.</code></pre>
   </tbody>
 </table>
 </div>
+  <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
 </div>
+
+
+
 
 <footer>
   <a href="/start">Get started</a> ·
