@@ -24,22 +24,86 @@ config :csuite_finder, CsuiteFinderWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
-
+  # Two ways to reach Postgres, because "I never set a password" is a normal
+  # state on a fresh box:
+  #
+  #   * DATABASE_URL       — TCP, with a password. The usual choice.
+  #   * DATABASE_SOCKET_DIR — Unix socket, using Postgres peer authentication,
+  #                           which needs no password at all.
+  #
+  # The socket form cannot be expressed as a URL: Ecto requires a host in
+  # `url:` and rejects a hostless one outright, whatever query parameters it
+  # carries. So it gets its own variables rather than a URL that looks like it
+  # should work and does not.
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
+  pool_size = String.to_integer(System.get_env("POOL_SIZE") || "10")
 
-  config :csuite_finder, CsuiteFinder.Repo,
-    # ssl: true,
-    url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    # For machines with several cores, consider starting multiple pools of `pool_size`
-    # pool_count: 4,
-    socket_options: maybe_ipv6
+  repo_config =
+    case System.get_env("DATABASE_SOCKET_DIR") do
+      socket_dir when is_binary(socket_dir) and socket_dir != "" ->
+        [
+          socket_dir: socket_dir,
+          username: System.get_env("DATABASE_USER") || System.get_env("USER") || "postgres",
+          database:
+            System.get_env("DATABASE_NAME") ||
+              raise("DATABASE_SOCKET_DIR is set, so DATABASE_NAME is required too.")
+        ]
+
+      _ ->
+        database_url =
+          System.get_env("DATABASE_URL") ||
+            raise """
+            environment variable DATABASE_URL is missing.
+
+            Either set it to a full connection URL:
+
+                DATABASE_URL=ecto://USER:PASSWORD@HOST/DATABASE
+
+            or, to connect with no password over the Unix socket:
+
+                DATABASE_SOCKET_DIR=/var/run/postgresql
+                DATABASE_NAME=csuite_finder_prod
+                DATABASE_USER=csuite
+            """
+
+        # Check the shape here rather than letting Ecto fail inside a supervisor.
+        # A host:port pair is the natural thing to type and is not a URL, and
+        # the error it produces ("host is not present", with a %URI{} dump)
+        # buries the one fact that helps: what it should have looked like.
+        case URI.parse(database_url) do
+          %URI{scheme: scheme, host: host}
+          when scheme in ~w(ecto postgres postgresql) and is_binary(host) and host != "" ->
+            :ok
+
+          _ ->
+            raise """
+            DATABASE_URL is not a database URL: #{inspect(database_url)}
+
+            Expected a full connection URL, not a host and port:
+
+                ecto://USER:PASSWORD@HOST/DATABASE
+
+            For example:
+
+                ecto://csuite:s3cret@localhost/csuite_finder_prod
+
+            If the password contains @ : / or ?, percent-encode it — a raw @
+            splits the URL at the wrong place and gives you this same error.
+
+            To connect with NO password, do not use a URL at all. Ecto requires
+            a host here and rejects a hostless URL even with ?socket_dir=. Use
+            the Unix socket variables instead:
+
+                DATABASE_SOCKET_DIR=/var/run/postgresql
+                DATABASE_NAME=csuite_finder_prod
+                DATABASE_USER=csuite
+            """
+        end
+
+        [url: database_url, socket_options: maybe_ipv6]
+    end
+
+  config :csuite_finder, CsuiteFinder.Repo, [pool_size: pool_size] ++ repo_config
 
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -57,15 +121,22 @@ if config_env() == :prod do
 
   config :csuite_finder, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Bind to loopback by default. Behind a reverse proxy (the standard VPS
+  # deployment) binding to every interface would leave port 4000 reachable
+  # from the internet directly — bypassing nginx, and with it TLS, the
+  # security headers and any rate limiting. Set BIND_ALL=true only on
+  # platforms that terminate TLS for you and route to the container's own
+  # address, such as Fly.io or a Kubernetes service.
+  bind_address =
+    if System.get_env("BIND_ALL") in ~w(true 1) do
+      {0, 0, 0, 0, 0, 0, 0, 0}
+    else
+      {127, 0, 0, 1}
+    end
+
   config :csuite_finder, CsuiteFinderWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
-    http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-      # See the documentation on https://bandit.hexdocs.pm/Bandit.html#t:options/0
-      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      ip: {0, 0, 0, 0, 0, 0, 0, 0}
-    ],
+    http: [ip: bind_address],
     secret_key_base: secret_key_base
 
   # ## SSL Support

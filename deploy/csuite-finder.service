@@ -1,0 +1,56 @@
+# systemd unit for the CSuiteFinder release.
+#
+#   sudo cp deploy/csuite-finder.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now csuite-finder
+#
+# Adjust User, WorkingDirectory and ExecStart if you deploy somewhere other
+# than /var/www/HoneyTrap/CSuiteFInder as the `csuite` user.
+
+[Unit]
+Description=CSuiteFinder API
+# Wants= rather than Requires=: if Postgres restarts we want to keep running
+# and reconnect, not be torn down with it.
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+Type=exec
+User=csuite
+Group=csuite
+WorkingDirectory=/var/www/HoneyTrap/CSuiteFInder
+
+# Secrets live here, root-owned and chmod 600 — never in this unit file,
+# which is world-readable.
+EnvironmentFile=/etc/csuite-finder.env
+
+ExecStart=/var/www/HoneyTrap/CSuiteFInder/_build/prod/rel/csuite_finder/bin/server
+
+# An OTP release supervises its own processes; systemd only needs to restart
+# the whole VM if it actually exits. RestartSec keeps a crash loop from
+# hammering Postgres.
+Restart=on-failure
+RestartSec=5
+
+# Give in-flight requests a moment to finish before SIGKILL.
+TimeoutStopSec=30
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=csuite-finder
+
+# Hardening. The app writes nothing to disk outside its own tree, so it can
+# run with almost everything read-only.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/HoneyTrap/CSuiteFInder
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

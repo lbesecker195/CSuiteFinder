@@ -297,6 +297,22 @@ export PAYPAL_CLIENT_ID=... PAYPAL_CLIENT_SECRET=... PAYPAL_WEBHOOK_ID=...
 export PAYPAL_MODE=live          # defaults to sandbox
 ```
 
+## Deploying
+
+See [DEPLOY.md](DEPLOY.md) — Ubuntu VPS, nginx, Let's Encrypt, systemd. Ready-made
+files live in `deploy/`: a systemd unit, an nginx site, and an environment
+template.
+
+Short version: it is a Mix release behind nginx. **Not pm2** — that is a Node
+process manager, and an OTP release already supervises itself; systemd gives you
+boot ordering against Postgres, journald and sandboxing for free.
+
+```bash
+MIX_ENV=prod mix release --overwrite
+_build/prod/rel/csuite_finder/bin/migrate
+sudo systemctl restart csuite-finder
+```
+
 ## Tests
 
 ```bash
