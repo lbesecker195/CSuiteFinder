@@ -140,17 +140,21 @@ Is a number real, and what kind of line.
 Returns validity, line type, carrier, region, timezones and the E.164, local,
 international and RFC3966 formats.
 
-### POST /csuitefinder/phone/who — included
+### Phone-input routes — all included
 
-Whose number is this.
+Three routes take a number instead of an address. They mirror the `/email/*`
+ones and are **answered only from numbers this service has already found**: no
+provider sells reverse phone lookup, so a number we have not seen is
+`found: false` — the true answer, not a failure. Numbers become known once found
+through `/phone/find`.
 
-- `phone` (required)
+- `POST /csuitefinder/phone/name` — whose number is this
+- `POST /csuitefinder/phone/enrich` — the person behind it, in full
+- `POST /csuitefinder/phone/company` — which company it belongs to
 
-**Answered only from numbers this service has already found.** No provider sells
-reverse phone lookup, so a number we have not seen is `found: false` — that is
-the true answer, not a failure. Numbers become known once found through
-`/phone/find`, and `phone` may then be sent instead of `email` to
-`/name/who`, `/email/enrich`, `/company/find` and `/company/info`.
+Each takes `phone` (required). Note the shape: `/email/*` takes an email and
+`/phone/*` takes a phone. Neither accepts the other's identifier, so the price
+and the failure modes of a route never depend on which parameter you sent.
 
 ### POST /csuitefinder/email/deliverable — included
 
@@ -170,10 +174,11 @@ location. `confidence` grades the answer.
 
 - `email` (required)
 
-### POST /csuitefinder/name/who — included
+### POST /csuitefinder/email/name — included
 
 Just the identity behind an address — name, title, employer. Same data and price
-as `/email/enrich`; use this when you want a name rather than a full record.
+as `/email/enrich`; use this when you want a name rather than a full record. The
+phone equivalent is `/phone/name`.
 
 - `email` (required)
 

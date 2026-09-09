@@ -200,6 +200,8 @@ defmodule CsuiteFinderWeb.PhoneTest do
       TregStub.stub(fn
         "treg.people.phone.find", _ -> {200, @found, 4_834}
         "tomba.people.phone.verify", _ -> {200, @validated, 8_900}
+        "treg.people.enrich", _ -> {200, TregStub.routed(%{"full_name" => "Dylan Field"}), 4_900}
+        "treg.companies.enrich", _ -> {200, TregStub.routed(%{"name" => "Figma"}), 1_900}
       end)
 
       get(conn, ~p"/csuitefinder/phone/find?full_name=Dylan%20Field&domain=figma.com")
@@ -207,10 +209,10 @@ defmodule CsuiteFinderWeb.PhoneTest do
     end
 
     test "a number we found is attributable afterwards", %{conn: conn} do
-      body = conn |> get(~p"/csuitefinder/phone/who?phone=7075485509") |> json_response(200)
+      body = conn |> get(~p"/csuitefinder/phone/name?phone=7075485509") |> json_response(200)
 
       assert body["found"]
-      assert body["belongs_to"]["full_name"] == "Dylan Field"
+      assert body["full_name"] == "Dylan Field"
     end
 
     test "matches however the number is written", %{conn: conn} do
@@ -218,7 +220,7 @@ defmodule CsuiteFinderWeb.PhoneTest do
       # would miss half the time.
       for form <- ["7075485509", "%2B17075485509", "(707)%20548-5509"] do
         body =
-          conn |> get("/csuitefinder/phone/who?phone=#{form}") |> json_response(200)
+          conn |> get("/csuitefinder/phone/name?phone=#{form}") |> json_response(200)
 
         assert body["found"], "did not resolve #{form}"
       end
@@ -227,21 +229,35 @@ defmodule CsuiteFinderWeb.PhoneTest do
     test "a number we have never seen is unknown, not guessed", %{conn: conn} do
       # There is no provider to buy a reverse lookup from, so saying so is the
       # only honest answer.
-      body = conn |> get(~p"/csuitefinder/phone/who?phone=2125550123") |> json_response(200)
+      body = conn |> get(~p"/csuitefinder/phone/name?phone=2125550123") |> json_response(200)
 
       refute body["found"]
       assert body["message"] =~ "have not seen"
     end
 
-    test "a phone stands in for an email on /name/who", %{conn: conn} do
-      body = conn |> get(~p"/csuitefinder/name/who?phone=7075485509") |> json_response(200)
-      assert body["full_name"] == "Dylan Field"
+    test "phone input has endpoints of its own rather than a parameter",
+         %{conn: conn} do
+      # /email/* takes an email, /phone/* takes a phone. Overloading one route
+      # with both made its price and its failure modes depend on which parameter
+      # you happened to send.
+      for path <- [
+            "/csuitefinder/phone/name",
+            "/csuitefinder/phone/enrich",
+            "/csuitefinder/phone/company"
+          ] do
+        assert conn |> get(path <> "?phone=7075485509") |> json_response(200)
+      end
+
+      # The email route no longer answers a phone at all.
+      assert %{"error" => "missing_params"} =
+               conn |> get(~p"/csuitefinder/email/name?phone=7075485509") |> json_response(400)
     end
 
-    test "an unknown number is refused there rather than answered vaguely",
-         %{conn: conn} do
-      body = conn |> get(~p"/csuitefinder/name/who?phone=2125550123") |> json_response(400)
-      assert body["error"] == "phone_unknown"
+    test "/phone/enrich returns the person behind the number", %{conn: conn} do
+      body = conn |> get(~p"/csuitefinder/phone/enrich?phone=7075485509") |> json_response(200)
+
+      assert body["found"]
+      assert body["full_name"] == "Dylan Field"
     end
   end
 

@@ -8,7 +8,7 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
     {:ok, conn: put_req_header(conn, "authorization", "Bearer " <> key), account: account}
   end
 
-  describe "GET /csuitefinder/name/who" do
+  describe "GET /csuitefinder/email/name" do
     test "returns the identity fields only", %{conn: conn} do
       TregStub.stub(fn "treg.people.enrich", _ ->
         {200,
@@ -21,7 +21,7 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
          }), 4_900}
       end)
 
-      body = conn |> get(~p"/csuitefinder/name/who?email=jane@acme.com") |> json_response(200)
+      body = conn |> get(~p"/csuitefinder/email/name?email=jane@acme.com") |> json_response(200)
 
       assert body["full_name"] == "Jane Doe"
       assert body["first_name"] == "Jane"
@@ -40,7 +40,7 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
       end)
 
       get(conn, ~p"/csuitefinder/email/enrich?email=jane@acme.com")
-      body = conn |> get(~p"/csuitefinder/name/who?email=jane@acme.com") |> json_response(200)
+      body = conn |> get(~p"/csuitefinder/email/name?email=jane@acme.com") |> json_response(200)
 
       assert body["full_name"] == "Jane Doe"
       # Served from the enrichment cache: no second upstream call.
@@ -51,7 +51,7 @@ defmodule CsuiteFinderWeb.LookupControllerTest do
       TregStub.stub(fn "treg.people.enrich", _ -> {200, %{"output" => nil}, 0} end)
 
       body =
-        conn |> get(~p"/csuitefinder/name/who?email=jane.doe@acme.com") |> json_response(200)
+        conn |> get(~p"/csuitefinder/email/name?email=jane.doe@acme.com") |> json_response(200)
 
       assert body["full_name"] == "Jane Doe"
       refute Map.has_key?(body, "source")

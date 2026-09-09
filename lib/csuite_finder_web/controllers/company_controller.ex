@@ -20,8 +20,7 @@ defmodule CsuiteFinderWeb.CompanyController do
   `info` would have paid to enrich, because the enrichment is the same one.
   """
   def find(conn, params) do
-    with {:ok, value} <-
-           present(params["email"] || params["domain"] || resolve_phone(params["phone"])),
+    with {:ok, value} <- present(params["email"] || params["domain"]),
          {:ok, row, lookup} <-
            Companies.info(value, refresh: params["refresh"] in ["true", "1"]) do
       meter(conn, row, lookup, value)
@@ -38,7 +37,7 @@ defmodule CsuiteFinderWeb.CompanyController do
 
   @doc "POST/GET /csuitefinder/company/info"
   def info(conn, params) do
-    input = params["email"] || params["domain"] || resolve_phone(params["phone"])
+    input = params["email"] || params["domain"]
 
     with {:ok, value} <- present(input),
          {:ok, row, lookup} <-
@@ -59,15 +58,6 @@ defmodule CsuiteFinderWeb.CompanyController do
       provider_cost_micro: lookup.spent_micro,
       request: %{input: value}
     })
-  end
-
-  defp resolve_phone(nil), do: nil
-
-  defp resolve_phone(phone) do
-    case CsuiteFinder.Phones.email_for(phone) do
-      {:ok, email} -> email
-      _ -> nil
-    end
   end
 
   defp present(value) when is_binary(value) do

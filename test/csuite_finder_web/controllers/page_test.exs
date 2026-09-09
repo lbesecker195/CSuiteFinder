@@ -177,6 +177,42 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "llms.txt cannot drift from the router" do
+    test "every route it documents is actually routed", %{conn: conn} do
+      # An agent follows this file literally. A path that renames without the
+      # docs following sends it to a 404 it has no way to recover from.
+      routed =
+        CsuiteFinderWeb.Router.__routes__()
+        |> Enum.map(& &1.path)
+        |> MapSet.new()
+
+      documented =
+        conn
+        |> get(~p"/llms.txt")
+        |> response(200)
+        |> then(&Regex.scan(~r{/csuitefinder/[a-z/]+}, &1))
+        |> List.flatten()
+        |> Enum.map(&String.trim_trailing(&1, "/"))
+        |> Enum.uniq()
+
+      for path <- documented do
+        assert MapSet.member?(routed, path), "llms.txt documents #{path}, which is not routed"
+      end
+    end
+
+    test "the renamed routes are gone and their replacements are live", %{conn: conn} do
+      routed = CsuiteFinderWeb.Router.__routes__() |> Enum.map(& &1.path) |> MapSet.new()
+
+      refute MapSet.member?(routed, "/csuitefinder/name/who")
+      refute MapSet.member?(routed, "/csuitefinder/phone/who")
+
+      for path <- ~w(/csuitefinder/email/name /csuitefinder/phone/name
+                     /csuitefinder/phone/enrich /csuitefinder/phone/company) do
+        assert MapSet.member?(routed, path)
+      end
+    end
+  end
+
   describe "prices are in dollars" do
     test "no public surface still talks about tokens", %{conn: conn} do
       # The only surviving "token" is PayPal's own query parameter, which is

@@ -132,7 +132,7 @@ defmodule CsuiteFinderWeb.NoLeakTest do
     end
 
     test "name/who", %{conn: conn} do
-      body = conn |> get(~p"/csuitefinder/name/who?email=jane@acme.com") |> json_response(200)
+      body = conn |> get(~p"/csuitefinder/email/name?email=jane@acme.com") |> json_response(200)
 
       assert body["full_name"] == "Jane Doe"
       assert_clean(body, :who)

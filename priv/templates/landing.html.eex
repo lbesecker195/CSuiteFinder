@@ -232,7 +232,7 @@
   <div class="item"><strong>Check it's deliverable</strong><span>Confirm the mailbox is real before you send, so bounces don't hurt your sender reputation.</span></div>
   <div class="item"><strong>Identify an address</strong><span>Given an email, find out whose it is — name, job title, employer.</span></div>
   <div class="item"><strong>Learn a company's format</strong><span>See how a company builds its addresses, and apply it to anyone else there.</span></div>
-  <div class="item"><strong>Identify a number</strong><span>A phone number you were called from, matched back to the person — from numbers we found for you.</span></div>
+  <div class="item"><strong>Identify a number</strong><span>A phone number you were called from, matched back to the person and their company — from numbers we found for you.</span></div>
   <div class="item"><strong>Look up the company</strong><span>Industry, headcount, founding year and location behind any work address.</span></div>
 </div>
 
@@ -354,8 +354,16 @@ Verify every address before you give it to me.</code></pre>
       <td>Is the number real? Line type, carrier, region and every format.</td>
     </tr>
     <tr>
-      <td>POST</td><td><code>/csuitefinder/phone/who</code></td><td><code>phone</code></td>
+      <td>POST</td><td><code>/csuitefinder/phone/name</code></td><td><code>phone</code></td>
       <td>Whose number is this — from numbers we have already found for you.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/enrich</code></td><td><code>phone</code></td>
+      <td>The person behind a number: name, title, employer, address.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/company</code></td><td><code>phone</code></td>
+      <td>Which company a number belongs to.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/email/find</code></td>
@@ -371,7 +379,7 @@ Verify every address before you give it to me.</code></pre>
       <td>The person behind an address — name, job title, seniority, department, employer, location.</td>
     </tr>
     <tr>
-      <td>POST</td><td><code>/csuitefinder/name/who</code></td><td><code>email</code></td>
+      <td>POST</td><td><code>/csuitefinder/email/name</code></td><td><code>email</code></td>
       <td>Just the identity: name, title, employer. The narrow form of enrich.</td>
     </tr>
     <tr>

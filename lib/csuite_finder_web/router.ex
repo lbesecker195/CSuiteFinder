@@ -42,8 +42,8 @@ defmodule CsuiteFinderWeb.Router do
     get "/email/pattern", EmailController, :pattern
     post "/email/pattern", EmailController, :pattern
 
-    get "/name/who", NameController, :who
-    post "/name/who", NameController, :who
+    get "/email/name", EmailNameController, :name
+    post "/email/name", EmailNameController, :name
 
     get "/company/info", CompanyController, :info
     post "/company/info", CompanyController, :info
@@ -63,8 +63,14 @@ defmodule CsuiteFinderWeb.Router do
     get "/phone/valid", PhoneController, :valid
     post "/phone/valid", PhoneController, :valid
 
-    get "/phone/who", PhoneController, :who
-    post "/phone/who", PhoneController, :who
+    get "/phone/name", PhoneController, :name
+    post "/phone/name", PhoneController, :name
+
+    get "/phone/enrich", PhoneController, :enrich
+    post "/phone/enrich", PhoneController, :enrich
+
+    get "/phone/company", PhoneController, :company
+    post "/phone/company", PhoneController, :company
   end
 
   scope "/csuitefinder", CsuiteFinderWeb do

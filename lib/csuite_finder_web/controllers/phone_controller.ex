@@ -9,7 +9,7 @@ defmodule CsuiteFinderWeb.PhoneController do
 
   use CsuiteFinderWeb, :controller
 
-  alias CsuiteFinder.{Billing, Phones}
+  alias CsuiteFinder.{Billing, Companies, Lookup, People, Phones}
   alias CsuiteFinderWeb.Plugs.Timing
 
   action_fallback CsuiteFinderWeb.FallbackController
@@ -45,33 +45,138 @@ defmodule CsuiteFinderWeb.PhoneController do
   end
 
   @doc """
-  POST/GET /csuitefinder/phone/who — whose number is this.
+  POST/GET /csuitefinder/phone/name — whose number is this.
 
-  Answered entirely from numbers this service has already found, so it is free
-  and it gets better with use. An unknown number is `found: false` rather than
-  a paid lookup, because there is nothing to buy: no provider offers reverse
-  phone lookup.
+  The phone counterpart of `/email/name`. Every phone route here is answered
+  from numbers this service has already found, so all of them are free and all
+  of them get better with use: no provider sells reverse phone lookup, which is
+  why an unknown number is `found: false` rather than a paid attempt.
   """
-  def who(conn, params) do
+  def name(conn, params) do
     with {:ok, number} <- require_param(params, "phone") do
       case Phones.owner(number) do
         {:ok, phone} ->
-          meter(conn, true, CsuiteFinder.Lookup.hit(), %{phone: number})
-          json(conn, Phones.present(phone, CsuiteFinder.Lookup.hit()))
-
-        {:error, :unknown} ->
-          meter(conn, false, CsuiteFinder.Lookup.hit(), %{phone: number})
+          meter(conn, true, Lookup.hit(), %{phone: number})
 
           json(conn, %{
-            phone: number,
-            found: false,
-            message: "We have not seen that number. It is only known once we have found it."
+            phone: phone.e164 || phone.phone,
+            found: true,
+            full_name: phone.full_name,
+            first_name: phone.first_name,
+            last_name: phone.last_name,
+            position: phone.position,
+            email: phone.email,
+            company_name: phone.domain
           })
+
+        {:error, :unknown} ->
+          unknown(conn, number)
 
         error ->
           error
       end
     end
+  end
+
+  @doc """
+  POST/GET /csuitefinder/phone/enrich — the person behind a number.
+
+  The phone counterpart of `/email/enrich`. Resolves the number to the address
+  we attributed it to and enriches that; a number we hold with no address still
+  answers with what the row itself knows.
+  """
+  def enrich(conn, params) do
+    with {:ok, number} <- require_param(params, "phone") do
+      case Phones.owner(number) do
+        {:ok, %{email: email} = phone} when is_binary(email) ->
+          case People.enrich(email) do
+            {:ok, row, lookup} ->
+              meter(conn, row.found, lookup, %{phone: number})
+              json(conn, Map.put(People.present(row, lookup), :phone, phone.e164 || phone.phone))
+
+            error ->
+              error
+          end
+
+        {:ok, phone} ->
+          meter(conn, true, Lookup.hit(), %{phone: number})
+
+          json(conn, %{
+            phone: phone.e164 || phone.phone,
+            found: true,
+            full_name: phone.full_name,
+            first_name: phone.first_name,
+            last_name: phone.last_name,
+            position: phone.position,
+            company_name: phone.domain,
+            note: "We know whose number this is but hold no email address for them."
+          })
+
+        {:error, :unknown} ->
+          unknown(conn, number)
+
+        error ->
+          error
+      end
+    end
+  end
+
+  @doc """
+  POST/GET /csuitefinder/phone/company — the company behind a number.
+
+  The phone counterpart of `/company/find`.
+  """
+  def company(conn, params) do
+    with {:ok, number} <- require_param(params, "phone") do
+      case Phones.owner(number) do
+        {:ok, %{domain: domain} = phone} when is_binary(domain) ->
+          case Companies.info(domain) do
+            {:ok, row, lookup} ->
+              meter(conn, row.found, lookup, %{phone: number})
+
+              json(
+                conn
+                |> Plug.Conn.assign(:phone, phone),
+                Map.put(
+                  Companies.present_identity(row, lookup),
+                  :phone,
+                  phone.e164 || phone.phone
+                )
+              )
+
+            error ->
+              error
+          end
+
+        {:ok, _phone} ->
+          meter(conn, false, Lookup.hit(), %{phone: number})
+
+          json(conn, %{
+            phone: number,
+            found: false,
+            message: "We know that number but not which company it belongs to."
+          })
+
+        {:error, :unknown} ->
+          unknown(conn, number)
+
+        error ->
+          error
+      end
+    end
+  end
+
+  # There is nothing to buy here — no provider reverses a phone number — so an
+  # unseen number is answered honestly rather than with a paid guess.
+  defp unknown(conn, number) do
+    meter(conn, false, Lookup.hit(), %{phone: number})
+
+    json(conn, %{
+      phone: number,
+      found: false,
+      message:
+        "We have not seen that number. Numbers become known once found through /phone/find."
+    })
   end
 
   defp meter(conn, found?, lookup, request) do

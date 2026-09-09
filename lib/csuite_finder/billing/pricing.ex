@@ -32,7 +32,12 @@ defmodule CsuiteFinder.Billing.Pricing do
     "email.deliverable" => 0,
     "email.enrich" => 0,
     "email.pattern" => 0,
-    "name.who" => 0,
+    "email.name" => 0,
+    # Phone-input routes are answered from numbers we already hold: nothing to
+    # buy, so nothing to charge beyond requiring a balance.
+    "phone.name" => 0,
+    "phone.enrich" => 0,
+    "phone.company" => 0,
     "company.info" => 0,
     "company.find" => 0,
     "phone.valid" => 0

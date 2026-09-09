@@ -106,7 +106,7 @@ defmodule CsuiteFinderWeb.BillingTest do
       end)
 
       json_response(post(conn, ~p"/csuitefinder/email/enrich", %{email: "jane@acme.com"}), 200)
-      json_response(post(conn, ~p"/csuitefinder/name/who", %{email: "jane@acme.com"}), 200)
+      json_response(post(conn, ~p"/csuitefinder/email/name", %{email: "jane@acme.com"}), 200)
       json_response(post(conn, ~p"/csuitefinder/company/info", %{email: "jane@acme.com"}), 200)
 
       assert Repo.reload(account).balance_micro == 2_500
