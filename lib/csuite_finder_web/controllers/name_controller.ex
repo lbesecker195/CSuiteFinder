@@ -14,6 +14,14 @@ defmodule CsuiteFinderWeb.NameController do
   action_fallback CsuiteFinderWeb.FallbackController
 
   @doc "POST/GET /csuitefinder/name/who"
+  def who(conn, %{"phone" => phone} = params) when is_binary(phone) do
+    case identity_from_phone(phone) do
+      {:email, email} -> who(conn, Map.put(Map.delete(params, "phone"), "email", email))
+      {:row, row} -> json(conn, from_phone_row(conn, row))
+      error -> error
+    end
+  end
+
   def who(conn, params) do
     with {:ok, email} <- require_email(params),
          {:ok, row, lookup} <- People.enrich(email, refresh: params["refresh"] in ["true", "1"]) do
@@ -42,6 +50,42 @@ defmodule CsuiteFinderWeb.NameController do
 
       json(conn, CsuiteFinderWeb.PublicView.render(:who, result))
     end
+  end
+
+  # A phone stands in for the address. The phone row already carries the name
+  # and employer — which is all this endpoint returns — so it answers directly
+  # rather than bouncing through an email the row may not have.
+  defp identity_from_phone(phone) do
+    case CsuiteFinder.Phones.owner(phone) do
+      {:ok, %{email: email}} when is_binary(email) -> {:email, email}
+      {:ok, %{full_name: name} = row} when is_binary(name) -> {:row, row}
+      {:error, :invalid_phone} -> {:error, :invalid_phone}
+      _ -> {:error, :phone_unknown}
+    end
+  end
+
+  defp from_phone_row(conn, row) do
+    CsuiteFinder.Billing.settle(%{
+      account: conn.assigns[:account],
+      api_key: conn.assigns[:api_key],
+      endpoint: conn.assigns[:endpoint_name],
+      found: true,
+      cached: true,
+      provider_cost_micro: 0,
+      duration_ms: CsuiteFinderWeb.Plugs.Timing.elapsed_ms(conn),
+      request: %{phone: row.phone}
+    })
+
+    CsuiteFinderWeb.PublicView.render(:who, %{
+      email: row.email,
+      found: true,
+      full_name: row.full_name,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      position: row.position,
+      company_name: row.domain,
+      confidence: "high"
+    })
   end
 
   defp require_email(params) do

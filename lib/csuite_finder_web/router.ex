@@ -53,6 +53,18 @@ defmodule CsuiteFinderWeb.Router do
 
     get "/company/people", ProspectController, :people
     post "/company/people", ProspectController, :people
+
+    get "/email/company/people", ProspectController, :emails
+    post "/email/company/people", ProspectController, :emails
+
+    get "/phone/find", PhoneController, :find
+    post "/phone/find", PhoneController, :find
+
+    get "/phone/valid", PhoneController, :valid
+    post "/phone/valid", PhoneController, :valid
+
+    get "/phone/who", PhoneController, :who
+    post "/phone/who", PhoneController, :who
   end
 
   scope "/csuitefinder", CsuiteFinderWeb do

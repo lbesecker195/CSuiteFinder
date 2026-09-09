@@ -76,17 +76,19 @@ curl -H "Authorization: Bearer $KEY" \
 
 `found: false` means no address was resolved — and you were not charged.
 
-### POST /csuitefinder/company/people — 1 token per person returned
+### POST /csuitefinder/company/people — 5 tokens per person returned
 
-Who works at a company. **The discovery endpoint** — use it when you have a
-domain but no names.
+Who works at a company, **with a phone number for each**. The discovery
+endpoint — use it when you have a domain but no names. For addresses only at a
+fifth of the price, use `/email/company/people` instead: the sweep itself
+carries no numbers, so each one here costs a lookup of its own.
 
 - `domain` (required) — "stripe.com"
 - `department` (optional) — executive, engineering, sales, finance, hr, it,
   marketing, legal, support, operations, communication. `executive` is the
   C-suite.
 - `limit` (optional) — 1..50, default 10. **This is the price dial**: you are
-  billed one token per person returned, so ask for what you will use. It is also
+  billed per person returned, so ask for what you will use. It is also
   clamped to your balance, so it can never overdraw you.
 - `type` (optional) — `personal` for named humans, `generic` for role mailboxes
   like sales@
@@ -101,6 +103,44 @@ department, seniority, linkedin_url, kind, confidence}]}`.
 
 A sweep is stored per person, so a later narrower query — the engineers at a
 domain you already swept — is answered from what the first one paid for.
+
+### POST /csuitefinder/email/company/people — 1 token per person
+
+The same sweep as `/company/people`, returning **email addresses only**. Cheaper
+because no phone lookup is made. Same parameters.
+
+### POST /csuitefinder/phone/find — 5 tokens
+
+A person's direct phone number.
+
+- `full_name` + `domain` (**cheapest — prefer this**), or `email`, or `linkedin_url`
+
+An email alone routes to a provider costing ten times as much, so an email-only
+request resolves the name first and asks by name. Send the name if you have it.
+
+Returns `{phone, line_type, belongs_to: {full_name, email, domain}}`.
+
+### POST /csuitefinder/phone/valid — included
+
+Is a number real, and what kind of line.
+
+- `phone` (required) — any format; `+` may be URL-encoded as `%2B`
+- `country_code` (optional) — ISO-2, to read a national-format number against
+
+Returns validity, line type, carrier, region, timezones and the E.164, local,
+international and RFC3966 formats.
+
+### POST /csuitefinder/phone/who — included
+
+Whose number is this.
+
+- `phone` (required)
+
+**Answered only from numbers this service has already found.** No provider sells
+reverse phone lookup, so a number we have not seen is `found: false` — that is
+the true answer, not a failure. Numbers become known once found through
+`/phone/find`, and `phone` may then be sent instead of `email` to
+`/name/who`, `/email/enrich`, `/company/find` and `/company/info`.
 
 ### POST /csuitefinder/email/deliverable — included
 

@@ -15,7 +15,12 @@ defmodule CsuiteFinder.Budgets do
     company_enrich: 0.005,
     # A page of ten people. The provider charges ceil(limit/10) credits, so a
     # 50-row sweep needs headroom for five.
-    company_people: 0.05
+    company_people: 0.05,
+    # The cheap provider wants a name and a domain ($0.0048). The one that takes
+    # a bare email is $0.0445 — above this ceiling on purpose, so a careless
+    # email-only request is refused rather than costing ten times as much.
+    phone_find: 0.04,
+    phone_verify: 0.01
   }
 
   @doc "Ceiling in USD for a lookup kind."

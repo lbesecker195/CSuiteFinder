@@ -53,8 +53,14 @@ defmodule CsuiteFinder.Billing.Pricing do
     "name.who" => 0,
     "company.info" => 0,
     "company.find" => 0,
-    # Billed per person returned, not per call — see Billing.settle/1's `units`.
-    "company.people" => 1
+    # Both billed per person returned, not per call — see Billing.settle/1's
+    # `units`. The difference is the phone: one costs a lookup of its own for
+    # every person in the result, so it is priced like /phone/find rather than
+    # like /email/find.
+    "company.people" => 5,
+    "email.company.people" => 1,
+    "phone.find" => 5,
+    "phone.valid" => 0
   }
 
   @doc "Token price in micro-USD."

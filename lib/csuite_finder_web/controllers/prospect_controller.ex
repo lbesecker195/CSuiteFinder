@@ -14,13 +14,30 @@ defmodule CsuiteFinderWeb.ProspectController do
 
   use CsuiteFinderWeb, :controller
 
+  alias CsuiteFinder.Billing.Pricing
   alias CsuiteFinder.{Billing, Prospects}
   alias CsuiteFinderWeb.Plugs.Timing
 
   action_fallback CsuiteFinderWeb.FallbackController
 
-  @doc "POST/GET /csuitefinder/company/people"
-  def people(conn, params) do
+  @doc """
+  POST/GET /csuitefinder/email/company/people — emails only, 1 token per person.
+
+  What the domain sweep actually returns. Cheaper because nothing else is bought.
+  """
+  def emails(conn, params), do: run(conn, params, phones: false)
+
+  @doc """
+  POST/GET /csuitefinder/company/people — emails and phone numbers, 5 tokens each.
+
+  The sweep does not carry numbers; its `phone_number` field is a boolean saying
+  one exists and `phone_data` comes back empty. So each person here costs a
+  phone lookup of their own, which is why this is priced like /phone/find rather
+  than like the email-only route above.
+  """
+  def people(conn, params), do: run(conn, params, phones: true)
+
+  defp run(conn, params, opts) do
     with {:ok, domain} <- require_domain(params),
          limit = affordable_limit(conn, params["limit"]),
          {:ok, people, lookup} <-
@@ -30,10 +47,15 @@ defmodule CsuiteFinderWeb.ProspectController do
              limit: limit,
              refresh: params["refresh"] in ["true", "1"]
            ) do
-      rendered =
-        Enum.map(people, fn person ->
-          CsuiteFinderWeb.PublicView.render(:person, Prospects.present(person))
-        end)
+      {rendered, phone_spend} =
+        if opts[:phones] do
+          {rows, spent} = Prospects.with_phones(people, domain)
+          {Enum.map(rows, &CsuiteFinderWeb.PublicView.render(:person_with_phone, &1)), spent}
+        else
+          {Enum.map(people, fn person ->
+             CsuiteFinderWeb.PublicView.render(:person, Prospects.present(person))
+           end), 0}
+        end
 
       Billing.settle(%{
         account: conn.assigns[:account],
@@ -42,7 +64,7 @@ defmodule CsuiteFinderWeb.ProspectController do
         found: rendered != [],
         units: length(rendered),
         cached: lookup.cached,
-        provider_cost_micro: lookup.spent_micro,
+        provider_cost_micro: lookup.spent_micro + phone_spend,
         duration_ms: Timing.elapsed_ms(conn),
         request: %{domain: domain, department: params["department"], limit: limit}
       })
@@ -67,8 +89,15 @@ defmodule CsuiteFinderWeb.ProspectController do
       end
 
     case conn.assigns[:account] do
-      nil -> asked
-      account -> max(min(asked, account.token_balance), 1)
+      nil ->
+        asked
+
+      account ->
+        # Divide by the per-row price, not the balance: a row costs 5 tokens on
+        # the phone-included route and 1 on the email-only one, so a balance of
+        # 20 buys four of the former and twenty of the latter.
+        per_row = max(Pricing.charge_for(conn.assigns[:endpoint_name]), 1)
+        max(min(asked, div(account.token_balance, per_row)), 1)
     end
   end
 

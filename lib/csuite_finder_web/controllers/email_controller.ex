@@ -66,6 +66,22 @@ defmodule CsuiteFinderWeb.EmailController do
 
   # ------------------------------------------------------------------ helpers
 
+  # `phone` stands in for `email` where we can attribute the number ourselves.
+  defp require_param(%{"phone" => phone} = params, "email") when is_binary(phone) do
+    case CsuiteFinder.Phones.email_for(phone) do
+      {:ok, email} ->
+        {:ok, email}
+
+      {:error, :invalid_phone} ->
+        {:error, :invalid_phone}
+
+      {:error, :unknown} ->
+        if params["email"],
+          do: require_param(Map.delete(params, "phone"), "email"),
+          else: {:error, :phone_unknown}
+    end
+  end
+
   defp require_param(params, key) do
     case Map.get(params, key) do
       value when is_binary(value) ->

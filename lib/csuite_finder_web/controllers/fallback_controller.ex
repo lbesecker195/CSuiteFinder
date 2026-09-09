@@ -9,6 +9,40 @@ defmodule CsuiteFinderWeb.FallbackController do
     bad_request(conn, "invalid_domain", "`domain` must be a valid domain, e.g. acme.com.")
   end
 
+  def call(conn, {:error, :invalid_phone}) do
+    bad_request(
+      conn,
+      "invalid_phone",
+      "`phone` must be 7-15 digits, optionally with a leading +."
+    )
+  end
+
+  def call(conn, {:error, :phone_unknown}) do
+    bad_request(
+      conn,
+      "phone_unknown",
+      "We have not seen that number, so we cannot say whose it is. Numbers become " <>
+        "known once found through /phone/find."
+    )
+  end
+
+  def call(conn, {:error, :missing_identity}) do
+    bad_request(
+      conn,
+      "missing_identity",
+      "Send `full_name` and `domain` (cheapest), or an `email`, or a `linkedin_url`."
+    )
+  end
+
+  def call(conn, {:error, :name_unknown}) do
+    bad_request(
+      conn,
+      "name_unknown",
+      "We could not work out whose address that is, and a phone lookup needs a name. " <>
+        "Send `full_name` and `domain` instead."
+    )
+  end
+
   def call(conn, {:error, :invalid_department}) do
     bad_request(
       conn,

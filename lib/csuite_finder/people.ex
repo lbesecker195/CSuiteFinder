@@ -99,6 +99,17 @@ defmodule CsuiteFinder.People do
   end
 
   defp store_provider(email, domain, attrs, payload, meta) do
+    # Every number this service sees is worth keeping: no provider does reverse
+    # phone lookup, so our own rows are the only way one is ever attributable.
+    CsuiteFinder.Phones.observe(attrs[:phone], %{
+      email: email,
+      domain: domain,
+      full_name: attrs[:full_name],
+      position: attrs[:position],
+      source: "enrichment",
+      provider: meta.served_by
+    })
+
     attrs
     |> Map.merge(%{
       email: email,

@@ -105,10 +105,23 @@ defmodule CsuiteFinderWeb.ProspectTest do
   end
 
   describe "billing" do
-    test "charges one token per person returned", %{conn: conn, account: account} do
+    test "charges five tokens per person on the phone-included route",
+         %{conn: conn, account: account} do
       conn |> get(~p"/csuitefinder/company/people?domain=acme.com") |> json_response(200)
 
+      # Three people at 5 each: the phone is a lookup of its own per person.
+      assert Repo.reload(account).token_balance == 385
+    end
+
+    test "charges one token per person on the email-only route",
+         %{conn: conn, account: account} do
+      body =
+        conn
+        |> get(~p"/csuitefinder/email/company/people?domain=acme.com")
+        |> json_response(200)
+
       assert Repo.reload(account).token_balance == 397
+      refute Map.has_key?(hd(body["people"]), "phone")
     end
 
     test "a second query is served from the stored rows without another sweep",
@@ -126,18 +139,32 @@ defmodule CsuiteFinderWeb.ProspectTest do
       assert TregStub.call_count() == calls
     end
 
-    test "limit is clamped to what the caller can afford", %{conn: conn} do
-      # The guard that stops a 50-row request from an account holding 2 tokens
-      # either overdrawing or handing back 50 rows for 2.
-      {_poor, key} = Fixtures.account_with_key(tokens: 2)
+    test "limit is clamped by the per-row price, not the raw balance", %{conn: conn} do
+      # 12 tokens buys two rows at 5 each, or twelve at 1 each. Clamping against
+      # the balance alone would hand back twelve rows for 12 tokens on a route
+      # that charges 60 for them.
+      {_account, key} = Fixtures.account_with_key(tokens: 12)
+      poor = put_req_header(build_conn(), "authorization", "Bearer " <> key)
+
+      with_phones =
+        poor
+        |> get(~p"/csuitefinder/company/people?domain=acme.com&limit=50")
+        |> json_response(200)
+
+      assert with_phones["count"] <= 2
+    end
+
+    test "an account that cannot afford a single row is refused outright",
+         %{conn: conn} do
+      {_account, key} = Fixtures.account_with_key(tokens: 2)
 
       body =
         build_conn()
         |> put_req_header("authorization", "Bearer " <> key)
-        |> get(~p"/csuitefinder/company/people?domain=acme.com&limit=50")
-        |> json_response(200)
+        |> get(~p"/csuitefinder/company/people?domain=acme.com")
+        |> json_response(402)
 
-      assert body["count"] <= 2
+      assert body["error"] == "insufficient_tokens"
     end
 
     test "an empty result is not billed", %{conn: conn, account: account} do

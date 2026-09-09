@@ -42,6 +42,9 @@ defmodule CsuiteFinderWeb.PublicView do
   @person ~w(email full_name first_name last_name position department seniority
              linkedin_url twitter kind confidence)a
 
+  # The same person, plus the number that cost a lookup of its own.
+  @person_with_phone @person ++ ~w(phone phone_line_type)a
+
   @company_info ~w(domain found name legal_name description industry
                    employee_count employee_range founded_year revenue_range
                    country city website linkedin_url logo_url tech_stack
@@ -57,6 +60,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def render(:company_find, result), do: take(result, @company_find)
   def render(:company_info, result), do: take(result, @company_info)
   def render(:person, result), do: take(result, @person)
+  def render(:person_with_phone, result), do: take(result, @person_with_phone)
 
   @doc "The field list for a view, for tests and documentation."
   @spec fields(atom()) :: [atom()]
@@ -68,6 +72,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def fields(:company_find), do: @company_find
   def fields(:company_info), do: @company_info
   def fields(:person), do: @person
+  def fields(:person_with_phone), do: @person_with_phone
 
   # Keys absent from the result are simply absent from the response, rather
   # than rendered as nulls that imply a field we do not have.

@@ -179,6 +179,15 @@ defmodule CsuiteFinder.Prospects do
     Enum.each(emails, fn person ->
       attrs = normalize(domain, person, meta)
 
+      CsuiteFinder.Phones.observe(attrs.phone, %{
+        email: attrs.email,
+        domain: domain,
+        full_name: attrs.full_name,
+        position: attrs.position,
+        source: "company_sweep",
+        provider: meta.served_by
+      })
+
       if attrs.email do
         %CompanyPerson{}
         |> CompanyPerson.changeset(attrs)
@@ -260,6 +269,52 @@ defmodule CsuiteFinder.Prospects do
   defp number(_), do: nil
   defp maybe_put(list, _key, nil), do: list
   defp maybe_put(list, key, value), do: Keyword.put(list, key, value)
+
+  @doc """
+  Attach a phone number to each person, looked up individually.
+
+  The sweep does not return numbers — its `phone_number` field is a boolean
+  saying one exists, and `phone_data` comes back empty — so a real number costs
+  a lookup per person. Run concurrently because they are independent and each
+  costs a second or two; treg imposes no concurrency limit of its own.
+  """
+  @spec with_phones([CompanyPerson.t()], String.t()) :: {[map()], non_neg_integer()}
+  def with_phones(people, domain) do
+    results =
+      people
+      |> Task.async_stream(
+        fn person ->
+          case CsuiteFinder.Phones.find(%{
+                 full_name: person.full_name,
+                 domain: domain,
+                 email: person.email
+               }) do
+            {:ok, %{found: true} = phone, lookup} -> {person, phone, lookup.spent_micro}
+            _ -> {person, nil, 0}
+          end
+        end,
+        max_concurrency: 8,
+        timeout: 30_000,
+        on_timeout: :kill_task
+      )
+      |> Enum.map(fn
+        {:ok, triple} -> triple
+        {:exit, _} -> nil
+      end)
+      |> Enum.reject(&is_nil/1)
+
+    spent = results |> Enum.map(&elem(&1, 2)) |> Enum.sum()
+
+    rows =
+      Enum.map(results, fn {person, phone, _} ->
+        person
+        |> present()
+        |> Map.put(:phone, phone && (phone.e164 || phone.phone))
+        |> Map.put(:phone_line_type, phone && phone.line_type)
+      end)
+
+    {rows, spent}
+  end
 
   @doc "Present a person for the API."
   @spec present(CompanyPerson.t()) :: map()

@@ -228,9 +228,11 @@
 <div class="does">
   <div class="item"><strong>Find the people at a company</strong><span>A domain in, named people out — with titles, departments and addresses. Filter to executives for the C-suite.</span></div>
   <div class="item"><strong>Find an email</strong><span>A name and a company domain become a work email address.</span></div>
+  <div class="item"><strong>Find a phone number</strong><span>A direct line or mobile for the same person, with the carrier and line type — and we remember whose it is.</span></div>
   <div class="item"><strong>Check it's deliverable</strong><span>Confirm the mailbox is real before you send, so bounces don't hurt your sender reputation.</span></div>
   <div class="item"><strong>Identify an address</strong><span>Given an email, find out whose it is — name, job title, employer.</span></div>
   <div class="item"><strong>Learn a company's format</strong><span>See how a company builds its addresses, and apply it to anyone else there.</span></div>
+  <div class="item"><strong>Identify a number</strong><span>A phone number you were called from, matched back to the person — from numbers we found for you.</span></div>
   <div class="item"><strong>Look up the company</strong><span>Industry, headcount, founding year and location behind any work address.</span></div>
 </div>
 
@@ -333,7 +335,25 @@ Verify every address before you give it to me.</code></pre>
     <tr>
       <td>POST</td><td><code>/csuitefinder/company/people</code></td>
       <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
-      <td>Who works at a company. <code>department=executive</code> for the C-suite. Billed per person returned.</td>
+      <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. 5 tokens per person.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/company/people</code></td>
+      <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
+      <td>The same sweep, email addresses only. 1 token per person.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/find</code></td>
+      <td><code>full_name</code> + <code>domain</code>, or <code>email</code></td>
+      <td>A direct phone number, with line type. 5 tokens.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/valid</code></td><td><code>phone</code></td>
+      <td>Is the number real? Line type, carrier, region and every format.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/who</code></td><td><code>phone</code></td>
+      <td>Whose number is this — from numbers we have already found for you.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/email/find</code></td>
