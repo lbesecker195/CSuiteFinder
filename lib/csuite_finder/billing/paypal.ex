@@ -424,4 +424,32 @@ defmodule CsuiteFinder.Billing.PayPal do
   @doc "Is PayPal wired up in this environment?"
   @spec configured?() :: boolean()
   def configured?, do: not is_nil(config()[:client_id]) and not is_nil(config()[:client_secret])
+
+  @doc """
+  Can we verify a webhook PayPal sends us?
+
+  Separate from `configured?/0` because this is the setting whose absence is
+  invisible. With no webhook id, every incoming webhook fails verification and
+  is dropped — payments still capture from the browser, so nothing looks broken,
+  but the retry PayPal sends when the customer closes the tab mid-payment never
+  lands and the credit is silently never applied.
+  """
+  @spec webhooks_configured?() :: boolean()
+  def webhooks_configured? do
+    case config()[:webhook_id] do
+      value when is_binary(value) and value != "" -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  Which PayPal this environment talks to, for the health check.
+
+  Reported because a server holding sandbox credentials looks exactly as
+  healthy as one holding live ones, right up until the first real payment.
+  """
+  @spec mode() :: String.t()
+  def mode do
+    if String.contains?(base_url(), "sandbox"), do: "sandbox", else: "live"
+  end
 end

@@ -20,6 +20,11 @@ defmodule CsuiteFinderWeb.HealthController do
       # Deliberately generic: a health check should not name our suppliers.
       lookups_configured: CsuiteFinder.Treg.Client.configured?(),
       payments_configured: CsuiteFinder.Billing.PayPal.configured?(),
+      # Split out because these two fail silently. A missing webhook id drops
+      # every callback PayPal retries, and sandbox credentials look identical
+      # to live ones until someone tries to pay.
+      payments_webhooks_configured: CsuiteFinder.Billing.PayPal.webhooks_configured?(),
+      payments_mode: CsuiteFinder.Billing.PayPal.mode(),
       version: Application.spec(:csuite_finder, :vsn) |> to_string()
     })
   end
