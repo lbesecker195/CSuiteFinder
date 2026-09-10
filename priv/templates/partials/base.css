@@ -137,3 +137,95 @@
     margin-top: 72px; padding: 28px 0 56px;
     border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
   }
+
+  /* ── the sample sheet ────────────────────────────────────────────────────
+     Styled as a spreadsheet because that is where this work already happens:
+     a salesperson recognises the grid before they have read a word of the
+     page. Its own palette rather than the site variables, since a spreadsheet
+     that changed colour with the OS theme would stop reading as one — but
+     dimmed in dark mode so it is not a slab of white. */
+  .sheet-wrap { margin: 0 0 10px; }
+  .sheet {
+    --s-line: #d4d7dc;
+    --s-head: #f3f3f3;
+    --s-headtext: #4a4a4a;
+    --s-cell: #ffffff;
+    --s-text: #1f1f1f;
+    --s-accent: #217346;          /* Excel green */
+    --s-chrome: #f8f8f8;
+    border: 1px solid var(--s-line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--s-cell);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .07);
+    font: 13px/1.45 "Segoe UI", ui-sans-serif, -apple-system, system-ui, sans-serif;
+    color: var(--s-text);
+  }
+  @media (prefers-color-scheme: dark) {
+    .sheet {
+      --s-line: #3a3a3a; --s-head: #262626; --s-headtext: #a8a8a8;
+      --s-cell: #1d1d1d; --s-text: #e6e6e6; --s-chrome: #222; --s-accent: #3fa46a;
+      box-shadow: none;
+    }
+  }
+
+  .sheet-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--s-chrome); border-bottom: 1px solid var(--s-line);
+    padding: 5px 8px; font-size: 12px; color: var(--s-headtext);
+  }
+  .sheet-namebox {
+    min-width: 62px; padding: 3px 7px; background: var(--s-cell);
+    border: 1px solid var(--s-line); border-radius: 3px; color: var(--s-text);
+  }
+  .sheet-fx { font-style: italic; opacity: .7; padding: 0 4px; }
+  .sheet-formula {
+    flex: 1; padding: 3px 8px; background: var(--s-cell);
+    border: 1px solid var(--s-line); border-radius: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--s-text);
+  }
+
+  .sheet-scroll { overflow-x: auto; }
+  .sheet table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13px; }
+  .sheet th, .sheet td {
+    border: 1px solid var(--s-line); padding: 5px 9px; text-align: left;
+    white-space: nowrap; font-weight: 400; text-transform: none; letter-spacing: 0;
+    color: var(--s-text); font-size: 13px;
+  }
+  /* The grey strip down the left and along the top: row numbers and A B C D. */
+  .sheet .col-head, .sheet .row-head {
+    background: var(--s-head); color: var(--s-headtext);
+    text-align: center; font-size: 11.5px; font-weight: 600;
+  }
+  .sheet .row-head { width: 34px; }
+  .sheet .corner { background: var(--s-head); width: 34px; }
+  .sheet tr.titles td { font-weight: 600; background: var(--s-cell); }
+  .sheet .email { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+  .sheet .empty-cell { color: #9aa0a6; }
+  .sheet .title-cell { font-weight: 600; }
+
+  /* The cell the cursor is "in", so the grid reads as a live sheet. */
+  .sheet td.active { outline: 2px solid var(--s-accent); outline-offset: -2px; }
+
+  .sheet .st { font-weight: 600; }
+  .sheet .st.ok { color: #1a7f37; }
+  .sheet .st.bad { color: #b42318; }
+  @media (prefers-color-scheme: dark) {
+    .sheet .st.ok { color: #57ab5a; }
+    .sheet .st.bad { color: #e5534b; }
+  }
+
+  .sheet-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--s-chrome); border-top: 1px solid var(--s-line);
+    padding: 0 10px; font-size: 11.5px; color: var(--s-headtext); flex-wrap: wrap;
+  }
+  .sheet-tabs { display: flex; align-items: stretch; gap: 2px; }
+  .sheet-tab { padding: 6px 14px; border-bottom: 2px solid transparent; }
+  .sheet-tab.on {
+    color: var(--s-accent); font-weight: 600; background: var(--s-cell);
+    border-bottom-color: var(--s-accent);
+  }
+  .sheet-count { padding: 6px 2px; font-variant-numeric: tabular-nums; }
+  .sheet-count strong { color: var(--s-text); font-size: 12.5px; }
+  .sheet-note { font-size: 12.5px; color: var(--muted); margin: 0 0 26px; }

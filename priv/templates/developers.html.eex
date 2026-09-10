@@ -21,6 +21,13 @@
   </p>
 </header>
 
+
+<%= CsuiteFinderWeb.Layout.sheet(
+      rows: @sheet,
+      rows_label: @sheet_rows,
+      date: @sheet_date
+    ) %>
+
 <h2 class="section-label">Getting a key</h2>
 
 <pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \

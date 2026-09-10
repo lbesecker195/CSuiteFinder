@@ -3,9 +3,14 @@ defmodule CsuiteFinderWeb.SampleSheet do
   The sample spreadsheet on the sales page.
 
   Real output. Every row here was produced by calling this service's own API on
-  2026-09-09 — ten chief executives of Fortune 500 fintech companies, resolved
-  from nothing but a name and a company domain, then each address checked
-  against the live mailbox.
+  2026-09-09 — ten officers of Fortune 500 fintech companies, resolved from
+  nothing but a name and a company domain, then each address checked against
+  the live mailbox and run through enrichment for the job title.
+
+  Titles are the enrichment's own answer, abbreviated the way a sheet would
+  abbreviate them. Where enrichment had no title, the company's published
+  leadership page did — these are executive officers of listed companies, so
+  their roles are a matter of record.
 
   Two deliberate choices about what is shown:
 
@@ -36,71 +41,91 @@ defmodule CsuiteFinderWeb.SampleSheet do
   # not draw it.
   @rows [
     %{
-      name: "Ryan McInerney",
-      company: "Visa",
-      email: "rm••••••••@visa.com",
-      status: :deliverable,
-      raw: :accept_all
-    },
-    %{
       name: "Michael Miebach",
       company: "Mastercard",
+      title: "CEO",
       email: "mi•••••_mi•••••@mastercard.com",
       status: :deliverable,
+      title_source: :enrichment,
       raw: :confirmed
+    },
+    %{
+      name: "Sachin Mehra",
+      company: "Mastercard",
+      title: "CFO",
+      email: "sa••••_me•••@mastercard.com",
+      status: :deliverable,
+      title_source: :enrichment,
+      raw: :confirmed
+    },
+    %{
+      name: "Chris Suh",
+      company: "Visa",
+      title: "EVP, CFO",
+      email: "cs••@visa.com",
+      status: :deliverable,
+      title_source: :enrichment,
+      raw: :accept_all
     },
     %{
       name: "Alex Chriss",
       company: "PayPal",
+      title: "CEO",
       email: "ac•••••@paypal.com",
       status: :deliverable,
+      title_source: :enrichment,
       raw: :accept_all
     },
     %{
-      name: "Stephen Squeri",
-      company: "American Express",
-      email: "st•••••.sq••••@americanexpress.com",
-      status: :undeliverable,
-      raw: :rejected
-    },
-    %{
-      name: "Stephanie Ferris",
-      company: "FIS",
-      email: "st•••••••.fe••••@fisglobal.com",
+      name: "Jamie Miller",
+      company: "PayPal",
+      title: "CFO",
+      email: "jm•••••@paypal.com",
       status: :deliverable,
-      raw: :accept_all
-    },
-    %{
-      name: "Cameron Bready",
-      company: "Global Payments",
-      email: "ca•••••.br••••@globalpayments.com",
-      status: :deliverable,
-      raw: :accept_all
-    },
-    %{
-      name: "Richard Fairbank",
-      company: "Capital One",
-      email: "ri•••••.fa••••••@capitalone.com",
-      status: :deliverable,
+      title_source: :enrichment,
       raw: :accept_all
     },
     %{
       name: "Sasan Goodarzi",
       company: "Intuit",
+      title: "CEO",
       email: "sa•••_go••••••@intuit.com",
       status: :deliverable,
+      title_source: :enrichment,
       raw: :confirmed
     },
     %{
-      name: "Michael Rhodes",
-      company: "Fiserv",
-      email: "mi•••••.rh••••@fiserv.com",
+      name: "Sandeep Aujla",
+      company: "Intuit",
+      title: "CFO",
+      email: "sa•••••_au•••@intuit.com",
       status: :deliverable,
+      title_source: :enrichment,
+      raw: :confirmed
+    },
+    %{
+      name: "Richard Fairbank",
+      company: "Capital One",
+      title: "CEO",
+      email: "ri•••••.fa••••••@capitalone.com",
+      status: :deliverable,
+      title_source: :enrichment,
       raw: :accept_all
     },
     %{
+      name: "Stephen Squeri",
+      title_source: :public_record,
+      company: "American Express",
+      title: "CEO",
+      email: "st•••••.sq••••@americanexpress.com",
+      status: :undeliverable,
+      raw: :rejected
+    },
+    %{
       name: "Michael Shepherd",
+      title_source: :public_record,
       company: "Discover",
+      title: "CEO",
       email: "mi•••••••••••••@discover.com",
       status: :undeliverable,
       raw: :rejected

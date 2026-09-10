@@ -48,6 +48,12 @@
   <a href="/account">free trial</a>, no card, no call.
 </p>
 
+<%= CsuiteFinderWeb.Layout.sheet(
+      rows: @sheet,
+      rows_label: @sheet_rows,
+      date: @sheet_date
+    ) %>
+
 <h2 class="section-label">What it does, either way</h2>
 
 <div class="does">

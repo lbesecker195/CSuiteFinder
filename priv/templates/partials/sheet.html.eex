@@ -1,0 +1,62 @@
+<!-- ── the sample sheet ─────────────────────────────────────────────────────
+     Real output, not a mockup: officers of Fortune 500 fintech companies
+     resolved from a name and a domain, then checked against the live mailbox.
+     Addresses are masked — CsuiteFinderWeb.SampleSheet says why. One partial
+     because three pages show it, and three copies of a table is three places
+     to forget to change. -->
+<div class="sheet-wrap">
+  <div class="sheet">
+    <div class="sheet-bar">
+      <span class="sheet-namebox">C3</span>
+      <span class="sheet-fx">fx</span>
+      <span class="sheet-formula"><%= Enum.at(@rows, 1).email %></span>
+    </div>
+
+    <div class="sheet-scroll">
+      <table>
+        <tbody>
+          <tr>
+            <td class="corner"></td>
+            <td class="col-head">A</td>
+            <td class="col-head">B</td>
+            <td class="col-head">C</td>
+            <td class="col-head">D</td>
+          </tr>
+          <tr class="titles">
+            <td class="row-head">1</td>
+            <td>Name</td>
+            <td>Title</td>
+            <td>Email</td>
+            <td>Deliverable</td>
+          </tr>
+          <%= for {row, index} <- Enum.with_index(@rows) do %>
+          <tr>
+            <td class="row-head"><%= index + 2 %></td>
+            <td><%= row.name %> <span class="empty-cell">· <%= row.company %></span></td>
+            <td class="title-cell"><%= row.title %></td>
+            <td class="email<%= if index == 1, do: " active" %>"><%= row.email %></td>
+            <td class="st <%= CsuiteFinderWeb.SampleSheet.status_class(row.status) %>"><%= CsuiteFinderWeb.SampleSheet.mark(row.status) %> <%= CsuiteFinderWeb.SampleSheet.label(row.status) %></td>
+          </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sheet-foot">
+      <div class="sheet-tabs">
+        <span class="sheet-tab on">Prospects</span>
+        <span class="sheet-tab">Sheet2</span>
+        <span class="sheet-tab">+</span>
+      </div>
+      <div class="sheet-count">Rows <strong><%= @rows_label %></strong> / month</div>
+    </div>
+  </div>
+</div>
+
+<p class="sheet-note">
+  Real lookups, run on <%= @date %>: a name and a company domain in, a work
+  address and a job title out — and no two of these companies build their
+  addresses the same way. Contact details are masked here because these are
+  real people. <strong>Deliverable</strong> is the live mailbox check: the two
+  marked otherwise are addresses you would have bounced, found before you sent.
+</p>

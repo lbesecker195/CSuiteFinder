@@ -61,13 +61,7 @@ defmodule CsuiteFinderWeb.PageController do
           seat_caveats: seat.caveats,
           seat_emails: delimit(seat.lookups.emails),
           comparison: Plans.comparison(),
-          contact_email: contact_email(),
-          sheet: SampleSheet.rows(),
-          sheet_date: Calendar.strftime(SampleSheet.generated_on(), "%-d %B %Y"),
-          # The row count in the status bar is the seat's monthly credit at the
-          # price of a work email — the same arithmetic the plan is built on,
-          # not a number typed into markup.
-          sheet_rows: delimit(seat.lookups.emails)
+          contact_email: contact_email()
         })
       )
     )
@@ -124,6 +118,12 @@ defmodule CsuiteFinderWeb.PageController do
       email_price: format(Pricing.price_usd("email.find")),
       phone_price: format(Pricing.price_usd("phone.find")),
       min_bundle: delimit(Pricing.min_bundle_usd()),
+      sheet: SampleSheet.rows(),
+      sheet_date: Calendar.strftime(SampleSheet.generated_on(), "%-d %B %Y"),
+      # The row count in the sheet's status bar is the seat's monthly credit at
+      # the price of a work email — the same arithmetic the plan is built on,
+      # not a number typed into markup.
+      sheet_rows: delimit(Plans.seat_lookups().emails),
       trial_usd: "$" <> format(Pricing.trial_usd()),
       trial_months: Pricing.trial_months(),
       bundles:

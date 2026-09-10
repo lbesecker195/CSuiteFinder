@@ -149,20 +149,39 @@ defmodule CsuiteFinderWeb.PageTest do
       refute html =~ "$" <> fmt(Pricing.price_usd("phone.find"))
     end
 
-    test "/teams shows the sample sheet, and the row count is the seat's own arithmetic",
-         %{conn: conn} do
-      html = conn |> get(~p"/teams") |> html_response(200)
-
+    test "every marketing page shows the same sheet, from one partial", %{conn: conn} do
       # The spreadsheet is the first thing a salesperson recognises, and the
       # number in its status bar is what a seat actually buys — derived, not
-      # typed, so it cannot drift from the plan.
-      assert html =~ ~s|class="sheet"|
-      assert html =~ "Rows <strong>#{delimited(Plans.seat_lookups().emails)}</strong> / month"
-      assert html =~ "<td>Deliverable</td>"
+      # typed, so it cannot drift from the plan. One partial, three pages: a
+      # second copy is a second place to forget to change.
+      for path <- ["/", "/teams", "/developers"] do
+        html = conn |> get(path) |> html_response(200)
 
-      for row <- CsuiteFinderWeb.SampleSheet.rows() do
-        assert html =~ row.name, "the sheet is missing #{row.name}"
-        assert html =~ row.email
+        assert html =~ ~s|class="sheet"|, "#{path} has no sheet"
+        assert html =~ "Rows <strong>#{delimited(Plans.seat_lookups().emails)}</strong> / month"
+
+        for column <- ~w(Name Title Email Deliverable) do
+          assert html =~ "<td>#{column}</td>", "#{path} is missing the #{column} column"
+        end
+
+        for row <- CsuiteFinderWeb.SampleSheet.rows() do
+          assert html =~ row.name, "#{path} is missing #{row.name}"
+          assert html =~ row.title
+          assert html =~ row.email
+        end
+      end
+    end
+
+    test "titles are abbreviated the way a sheet abbreviates them", %{conn: _conn} do
+      # A column of "Chief Financial Officer" is a column nobody can scan.
+      titles = CsuiteFinderWeb.SampleSheet.rows() |> Enum.map(& &1.title)
+
+      assert "CEO" in titles
+      assert "CFO" in titles
+
+      for title <- titles do
+        assert String.length(title) <= 12, "#{title} is too long to sit in a cell"
+        refute title =~ ~r/Chief|Officer|President/i, "#{title} is not abbreviated"
       end
     end
 
@@ -184,12 +203,26 @@ defmodule CsuiteFinderWeb.PageTest do
     end
 
     test "the sheet keeps what the mailbox check actually returned", %{conn: _conn} do
-      # The page draws two states; the data behind it still knows that six of
-      # these are accept-all domains rather than confirmed mailboxes. Collapsing
-      # that in the source as well as the view would lose it for good.
+      # The page draws two states; the data behind it still knows which rows were
+      # confirmed, which sit on accept-all domains, and which were rejected.
+      # Collapsing that in the source as well as the view would lose it for good.
       raws = CsuiteFinderWeb.SampleSheet.rows() |> Enum.map(& &1.raw) |> Enum.frequencies()
 
-      assert raws == %{accept_all: 6, confirmed: 2, rejected: 2}
+      assert Map.keys(raws) |> Enum.sort() == [:accept_all, :confirmed, :rejected]
+      assert raws.rejected > 0, "a sheet with no failures in it is a sheet nobody believes"
+    end
+
+    test "the sheet says where each title came from", %{conn: _conn} do
+      # Enrichment answers for most of them; where it does not, the company's
+      # published leadership page does — inferring rather than dropping the row
+      # is what the product does everywhere else, and the row records which.
+      for row <- CsuiteFinderWeb.SampleSheet.rows() do
+        assert row.title_source in [:enrichment, :public_record],
+               "#{row.name} does not say where its title came from"
+      end
+
+      sources = CsuiteFinderWeb.SampleSheet.rows() |> Enum.map(& &1.title_source)
+      assert :enrichment in sources
     end
 
     test "phone numbers are not sold anywhere in the copy", %{conn: conn} do

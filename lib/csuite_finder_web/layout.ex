@@ -40,6 +40,10 @@ defmodule CsuiteFinderWeb.Layout do
   @external_resource @base_css_path
   @base_css File.read!(@base_css_path)
 
+  @sheet Path.join(@partials, "sheet.html.eex")
+  @external_resource @sheet
+  EEx.function_from_file(:defp, :render_sheet, @sheet, [:assigns])
+
   @footer Path.join(@partials, "footer.html.eex")
   @external_resource @footer
   EEx.function_from_file(:defp, :render_footer, @footer, [:assigns])
@@ -105,6 +109,21 @@ defmodule CsuiteFinderWeb.Layout do
   """
   @spec page_css(atom()) :: String.t()
   def page_css(_other), do: ""
+
+  @doc """
+  The sample spreadsheet, as shown on the home, sales and developer pages.
+
+  Options: `:rows` (from `CsuiteFinderWeb.SampleSheet`), `:rows_label` for the
+  figure in the status bar, and `:date` for the caption.
+  """
+  @spec sheet(keyword()) :: String.t()
+  def sheet(opts) do
+    render_sheet(%{
+      rows: Keyword.fetch!(opts, :rows),
+      rows_label: Keyword.fetch!(opts, :rows_label),
+      date: Keyword.fetch!(opts, :date)
+    })
+  end
 
   @doc """
   The site footer.
