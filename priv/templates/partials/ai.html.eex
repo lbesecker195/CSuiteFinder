@@ -1,0 +1,89 @@
+<%!-- The second thing every page says, after what the product finds.
+
+    It is one partial rather than three sections because the claim has to be
+    identical everywhere: a salesperson and an engineer are being sold the same
+    integration story, and the moment two pages describe it differently one of
+    them is out of date. Only the examples change with the audience. --%>
+<h2 class="section-label">Nothing to integrate. Your AI already knows how.</h2>
+
+<div class="ai-band">
+  <div>
+    <p class="ai-claim">
+      Point any assistant at one URL and it knows the whole service — every
+      endpoint, every parameter, every price.
+    </p>
+    <p class="quiet">
+      <a href="/llms.txt"><code>llms.txt</code></a> is generated from the live
+      service, so what your assistant reads is what you are charged. No SDK to
+      install, no client library, no documentation to work through, no ticket
+      for an engineer. Claude, ChatGPT, Cursor, Copilot — anything that can read
+      a page and make a request.
+    </p>
+  </div>
+
+  <div class="ai-paste">
+    <span class="ai-paste-label">The whole setup</span>
+    <button class="ai-copy" data-ai-copy>Copy</button>
+    <pre><code id="ai-line">Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `csf_live_...` to be used. Then run /demo</code></pre>
+    <p class="quiet ai-paste-note">
+      That is the integration, start to finish.
+      <a href="/start">Walk through it →</a>
+    </p>
+  </div>
+</div>
+
+<div class="ai-points">
+  <%= if @audience == :sales do %>
+    <div class="ai-point">
+      <strong>You never see an API</strong>
+      <span>No key to paste, no terminal, no meter to watch. You ask your
+      assistant for the people you want; it does the calls.</span>
+    </div>
+    <div class="ai-point">
+      <strong>Ask the way you would ask a colleague</strong>
+      <span>"Get me the C-suite at these forty companies, checked, as a CSV."
+      The file comes back done.</span>
+    </div>
+    <div class="ai-point">
+      <strong>Ten commands it already knows</strong>
+      <span><code>/room</code> for everyone at a company, <code>/reach</code>
+      for a whole funnel, <code>/clean</code> for a list that has gone stale.</span>
+    </div>
+  <% else %>
+    <div class="ai-point">
+      <strong>No SDK, in any language</strong>
+      <span>Plain JSON over HTTPS, one bearer token. There is no client library
+      to pin, upgrade, or wait on.</span>
+    </div>
+    <div class="ai-point">
+      <strong>Prices your agent can read</strong>
+      <span>Every endpoint carries its cost in the same file, so an agent can
+      budget a run before it spends anything.</span>
+    </div>
+    <div class="ai-point">
+      <strong>One line in your project rules</strong>
+      <span>Drop the URL into <code>CLAUDE.md</code>, <code>AGENTS.md</code> or
+      Cursor rules and it stays available without being told again.</span>
+    </div>
+  <% end %>
+</div>
+
+<script>
+// Scoped to this partial so any page can drop it in without also remembering to
+// carry a script. The button is written by the markup rather than by script, so
+// it is still visible (and the line still selectable) if this never runs.
+(function () {
+  "use strict";
+  var btn = document.querySelector("[data-ai-copy]");
+  var line = document.getElementById("ai-line");
+  if (!btn || !line) return;
+  btn.addEventListener("click", function () {
+    navigator.clipboard.writeText(line.textContent).then(function () {
+      btn.textContent = "Copied";
+      setTimeout(function () { btn.textContent = "Copy"; }, 1600);
+    }, function () {
+      btn.textContent = "Select it manually";
+    });
+  });
+})();
+</script>

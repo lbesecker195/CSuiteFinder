@@ -94,6 +94,43 @@
   .sub-label { font-size: 17px; text-transform: none; letter-spacing: -.01em;
     color: var(--text); font-weight: 700; margin: 30px 0 10px; padding: 0; border: none; }
 
+  /* --------------------------------------------------------------------
+     The AI integration pitch. Shared by the home, sales and developer pages
+     through CsuiteFinderWeb.Layout.ai/1, so it lives here rather than in any
+     one page's own block.
+     -------------------------------------------------------------------- */
+  .ai-band { display: grid; gap: 22px; grid-template-columns: 1fr 1fr;
+    align-items: start; margin-bottom: 20px; }
+  /* A grid track is min-content wide by default, so the pasteable snippet would
+     widen its own column and, in a narrow window, the page with it. This lets
+     the track shrink and the <pre> scroll inside itself instead. */
+  .ai-band > * { min-width: 0; }
+  .ai-claim { font-size: clamp(18px, 2.6vw, 23px); line-height: 1.35;
+    letter-spacing: -0.02em; font-weight: 700; margin: 0 0 12px; }
+  .ai-paste { background: var(--accent-soft); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 16px 18px; position: relative; }
+  .ai-copy { position: absolute; top: 13px; right: 14px; cursor: pointer;
+    background: var(--surface); color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 6px; font: inherit; font-size: 11.5px; font-weight: 700;
+    padding: 3px 10px; }
+  .ai-paste-label { display: block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .07em; font-weight: 700; color: var(--accent); margin-bottom: 9px; }
+  /* Wrapped rather than scrolled: this line exists to be read and copied, and a
+     line that runs off the right edge reads as a truncated one. */
+  .ai-paste pre { margin: 0 0 10px; background: var(--surface); font-size: 12.5px;
+    padding: 13px 15px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ai-paste-note { margin: 0; font-size: 13.5px; }
+  .ai-points { display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .ai-point { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 15px 17px; }
+  .ai-point strong { display: block; margin-bottom: 5px; font-size: 14.5px;
+    letter-spacing: -0.01em; }
+  .ai-point span { color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+  @media (max-width: 700px) {
+    .ai-band { grid-template-columns: 1fr; }
+  }
+
   .step { display: flex; gap: 16px; align-items: baseline; margin-bottom: 8px; }
   .step-n {
     flex: none; width: 26px; height: 26px; border-radius: 50%;

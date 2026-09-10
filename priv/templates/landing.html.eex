@@ -8,10 +8,11 @@
   <h1>Reach the decision-maker, not the contact form.</h1>
   <p class="lede">
     You know the person you need — a VP of Engineering, a founder, a Head of Procurement.
-    CSuiteFinder turns their name and their company into a verified work email address
-
+    CSuiteFinder turns their name and their company into a verified work email address.
   </p>
 </header>
+
+<%= CsuiteFinderWeb.Layout.ai(audience: :sales, base_url: @base_url) %>
 
 <h2 class="section-label">Which one are you?</h2>
 
@@ -25,8 +26,7 @@
     <h3 class="door-title">I need to reach people</h3>
     <span class="price">$<%= @seat_usd %><span class="per">/month per seat</span></span>
     <p>
-      Work in the browser. Search a company, get the room — names, titles, deliverable
-      deliverable addresses. No API key, no terminal, no meter to watch.
+      Work in the browser. Search a company, get the room — names, titles, deliverable addresses. No API key, no terminal, no meter to watch.
     </p>
     <span class="go">See the seat plan →</span>
   </a>

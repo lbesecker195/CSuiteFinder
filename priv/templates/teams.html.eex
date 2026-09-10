@@ -24,6 +24,7 @@
   </p>
 </header>
 
+<%= CsuiteFinderWeb.Layout.ai(audience: :sales, base_url: @base_url) %>
 
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,

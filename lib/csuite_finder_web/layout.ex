@@ -44,6 +44,10 @@ defmodule CsuiteFinderWeb.Layout do
   @external_resource @sheet
   EEx.function_from_file(:defp, :render_sheet, @sheet, [:assigns])
 
+  @ai Path.join(@partials, "ai.html.eex")
+  @external_resource @ai
+  EEx.function_from_file(:defp, :render_ai, @ai, [:assigns])
+
   @footer Path.join(@partials, "footer.html.eex")
   @external_resource @footer
   EEx.function_from_file(:defp, :render_footer, @footer, [:assigns])
@@ -132,6 +136,28 @@ defmodule CsuiteFinderWeb.Layout do
       rows: with_visitor(Keyword.fetch!(opts, :rows), Keyword.get(opts, :visitor)),
       rows_label: Keyword.fetch!(opts, :rows_label),
       date: Keyword.fetch!(opts, :date)
+    })
+  end
+
+  @doc """
+  The AI integration pitch — the second thing every page says.
+
+  Site-wide and shared, because it is a claim rather than a feature list: if the
+  home page and the sales page describe the integration differently, one of them
+  is wrong. Only the three supporting points change with the audience, since a
+  salesperson wants to hear there is no terminal and an engineer wants to hear
+  there is no SDK.
+
+  Options: `:audience` (`:sales` or `:developer`) and `:base_url`, which is the
+  canonical public URL rather than the request's Host header — the snippet is
+  meant to be pasted, so it has to name this service and not whatever host a
+  forged request arrived with.
+  """
+  @spec ai(keyword()) :: String.t()
+  def ai(opts) do
+    render_ai(%{
+      audience: Keyword.get(opts, :audience, :developer),
+      base_url: Keyword.fetch!(opts, :base_url)
     })
   end
 

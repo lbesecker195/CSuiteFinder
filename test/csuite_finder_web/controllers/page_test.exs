@@ -844,4 +844,67 @@ defmodule CsuiteFinderWeb.PageTest do
       refute Jason.encode!(body) =~ "token"
     end
   end
+
+  describe "the AI integration pitch" do
+    # It is the second selling point, after what the product finds. That is a
+    # claim about position, so these assert on position rather than presence:
+    # a section that quietly slides below the endpoint tables is no longer the
+    # second thing the page says, and nothing else would catch that.
+
+    test "leads every page, ahead of any other section", %{conn: conn} do
+      for path <- ["/", "/teams", "/developers"] do
+        html = conn |> get(path) |> html_response(200)
+
+        assert html =~ "Nothing to integrate. Your AI already knows how.",
+               "#{path} does not carry the AI pitch"
+
+        # First section on the page, so only the headline outranks it.
+        [{first, _}] =
+          Regex.scan(~r/<h2 class="section-label"[^>]*>([^<]+)</, html, capture: :all_but_first)
+          |> Enum.take(1)
+          |> Enum.map(&{List.first(&1), nil})
+
+        assert first =~ "Nothing to integrate",
+               "#{path} leads with #{inspect(first)} instead of the AI pitch"
+      end
+    end
+
+    test "sits below the headline, which is still the first claim", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert :binary.match(html, "Reach the decision-maker") <
+               :binary.match(html, "Nothing to integrate")
+    end
+
+    test "says the same thing everywhere, and varies only the examples", %{conn: conn} do
+      sales = conn |> get(~p"/teams") |> html_response(200)
+      dev = conn |> get(~p"/developers") |> html_response(200)
+
+      # The claim is shared.
+      for page <- [sales, dev] do
+        assert page =~ "it knows the whole service"
+        assert page =~ "csf_live_..."
+        assert page =~ "Then run /demo"
+      end
+
+      # A salesperson is told there is no terminal; an engineer, no SDK.
+      assert sales =~ "You never see an API"
+      refute sales =~ "No SDK, in any language"
+
+      assert dev =~ "No SDK, in any language"
+      refute dev =~ "You never see an API"
+    end
+
+    test "the pasteable line names this service, not the request's Host", %{conn: conn} do
+      # It is copied into someone else's agent, so a forged Host header must not
+      # be able to point that agent at another server.
+      html =
+        %{conn | host: "evil.example.com"}
+        |> get(~p"/")
+        |> html_response(200)
+
+      assert html =~ "https://csuitefinder.test/llms.txt"
+      refute html =~ "evil.example.com"
+    end
+  end
 end

@@ -21,6 +21,14 @@
   </p>
 </header>
 
+<%= CsuiteFinderWeb.Layout.ai(audience: :developer, base_url: @base_url) %>
+
+<div class="note">
+  <strong>Worth telling your agent:</strong> you can start from a name <em>or</em> from a
+  domain. <code>/email/find</code> resolves someone you can already name;
+  <code>/company/people</code> is the one that builds the list. Agents that only learn the
+  first waste turns hunting for a search endpoint they have already been given.
+</div>
 
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,
@@ -157,36 +165,6 @@
     <tr><td><code>GET /csuitefinder/health</code></td><td>Service status</td></tr>
   </tbody>
 </table>
-</div>
-
-<h2 class="section-label">Using it with an AI agent</h2>
-
-<p class="quiet">
-  The fastest way in — <a href="/start"><strong>the full walkthrough is here</strong></a>.
-  If you work with Claude, ChatGPT, Cursor or any coding agent, you do not have to
-  explain this API to it. Point it at our
-  <a href="/llms.txt"><code>llms.txt</code></a> and it will know every endpoint,
-  parameter and price — the file is generated from the live service, so what it
-  reads is what you are charged.
-</p>
-
-<p class="quiet"><strong>Paste this to your agent:</strong></p>
-
-<pre><code>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API.
-Register for a key, then find the work email for each person in my list.
-Verify every address before you give it to me.</code></pre>
-
-<p class="quiet">
-  It will register itself and be ready to work as soon as the trial is paid for. If your
-  agent supports remembering instructions, drop the same URL into its project rules
-  or <code>AGENTS.md</code> and it will keep the API available for later.
-</p>
-
-<div class="note">
-  <strong>Worth telling your agent:</strong> you can start from a name <em>or</em> from a
-  domain. <code>/email/find</code> resolves someone you can already name;
-  <code>/company/people</code> is the one that builds the list. Agents that only learn the
-  first waste turns hunting for a search endpoint they have already been given.
 </div>
 
 <!-- ── pricing ─────────────────────────────────────────────────────────────
