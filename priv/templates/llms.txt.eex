@@ -95,6 +95,23 @@ curl -H "Authorization: Bearer $KEY" \
 
 `found: false` means no address was resolved — and you were not charged.
 
+### POST /csuitefinder/company/search — $<%= @email_price %> per company returned
+
+Companies matching a description, for building an account list. This is the step
+*before* `/company/people`: you do not need to know the company yet.
+
+- `industry` — e.g. `fintech`, `logistics`
+- `technology` — something they run, e.g. `shopify`, `snowflake`
+- `size` — a headcount band: `50-200`, `1000+`, `250`
+- `country` — ISO code, where the data supports it
+- `q` — a free-text description, when the filters above do not fit
+- `name`, `domain` — when you are looking for a company you can already name
+- `limit` — rows to return, 1-50 (default 10). **This is the price dial.**
+
+At least one filter is required. Every row carries a `domain`, which is the
+input `/company/people`, `/company/info` and `/email/find` all take — chain them
+to go from an industry to a named person's verified address.
+
 ### POST /csuitefinder/company/people — $<%= @phone_price %> per person returned
 
 Who works at a company, **with a phone number for each**. The discovery

@@ -57,6 +57,9 @@ defmodule CsuiteFinderWeb.Router do
     get "/company/find", CompanyController, :find
     post "/company/find", CompanyController, :find
 
+    get "/company/search", CompanyController, :search
+    post "/company/search", CompanyController, :search
+
     get "/company/people", ProspectController, :people
     post "/company/people", ProspectController, :people
 

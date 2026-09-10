@@ -13,6 +13,11 @@ defmodule CsuiteFinder.Budgets do
     person_enrich: 0.005,
     email_pattern: 0.01,
     company_enrich: 0.005,
+    # A page of company rows for an account list. Most providers here bill per
+    # row at a fifth of a cent, so this covers a full 50-row page with room for
+    # the waterfall to try a dearer one — and stops a single call wandering into
+    # the $0.38 provider at the bottom of the route.
+    company_search: 0.06,
     # A page of ten people. The provider charges ceil(limit/10) credits, so a
     # 50-row sweep needs headroom for five.
     company_people: 0.05,

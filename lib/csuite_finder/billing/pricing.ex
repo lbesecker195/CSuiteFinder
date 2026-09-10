@@ -28,6 +28,10 @@ defmodule CsuiteFinder.Billing.Pricing do
     # Per person returned. The phone-bearing route buys a lookup for each one.
     "company.people" => 25_000,
     "email.company.people" => 2_500,
+    # Per company returned. An account list is the top of the funnel and every
+    # row is a domain the rest of the API takes as input, so it is priced like
+    # an address rather than like a person.
+    "company.search" => 2_500,
     # Included with any balance.
     "email.deliverable" => 0,
     "email.enrich" => 0,
@@ -145,7 +149,8 @@ defmodule CsuiteFinder.Billing.Pricing do
 
   @doc "Endpoints billed per result rather than per call."
   @spec per_result?(String.t()) :: boolean()
-  def per_result?(endpoint), do: endpoint in ~w(company.people email.company.people)
+  def per_result?(endpoint),
+    do: endpoint in ~w(company.people email.company.people company.search)
 
   @doc "Does this endpoint cost anything, or is it included with a balance?"
   @spec metered?(String.t()) :: boolean()

@@ -48,6 +48,11 @@ defmodule CsuiteFinderWeb.PublicView do
   # The same person, plus the number that cost a lookup of its own.
   @person_with_phone @person ++ ~w(phone phone_line_type)a
 
+  # One company in a search result: thinner than a full profile, because a
+  # search row is what the provider gave us and not a profile lookup.
+  @company_row ~w(domain name industry employee_count employee_range country city
+                  website linkedin_url description tech_stack)a
+
   @company_info ~w(domain found name legal_name description industry
                    employee_count employee_range founded_year revenue_range
                    country city website linkedin_url logo_url tech_stack
@@ -62,6 +67,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def render(:who, result), do: take(result, @who)
   def render(:company_find, result), do: take(result, @company_find)
   def render(:company_info, result), do: take(result, @company_info)
+  def render(:company_row, result), do: take(result, @company_row)
   def render(:person, result), do: take(result, @person)
   def render(:person_with_phone, result), do: take(result, @person_with_phone)
 
@@ -74,6 +80,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def fields(:who), do: @who
   def fields(:company_find), do: @company_find
   def fields(:company_info), do: @company_info
+  def fields(:company_row), do: @company_row
   def fields(:person), do: @person
   def fields(:person_with_phone), do: @person_with_phone
 

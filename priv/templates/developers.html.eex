@@ -59,6 +59,11 @@
   <thead><tr><th>Method</th><th>Path</th><th>Parameters</th><th>What it does</th></tr></thead>
   <tbody>
     <tr>
+      <td>POST</td><td><code>/csuitefinder/company/search</code></td>
+      <td><code>industry</code>, <code>technology</code>, <code>size</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
+      <td>Companies matching a description — an account list for lead generation. Every row is a domain the rest of the API takes as input. $<%= @email_price %> per company.</td>
+    </tr>
+    <tr>
       <td>POST</td><td><code>/csuitefinder/company/people</code></td>
       <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
       <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. $<%= @phone_price %> per person.</td>
