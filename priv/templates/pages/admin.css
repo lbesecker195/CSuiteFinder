@@ -82,11 +82,17 @@
   footer{ margin-top: 44px; font-size: 12.5px; color: var(--faint); }
   footer a{ color: var(--muted); }
 
-  /* The daily-volume chart is a WebGL canvas; the fallback and the tooltip sit
-     on top of it. Height is fixed rather than aspect-driven so the panel does
-     not jump around while the renderer sizes itself. */
-  .chart3d { position: relative; height: 190px; width: 100%; }
-  .chart3d canvas { display: block; width: 100% !important; height: 100% !important; }
+  /* The daily-volume chart. D3 draws the SVG; everything it can be told in CSS
+     is told in CSS, so the chart follows the theme without reading computed
+     styles back out of the document. Height is fixed rather than aspect-driven
+     so the panel does not jump while the chart sizes itself. */
+  .chart { position: relative; height: 190px; width: 100%; }
+  .chart-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .chart-svg rect.cached { fill: var(--accent); }
+  .chart-svg rect.fresh { fill: var(--bar); }
+  .chart-svg rect.hit { fill: transparent; cursor: default; }
+  .chart-svg .chart-ticks line { stroke: var(--border); stroke-width: 1; shape-rendering: crispEdges; }
+  .chart-svg .chart-ticks text { fill: var(--faint); font-size: 10px; text-anchor: end; }
   .chart-fallback {
     position: absolute; inset: 0; display: grid; place-items: center;
     color: var(--faint); font-size: 13px; text-align: center; padding: 0 16px;

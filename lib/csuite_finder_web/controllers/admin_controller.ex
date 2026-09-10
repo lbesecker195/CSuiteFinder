@@ -2,10 +2,11 @@ defmodule CsuiteFinderWeb.AdminController do
   @moduledoc """
   The admin dashboard.
 
-  The daily-volume chart is drawn with Three.js in the browser. The server sends
-  the series and nothing else — no coordinates, no geometry — so there is one
-  description of the chart's shape rather than two that can drift apart. If
-  WebGL is unavailable the panel says so rather than rendering half a chart.
+  The daily-volume chart is drawn with D3 in the browser. The server sends the
+  series and nothing else — no coordinates, no scales, no tick values — so there
+  is one description of the chart's shape rather than two that can drift apart.
+  If the library does not load the panel says so rather than rendering half a
+  chart.
   """
 
   use CsuiteFinderWeb, :controller

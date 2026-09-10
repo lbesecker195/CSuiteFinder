@@ -131,10 +131,10 @@
 
 <div class="panel">
   <%= if @chart.max > 0 do %>
-    <!-- The series, and nothing about how to draw it. main.js below turns this
-         into geometry; the server has no opinion about pixels. -->
+    <!-- The series, and nothing about how to draw it. The script below turns
+         this into a chart; the server has no opinion about pixels. -->
     <script type="application/json" id="volume-series"><%= CsuiteFinderWeb.AdminController.series_json(@chart) %></script>
-    <div class="chart3d" id="volume">
+    <div class="chart" id="volume">
       <div class="chart-fallback" id="volume-fallback">Loading the chart…</div>
       <div class="chart-tip" id="volume-tip" hidden></div>
     </div>
@@ -304,13 +304,13 @@
 
 </div>
 
-<script type="module">
-// The daily-volume chart. Three.js rather than hand-built SVG: the bars have
-// real depth and the hit-testing is the renderer's job, not arithmetic in a
-// template. Pinned to an exact version — a dashboard that changes shape because
-// a CDN moved on is worse than one that does not change at all.
-import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.186.0/three.module.min.js";
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// The daily-volume chart. D3 rather than geometry computed in the controller:
+// the scales, the axis ticks and the hit-testing are the library's job, and the
+// server sends a series with no opinion about pixels. Pinned to an exact
+// version — a dashboard that changes shape because a CDN moved on is worse than
+// one that does not change at all.
 (function () {
   "use strict";
 
@@ -318,6 +318,11 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.186.0/
   var fallback = document.getElementById("volume-fallback");
   var tip = document.getElementById("volume-tip");
   if (!host) return;
+
+  if (typeof d3 === "undefined") {
+    fallback.textContent = "The chart library did not load.";
+    return;
+  }
 
   var series;
   try {
@@ -328,153 +333,97 @@ import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.186.0/
   }
   if (!series.length) { fallback.textContent = "Nothing to plot."; return; }
 
-  // --- colours come from the stylesheet, so the chart follows the theme ------
-  function token(name, fallbackColor) {
-    var value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return new THREE.Color(value || fallbackColor);
-  }
-
-  var renderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  } catch (e) {
-    fallback.textContent = "This chart needs WebGL, which this browser has switched off.";
-    return;
-  }
-  if (!renderer.getContext()) {
-    fallback.textContent = "This chart needs WebGL, which this browser has switched off.";
-    return;
-  }
-
   fallback.hidden = true;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  host.appendChild(renderer.domElement);
 
-  var scene = new THREE.Scene();
-
-  // Orthographic, because this is a chart: a bar twice as tall must read as
-  // twice as many requests from any position on the page.
-  var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-
-  var peak = series.reduce(function (m, d) { return Math.max(m, d.requests); }, 0) || 1;
-  var count = series.length;
-
-  // The chart lives in a 100 x 40 x 6 box; the camera frames it on resize.
-  var W = 100, H = 40, DEPTH = 6;
-  var slot = W / count;
-  var barW = Math.max(slot * 0.62, 0.4);
-
-  var group = new THREE.Group();
-  scene.add(group);
-
-  var geometry = new THREE.BoxGeometry(1, 1, DEPTH);
-  var cachedMat = new THREE.MeshLambertMaterial({ color: token("--accent", "#b8541f") });
-  var freshMat = new THREE.MeshLambertMaterial({ color: token("--bar", "#d8d2c8") });
-  var bars = [];
-
-  series.forEach(function (day, i) {
-    var total = day.requests / peak * H;
-    var cached = day.requests > 0 ? Math.min(day.cached / peak * H, total) : 0;
-    var fresh = Math.max(total - cached, 0);
-    var x = i * slot + slot / 2 - W / 2;
-
-    // Stacked: the cached share sits at the base, the rest above it. Reading
-    // the split off two segments beats reading it off an overlay.
-    [[cached, cachedMat], [fresh, freshMat]].forEach(function (part, index) {
-      var height = part[0];
-      if (height <= 0.001) return;
-      var mesh = new THREE.Mesh(geometry, part[1]);
-      mesh.scale.set(barW, height, 1);
-      mesh.position.set(x, (index === 0 ? 0 : cached) + height / 2 - H / 2, 0);
-      mesh.userData.day = day;
-      group.add(mesh);
-      bars.push(mesh);
-    });
-  });
-
-  // A little rotation so the depth reads as depth. Enough to see the sides,
-  // not enough to make the heights hard to compare.
-  group.rotation.x = -0.12;
-  group.rotation.y = -0.18;
-
-  scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-  var key = new THREE.DirectionalLight(0xffffff, 1.6);
-  key.position.set(-30, 60, 80);
-  scene.add(key);
-
-  camera.position.set(0, 0, 100);
-  camera.lookAt(0, 0, 0);
-
-  function resize() {
-    var width = host.clientWidth || 1;
-    var height = host.clientHeight || 1;
-    renderer.setSize(width, height, false);
-
-    // Contain-fit the box in the panel. The vertical need includes the bars'
-    // depth: tilting the group lifts the top of the tallest bar, and a chart
-    // whose peak is clipped is worse than one with a little air above it.
-    var needW = (W / 2) * 1.04;
-    var needH = (H / 2 + DEPTH) * 1.06;
-    var aspect = width / height;
-    var halfW, halfH;
-
-    if (needW / needH > aspect) {
-      halfW = needW;
-      halfH = needW / aspect;
-    } else {
-      halfH = needH;
-      halfW = needH * aspect;
-    }
-
-    camera.left = -halfW; camera.right = halfW;
-    camera.top = halfH; camera.bottom = -halfH;
-    camera.updateProjectionMatrix();
-    renderer.render(scene, camera);
-  }
-
-  // --- hover ----------------------------------------------------------------
-  var raycaster = new THREE.Raycaster();
-  var pointer = new THREE.Vector2();
-  var hovered = null;
+  var svg = d3.select(host).append("svg").attr("class", "chart-svg");
+  var plot = svg.append("g");
+  var axis = svg.append("g").attr("class", "chart-ticks");
+  var margin = { top: 6, right: 0, bottom: 0, left: 34 };
 
   function commas(n) { return (n || 0).toLocaleString("en-US"); }
 
-  host.addEventListener("pointermove", function (event) {
-    var rect = host.getBoundingClientRect();
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, camera);
+  function draw() {
+    var width = host.clientWidth || 1;
+    var height = host.clientHeight || 1;
+    var inner = { w: Math.max(width - margin.left - margin.right, 1),
+                  h: Math.max(height - margin.top - margin.bottom, 1) };
 
-    var hit = raycaster.intersectObjects(bars, false)[0];
-    var day = hit && hit.object.userData.day;
+    svg.attr("width", width).attr("height", height);
+    plot.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    axis.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    if (!day) {
-      tip.hidden = true;
-      if (hovered) { hovered = null; renderer.render(scene, camera); }
-      return;
-    }
+    var x = d3.scaleBand()
+      .domain(series.map(function (d, i) { return i; }))
+      .range([0, inner.w])
+      .padding(0.28);
 
-    tip.hidden = false;
-    tip.textContent = day.label + " · " + commas(day.requests) + " requests · " +
-                      commas(day.cached) + " cached";
-    tip.style.left = Math.min(event.clientX - rect.left + 12, rect.width - tip.offsetWidth - 8) + "px";
-    tip.style.top = Math.max(event.clientY - rect.top - 34, 4) + "px";
-    hovered = day;
-  });
+    var peak = d3.max(series, function (d) { return d.requests; }) || 1;
+    var y = d3.scaleLinear().domain([0, peak]).nice().range([inner.h, 0]);
 
-  host.addEventListener("pointerleave", function () { tip.hidden = true; });
+    // Two or three gridlines. More would be a chart about its own axis.
+    var ticks = y.ticks(3);
+    var lines = axis.selectAll("g.tick").data(ticks);
+    var entered = lines.enter().append("g").attr("class", "tick");
+    entered.append("line");
+    entered.append("text");
 
-  new ResizeObserver(resize).observe(host);
-  resize();
+    var all = entered.merge(lines);
+    all.attr("transform", function (d) { return "translate(0," + y(d) + ")"; });
+    all.select("line").attr("x1", 0).attr("x2", inner.w);
+    all.select("text").attr("x", -8).attr("dy", "0.32em").text(function (d) { return commas(d); });
+    lines.exit().remove();
 
-  // Re-colour rather than reload when the OS theme flips under the page.
-  var dark = window.matchMedia("(prefers-color-scheme: dark)");
-  var onTheme = function () {
-    cachedMat.color = token("--accent", "#b8541f");
-    freshMat.color = token("--bar", "#d8d2c8");
-    renderer.render(scene, camera);
-  };
-  if (dark.addEventListener) dark.addEventListener("change", onTheme);
+    // Stacked: the cached share at the base, the rest above it. Reading the
+    // split off two segments beats reading it off an overlay.
+    var groups = plot.selectAll("g.bar").data(series);
+    var g = groups.enter().append("g").attr("class", "bar");
+    g.append("rect").attr("class", "cached");
+    g.append("rect").attr("class", "fresh");
+
+    var bars = g.merge(groups);
+    bars.attr("transform", function (d, i) { return "translate(" + x(i) + ",0)"; });
+
+    bars.select("rect.cached")
+      .attr("width", x.bandwidth())
+      .attr("y", function (d) { return y(Math.min(d.cached, d.requests)); })
+      .attr("height", function (d) { return inner.h - y(Math.min(d.cached, d.requests)); });
+
+    bars.select("rect.fresh")
+      .attr("width", x.bandwidth())
+      .attr("y", function (d) { return y(d.requests); })
+      .attr("height", function (d) {
+        return Math.max(y(Math.min(d.cached, d.requests)) - y(d.requests), 0);
+      });
+
+    // One transparent rect per column, so a day with barely any traffic is as
+    // easy to hover as a day with a lot.
+    bars.selectAll("rect.hit").data(function (d) { return [d]; }).enter()
+      .append("rect")
+      .attr("class", "hit")
+      .attr("x", -x.step() * x.padding() / 2)
+      .attr("y", 0)
+      .attr("width", x.step())
+      .attr("height", inner.h);
+
+    bars.selectAll("rect.hit")
+      .attr("width", x.step())
+      .attr("height", inner.h)
+      .on("pointerenter", function (event, d) {
+        tip.hidden = false;
+        tip.textContent = d.label + " · " + commas(d.requests) + " requests · " +
+                          commas(d.cached) + " cached";
+        var box = host.getBoundingClientRect();
+        tip.style.left = Math.min(event.clientX - box.left + 12,
+                                  box.width - tip.offsetWidth - 8) + "px";
+        tip.style.top = Math.max(event.clientY - box.top - 34, 4) + "px";
+      })
+      .on("pointerleave", function () { tip.hidden = true; });
+
+    groups.exit().remove();
+  }
+
+  new ResizeObserver(draw).observe(host);
+  draw();
 })();
 </script>
 </body>
