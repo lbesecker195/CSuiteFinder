@@ -39,6 +39,10 @@ defmodule CsuiteFinderWeb.Nav do
   # audience decides which of the other items survive.
   @key_store "csf_api_key"
   @audience_store "csf_audience"
+  # A campaign link can carry ?email=, so the signup field arrives filled in.
+  # Captured here rather than on the account page because the visitor may land
+  # anywhere — the link in an email points at whichever page makes the case.
+  @email_store "csf_email"
 
   @doc """
   The header markup.
@@ -98,6 +102,27 @@ defmodule CsuiteFinderWeb.Nav do
         }
       } catch (e) {}
 
+      // Take the address out of the URL once it is kept: an email in a query
+      // string ends up in bookmarks, in referrer headers and on the screen of
+      // whoever is looking over their shoulder. Only that parameter is removed,
+      // because others on this page are load-bearing.
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var prefill = params.get("email");
+        if (prefill) {
+          localStorage.setItem("#{@email_store}", prefill.slice(0, 254));
+          params.delete("email");
+          var rest = params.toString();
+          window.history.replaceState({}, "",
+            window.location.pathname + (rest ? "?" + rest : "") + window.location.hash);
+        }
+      } catch (e) {}
+
+      window.csfPrefillEmail = function () {
+        try { return localStorage.getItem("#{@email_store}") || ""; }
+        catch (e) { return ""; }
+      };
+
       window.csfAudience = function () {
         if (FIXED) return FIXED;
         try { return localStorage.getItem("#{@audience_store}") || DEFAULT; }
@@ -134,6 +159,10 @@ defmodule CsuiteFinderWeb.Nav do
   @doc "The browser key the visitor's audience is remembered under."
   @spec audience_store() :: String.t()
   def audience_store, do: @audience_store
+
+  @doc "The browser key a campaign-supplied email is remembered under."
+  @spec email_store() :: String.t()
+  def email_store, do: @email_store
 
   @doc "Styles for the header, injected into each page's stylesheet."
   @spec css() :: String.t()

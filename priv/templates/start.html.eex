@@ -25,16 +25,21 @@
       Works with Claude, ChatGPT, Cursor, Copilot — anything that can read a web page
       and make a request.
     </p>
-    <div class="copyblock">
+    <div class="copyblock" data-signed="out">
       <button class="copybtn" data-copy="prompt1">Copy</button>
       <pre><code id="prompt1">Read <%= @base_url %>/llms.txt and use the CSuiteFinder API to find work email addresses for me. Register for a free key first, and verify every address before you give it to me.</code></pre>
+    </div>
+
+    <div class="copyblock" data-signed="in" hidden>
+      <button class="copybtn" data-copy="prompt1-key">Copy</button>
+      <pre><code id="prompt1-key" data-key>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API to find work email addresses for me. My key is CSF_KEY_HERE — send it as the Authorization bearer token, and verify every address before you give it to me.</code></pre>
     </div>
   </div>
 </div>
 
 <div class="big-step">
   <span class="n">2</span>
-  <div>
+  <div data-signed="out">
     <h3>It sets itself up</h3>
     <p>
       That file is written for machines. Your assistant reads it, registers an account,
@@ -45,6 +50,20 @@
     <p>
       Ask it to show you the key it created, and keep a copy. We only ever store a hash of
       it, so it cannot be re-sent.
+    </p>
+  </div>
+
+  <div data-signed="in" hidden>
+    <h3>It reads the file and starts working</h3>
+    <p>
+      That file is written for machines. Your assistant reads it and knows every endpoint,
+      every parameter and what each one costs, because the file is generated from the live
+      service. It has no account to create — the line above carries
+      <strong>your key</strong>, and the lookups come out of the credit you already have.
+    </p>
+    <p class="quiet">
+      Your balance and usage are on <a href="/account">your account page</a>. Treat that
+      key like a password: anything holding it can spend your credit.
     </p>
   </div>
 </div>
@@ -88,29 +107,43 @@
   instructions — and it will keep the API to hand without being told again:
 </p>
 
-<div class="copyblock">
+<div class="copyblock" data-signed="out">
   <button class="copybtn" data-copy="prompt2">Copy</button>
   <pre><code id="prompt2">For work email lookups, use the CSuiteFinder API documented at <%= @base_url %>/llms.txt. The key is in the CSF_API_KEY environment variable.</code></pre>
+</div>
+
+<div class="copyblock" data-signed="in" hidden>
+  <button class="copybtn" data-copy="prompt2-key">Copy</button>
+  <pre><code id="prompt2-key" data-key>For work email lookups, use the CSuiteFinder API documented at <%= @base_url %>/llms.txt. Use the key CSF_KEY_HERE as the Authorization bearer token.</code></pre>
 </div>
 
 <div class="alt">
 <h2 class="section-label">No assistant? Two other ways</h2>
 
 <h3 class="sub-label">In your browser</h3>
-<p class="quiet">
+<p class="quiet" data-signed="out">
   <a href="/account"><strong>Open your account</strong></a>, enter your email, and you have a key
   and <%= @trial_usd %> of credit. The same page shows your balance, your usage and lets you buy
   more — no headers, no terminal.
 </p>
+<p class="quiet" data-signed="in" hidden>
+  <a href="/account"><strong>Your account page</strong></a> shows your balance, what you have
+  used it on, and lets you top up or mint a spare key — no headers, no terminal.
+</p>
 
 <h3 class="sub-label">From the command line</h3>
 <div class="copyblock">
-  <button class="copybtn" data-copy="prompt3">Copy</button>
-  <pre><code id="prompt3">KEY=$(curl -s -X POST <%= @base_url %>/csuitefinder/register \
+  <button class="copybtn" data-copy="prompt3" data-signed="out">Copy</button>
+  <button class="copybtn" data-copy="prompt3-key" data-signed="in" hidden>Copy</button>
+  <pre data-signed="out"><code id="prompt3">KEY=$(curl -s -X POST <%= @base_url %>/csuitefinder/register \
   -H 'content-type: application/json' \
   -d '{"email":"you@company.com"}' | grep -o '"api_key":"[^"]*' | cut -d'"' -f4)
 
 curl -H "Authorization: Bearer $KEY" \
+  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"</code></pre>
+  <pre data-signed="in" hidden><code id="prompt3-key" data-key>export CSF_KEY=CSF_KEY_HERE
+
+curl -H "Authorization: Bearer $CSF_KEY" \
   "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"</code></pre>
 </div>
 <p class="quiet">
@@ -121,15 +154,22 @@ curl -H "Authorization: Bearer $KEY" \
 
 <h2 class="section-label">What it costs</h2>
 
-<p class="quiet">
-  Your first <strong><%= @trial_usd %> of credit are free</strong> (<%= @trial_usd %> of credit) —
-  real lookups, not a limited preview. After that you pay <strong>$<%= @email_price %> per email address</strong>,
+<p class="quiet" data-signed="out">
+  Your first <strong><%= @trial_usd %> of credit are free</strong> — real lookups, not a
+  limited preview. After that you pay <strong>$<%= @email_price %> per email address</strong>,
   and nothing at all for deliverability checks, identity lookups, company
   data or email formats. A lookup that finds nothing is free.
 </p>
 
+<p class="quiet" data-signed="in" hidden>
+  You pay <strong>$<%= @email_price %> per email address</strong> out of the credit you
+  already have, and nothing at all for deliverability checks, identity lookups, company
+  data or email formats. A lookup that finds nothing is free.
+</p>
+
 <p style="margin-top:22px">
-  <a class="btn btn-primary" href="/account">Create your free account</a>
+  <a class="btn btn-primary" href="/account" data-signed="out">Create your free account</a>
+  <a class="btn btn-primary" href="/account" data-signed="in" hidden>Open your account</a>
   <a class="btn btn-ghost" href="/llms.txt">Read llms.txt</a>
 </p>
 
@@ -150,6 +190,30 @@ curl -H "Authorization: Bearer $KEY" \
 </div>
 
 <script>
+// Someone who already has a key does not need to be told to register for a
+// trial — they need the same instructions with their own credentials in them.
+// The page is rendered signed-out and narrowed here, so a first visit and a
+// browser with scripting off both get a page that still makes sense.
+(function () {
+  "use strict";
+
+  var key = null;
+  try { key = localStorage.getItem("csf_api_key"); } catch (e) {}
+
+  var state = key ? "in" : "out";
+  document.querySelectorAll("[data-signed]").forEach(function (el) {
+    el.hidden = el.getAttribute("data-signed") !== state;
+  });
+
+  // Put the real key into the snippets, so what they copy works as pasted
+  // rather than needing a placeholder swapped out by hand.
+  if (key) {
+    document.querySelectorAll("[data-key]").forEach(function (el) {
+      el.textContent = el.textContent.replace("CSF_KEY_HERE", key);
+    });
+  }
+})();
+
 document.querySelectorAll(".copybtn").forEach(function (btn) {
   btn.addEventListener("click", function () {
     var text = document.getElementById(btn.getAttribute("data-copy")).textContent;

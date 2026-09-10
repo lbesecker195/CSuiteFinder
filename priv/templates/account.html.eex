@@ -26,7 +26,8 @@
     <div class="row">
       <div>
         <label for="email">Your email</label>
-        <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
+        <input type="email" id="email" placeholder="you@company.com" autocomplete="email"
+               value="<%= @prefill_email %>">
       </div>
       <button id="register">Create account</button>
     </div>
@@ -549,6 +550,12 @@
   }
 
   // ---- boot ---------------------------------------------------------------
+  // The server fills this field when the address came in on this page's own
+  // URL. When the visitor picked it up on an earlier page, it is here instead.
+  if (!$("email").value && window.csfPrefillEmail) {
+    $("email").value = window.csfPrefillEmail();
+  }
+
   key = load();
   var returning = handleReturn();
   if (key) { if (!returning) refresh(); }

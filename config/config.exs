@@ -28,6 +28,11 @@ config :logger, :default_formatter,
   metadata: [:request_id]
 
 # Use Jason for JSON parsing in Phoenix
+# Addresses now arrive in query strings (a campaign link's ?email=) and in
+# registration bodies. Phoenix logs parameters on every request, and a log full
+# of customers' email addresses is a liability nobody asked for.
+config :phoenix, :filter_parameters, ["password", "email", "api_key", "token"]
+
 config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom

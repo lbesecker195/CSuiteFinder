@@ -331,6 +331,83 @@ defmodule CsuiteFinderWeb.PageTest do
     end
   end
 
+  describe "a campaign link that fills in the signup" do
+    test "an address in the query string lands in the field", %{conn: conn} do
+      html = conn |> get(~p"/account?email=jane.doe@acme.com") |> html_response(200)
+
+      assert html =~ ~s|value="jane.doe@acme.com"|
+    end
+
+    test "anything that is not an address is dropped, not printed", %{conn: conn} do
+      # This parameter is in a URL anybody can build, and these templates do no
+      # escaping of their own — so it is the one input on the site that could
+      # put markup into a page.
+      for attempt <- [
+            "\">   <script>alert(1)</script>",
+            "not an email",
+            "a@b",
+            "<img src=x onerror=alert(1)>",
+            String.duplicate("a", 300) <> "@acme.com"
+          ] do
+        html = conn |> get("/account?email=#{URI.encode_www_form(attempt)}") |> html_response(200)
+
+        assert html =~ ~s|value=""|, "#{attempt} was not rejected"
+        refute html =~ "alert(1)"
+        refute html =~ "onerror"
+      end
+    end
+
+    test "the address is remembered across pages, not left in the URL", %{conn: conn} do
+      # Picked up wherever the visitor lands, so a link into /teams still fills
+      # the signup two clicks later — and taken out of the address bar, because
+      # an email in a URL ends up in bookmarks and referrer headers.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ "csf_email"
+      assert html =~ "params.delete(\"email\")"
+      assert conn |> get(~p"/account") |> html_response(200) =~ "csfPrefillEmail"
+    end
+  end
+
+  describe "getting started" do
+    test "is linked from the foot of the sales and account pages", %{conn: conn} do
+      for path <- ["/teams", "/account"] do
+        html = conn |> get(path) |> html_response(200)
+        footer = html |> String.split("<footer>") |> List.last()
+
+        assert footer =~ ~s|href="/start"|, "#{path} has no getting-started link in its footer"
+      end
+    end
+
+    test "/start speaks to someone who already has a key", %{conn: conn} do
+      # Telling a paying customer to sign up for a free trial is the fastest way
+      # to lose them at the last step. The page carries both sets of
+      # instructions and shows the one that fits.
+      html = conn |> get(~p"/start") |> html_response(200)
+
+      assert html =~ ~s|data-signed="out"|
+      assert html =~ ~s|data-signed="in"|
+      assert html =~ "CSF_KEY_HERE"
+      assert html =~ ~s|localStorage.getItem("csf_api_key")|
+    end
+
+    test "and is rendered signed-out, so no-JS still gets a usable page", %{conn: conn} do
+      html = conn |> get(~p"/start") |> html_response(200)
+
+      # Every signed-in block ships hidden; the script reveals them.
+      for block <- Regex.scan(~r/data-signed="in"[^>]*/, html) do
+        assert hd(block) =~ "hidden", "a signed-in block is visible before the script runs"
+      end
+    end
+
+    test "and never ships a real key in the markup", %{conn: conn} do
+      # The substitution happens in the browser from the visitor's own storage.
+      # The server has only a hash and must never render one anyway.
+      html = conn |> get(~p"/start") |> html_response(200)
+      refute html =~ "csf_live_"
+    end
+  end
+
   describe "GET /llms.txt" do
     test "serves an agent-readable description as plain text", %{conn: conn} do
       conn = get(conn, ~p"/llms.txt")

@@ -142,6 +142,7 @@ defmodule CsuiteFinderWeb.Layout do
       {"/", "Home"},
       {"/teams", "For sales teams"},
       {"/developers", "For developers"},
+      {"/start", "Get started"},
       {"/account", "Your account"},
       {"/csuitefinder/health", "status"}
     ])
@@ -151,6 +152,10 @@ defmodule CsuiteFinderWeb.Layout do
     footer([
       {"/teams", "Home"},
       {"/teams#pricing", "Pricing"},
+      # The seat's answer to "how do I actually use this" is an assistant
+      # pointed at llms.txt, and that walkthrough is /start. It belongs in
+      # front of a seat holder, not only a developer.
+      {"/start", "Get started"},
       {"/account", "Your account"},
       {"/csuitefinder/health", "status"}
     ])
