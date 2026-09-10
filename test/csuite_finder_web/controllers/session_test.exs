@@ -48,7 +48,7 @@ defmodule CsuiteFinderWeb.SessionTest do
         |> json_response(400)
 
       assert body["error"] == "password_too_short"
-      assert body["message"] =~ "at least 12 characters"
+      assert body["message"] =~ "at least 8 characters"
     end
 
     test "is never stored in the clear" do
@@ -174,7 +174,17 @@ defmodule CsuiteFinderWeb.SessionTest do
       assert html =~ ~s|id="signin-password"|
       # The one thing someone must know before they rely on a password here.
       assert html =~ "There is no email reset"
-      assert html =~ "your key is\n      the way back in" or html =~ "the way back in"
+      assert html =~ "we will set a new one for you"
+    end
+
+    test "has no key-pasting sign-in left on it", %{conn: conn} do
+      # The page is a person's door and takes a password. A key is what a
+      # program carries; keeping both was two ways in to maintain and explain.
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      refute html =~ ~s|id="signin"|
+      refute html =~ "Have a key instead"
+      refute html =~ "Paste it to see your balance"
     end
 
     test "never puts a password in the markup", %{conn: conn} do
@@ -187,7 +197,7 @@ defmodule CsuiteFinderWeb.SessionTest do
     test "asks for a length rather than a puzzle", %{conn: conn} do
       html = conn |> get(~p"/account") |> html_response(200)
 
-      assert html =~ "at least 12 characters"
+      assert html =~ "at least 8 characters"
       assert html =~ "length is the only rule"
     end
   end

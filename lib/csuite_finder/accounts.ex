@@ -22,9 +22,10 @@ defmodule CsuiteFinder.Accounts do
   @key_prefix "csf_live_"
   @session_prefix "csf_sess_"
 
-  # Long enough to be worth having, with no composition rules — a rule that
-  # forces a symbol produces "Password1!" and nothing else.
-  @min_password 12
+  # NIST's floor for a user-chosen secret, with no composition rules — a rule
+  # that forces a symbol produces "Password1!" and nothing else. Length is what
+  # helps, so longer is better, but eight is where we refuse.
+  @min_password 8
 
   # Brute force is the entire risk of putting a password on a system that had
   # none. Five wrong guesses buys a quarter of an hour of silence.
@@ -110,13 +111,13 @@ defmodule CsuiteFinder.Accounts do
   @doc """
   Give an account a password, or change the one it has.
 
-  Optional, always. An account with no password signs in with its API key, which
-  is how every account worked before this and how machine callers still do —
-  the API is key-authenticated and a password has no part in it.
+  A password is how a person reaches the account page. The API itself is
+  key-authenticated and a password has no part in it, so an account created by
+  an agent through `POST /register` needs one only if a human will ever sign in.
 
   There is no reset flow, because there is no mail server to send one through.
-  Losing the password means signing in with the key and setting a new one, and
-  the page says so before it asks for one.
+  An operator resets it with `CsuiteFinder.Release.set_password/2`; the page
+  says as much before it asks anyone to depend on one.
   """
   @spec set_password(Account.t(), String.t()) :: {:ok, Account.t()} | {:error, atom()}
   def set_password(%Account{} = account, password) when is_binary(password) do

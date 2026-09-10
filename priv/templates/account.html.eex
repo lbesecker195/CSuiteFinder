@@ -31,7 +31,7 @@
                value="<%= @prefill_email %>">
       </div>
       <div>
-        <label for="newpassword">Password <span class="muted">(optional)</span></label>
+        <label for="newpassword">Password</label>
         <input type="password" id="newpassword" placeholder="at least <%= @min_password %> characters"
                autocomplete="new-password">
       </div>
@@ -56,22 +56,10 @@
       <button id="signin-password">Sign in</button>
     </div>
     <p class="muted" style="margin:14px 0 0">
-      No password yet, or forgotten it? Sign in with your API key below and set one.
-      <strong>There is no email reset</strong> — we have no mail server, so your key is
-      the way back in.
+      <strong>There is no email reset.</strong> We have no mail server, so nobody can send
+      you a link. If you are locked out, email <a href="mailto:<%= @contact_email %>">
+      <%= @contact_email %></a> and we will set a new one for you.
     </p>
-  </div>
-
-  <div class="card">
-    <h3 style="margin:0 0 4px;font-size:17px">Have a key instead?</h3>
-    <p class="muted" style="margin-bottom:16px">Paste it to see your balance and buy credit.</p>
-    <div class="row">
-      <div>
-        <label for="key">API key</label>
-        <input type="text" id="key" placeholder="csf_live_…" spellcheck="false" autocomplete="off">
-      </div>
-      <button id="signin">Continue</button>
-    </div>
   </div>
 
 </section>
@@ -419,8 +407,13 @@
     var btn = this; btn.disabled = true; say("Creating your account…", "info");
 
     var newPassword = $("newpassword") ? $("newpassword").value : "";
-    var payload = { email: email, audience: audience };
-    if (newPassword) payload.password = newPassword;
+    if (!newPassword) {
+      say("Choose a password — it is how you sign back in.", "err");
+      btn.disabled = false;
+      return;
+    }
+
+    var payload = { email: email, audience: audience, password: newPassword };
 
     api("/register", { method: "POST", body: payload }).then(function (res) {
       btn.disabled = false;
@@ -489,16 +482,6 @@
   });
 
   // ---- sign in ------------------------------------------------------------
-  $("signin").addEventListener("click", function () {
-    var v = $("key").value.trim();
-    if (!v) { say("Paste your API key first.", "err"); return; }
-    key = v; say("Checking…", "info");
-    api("/billing/balance").then(function (res) {
-      if (!res.ok) { key = null; say("That key was not accepted.", "err"); return; }
-      save(key); say(""); refresh();
-    });
-  });
-
   $("copykey").addEventListener("click", function () {
     var btn = this;
     navigator.clipboard.writeText($("newkeyvalue").textContent).then(function () {
