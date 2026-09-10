@@ -79,6 +79,10 @@ work described here rather than looking for a matching URL.
 Every one of them ends the same way: nothing goes out to a human until the
 address has been through `/email/deliverable`.
 
+And none of them edits what the caller gave you. Where a command produces a
+file, write a new one and leave the input exactly as it was — a row you delete
+is a row nobody can get back, and a verdict you deleted it on can be wrong.
+
 ### /find <name> at <company>
 The core job. One person, one address.
 `/email/find?full_name=…&domain=…` → `/email/deliverable`.
@@ -120,12 +124,22 @@ Included — it costs nothing beyond having a balance.
 takes everything and proves nothing. Never send to an address you did not check.*
 
 ### /clean <a list of addresses>
-List hygiene before a send: verify every address, drop the dead, and re-resolve
-the ones worth saving. Verify → for each failure, `/email/find` with the name and
-domain again, which will route around the format that just bounced.
+List hygiene before a send. **Never modify the list you were given.** Write a new
+file beside it and leave the original untouched, byte for byte.
+
+Verify every address with `/email/deliverable`. For each failure, try
+`/email/find` again with that person's name and domain — it routes around the
+format that just bounced and often returns a working address.
+
+Keep **every** row you were given, in its original order, and add columns rather
+than removing anything: the verdict, and the replacement address where one was
+found. Mark the dead rows; do not delete them.
 Verification is included; only the re-resolves cost anything.
-*This is the highest-value thing you can do with an old list. A bounce costs the
-sender far more than the lookup did.*
+*Two reasons the deletions are not yours to make. A verdict can be wrong — an
+`accept_all` domain proves nothing either way, and a verifier that could not
+answer returns `unknown`, which is not the same as `undeliverable`. And the row
+carries more than an address: a name, a company, notes, whatever the sender put
+there. Hand back a marked-up copy and let them decide what to drop.*
 
 ### /whois <email, phone or domain>
 What is this thing. An address or a number gives you the person — name, title,

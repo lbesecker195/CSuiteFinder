@@ -543,6 +543,21 @@ defmodule CsuiteFinderWeb.PageTest do
       assert body =~ "They are not routes"
     end
 
+    test "no command edits what the caller gave it", %{conn: conn} do
+      # An agent told to "clean a list" and left to interpret it will happily
+      # rewrite the file in place. A row it deletes is a row nobody gets back,
+      # and the verdict it deleted on can be wrong.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      assert body =~ "Never modify the list you were given"
+      assert body =~ "leave the input exactly as it was"
+      assert body =~ "Mark the dead rows; do not delete them."
+
+      # And it says why, because a rule without a reason is one an agent talks
+      # itself out of.
+      assert body =~ "is not the same as `undeliverable`"
+    end
+
     test "every command names the endpoints it runs", %{conn: conn} do
       # A command nobody can execute is a decoration. Each block has to point at
       # something real in the reference below it.
