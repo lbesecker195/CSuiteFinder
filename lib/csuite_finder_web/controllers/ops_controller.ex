@@ -26,10 +26,16 @@ defmodule CsuiteFinderWeb.OpsController do
       budgets_usd: Budgets.all(),
       pricing: Pricing.terms(),
       explanation:
-        "expected_cost_micro_per_success = cost_per_hit / weighted_hit_rate. " <>
+        "Providers are ordered by cost_micro_per_hit ascending — what we paid " <>
+          "divided by the answers we got. A miss on a per-success provider is " <>
+          "free, so a cheap one that often misses still costs nothing to ask; " <>
+          "and a per-call provider's wasted misses are already inside its cost " <>
+          "per hit, so no second correction is applied. " <>
+          "expected_cost_micro_per_success divides that by the hit rate again " <>
+          "and is reported for reference only — it is not what routes. " <>
           "Hits are weighted by (1 + prior_failures) so a provider tried late, " <>
           "on questions others already failed, is not penalised for the harder " <>
-          "queries it sees. Providers are tried in ascending order of that score."
+          "queries it sees."
     })
   end
 

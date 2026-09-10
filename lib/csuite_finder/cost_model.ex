@@ -146,7 +146,34 @@ defmodule CsuiteFinder.CostModel do
 
     stats
     |> Enum.map(&score(&1, fallback))
-    |> Enum.sort_by(& &1.expected_cost_micro_per_success)
+    # Cost per hit, ascending. That is what we paid divided by the answers we
+    # got, and it is the right order to try providers in for two reasons that
+    # happen to agree.
+    #
+    # A miss on a per-success provider is free, so a cheap provider that often
+    # misses still costs nothing to ask — we simply fall through. Dividing by
+    # the hit rate, which is what this used to do, charged that provider twice
+    # for the same weakness and sent us to a dearer one first.
+    #
+    # And a provider that bills per call rather than per success already shows
+    # up here: its wasted misses are in `cost_micro_total` but not in `hits`, so
+    # its cost per hit rises on its own. No second correction is needed, and
+    # applying one is a double count.
+    #
+    # The theory agrees: the least-cost ordering is expected cost per attempt
+    # divided by the chance of success, and that is
+    # (total / attempts) / (hits / attempts) — which is total / hits.
+    #
+    # Providers that have never hit sort after every one that has. Their cost
+    # per hit is a guess — there is no hit to divide by — and a run of misses is
+    # evidence, so a guess does not get to outrank a measurement. Without this
+    # a per-success provider that has failed twenty times reads as free and
+    # takes first place.
+    # Hit rate only breaks ties. Two providers at the same cost per answer are
+    # separated by which one answers more often — and among the guesses, which
+    # has come closest to working. It never outranks price, which is the
+    # mistake this ordering used to make.
+    |> Enum.sort_by(&{&1.cost_is_estimated, &1.cost_micro_per_hit, -&1.weighted_hit_rate})
   end
 
   # What to assume a hit costs from a provider that has never produced one.
@@ -214,6 +241,11 @@ defmodule CsuiteFinder.CostModel do
       weighted_hit_rate: Float.round(hit_rate, 4),
       cost_micro_per_hit: Float.round(cost_per_hit, 2),
       cost_is_estimated: stat.hits == 0,
+      # Kept for the ops report, no longer what orders the list. It reads as a
+      # per-answer price and is not one: a miss costs nothing on most of these,
+      # so the division inflates a cheap provider that misses into an expensive
+      # one. Useful as a rough "how much work is this provider" figure, and
+      # nothing to route on.
       expected_cost_micro_per_success: Float.round(cost_per_hit / hit_rate, 2),
       avg_latency_ms:
         if(stat.attempts > 0, do: div(stat.latency_ms_total, stat.attempts), else: nil),
