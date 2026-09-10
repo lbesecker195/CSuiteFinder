@@ -56,6 +56,14 @@ defmodule CsuiteFinderWeb.FallbackController do
     bad_request(conn, "invalid_name", "`full_name` could not be parsed into a name.")
   end
 
+  def call(conn, {:error, :invalid_linkedin_url}) do
+    bad_request(
+      conn,
+      "invalid_linkedin_url",
+      "`linkedin_url` must be a profile URL, e.g. https://www.linkedin.com/in/jensenhuang."
+    )
+  end
+
   def call(conn, {:error, :missing_params, required}) do
     bad_request(conn, "missing_params", "Required: #{Enum.join(required, ", ")}.")
   end

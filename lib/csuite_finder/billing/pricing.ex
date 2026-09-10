@@ -19,8 +19,13 @@ defmodule CsuiteFinder.Billing.Pricing do
 
   # Charged per answer, in micro-USD.
   @prices %{
-    # An address resolved from a name.
+    # An address resolved from a name. A company's format is bought once and
+    # resolves everyone there afterwards, which is what makes this price work.
     "email.find" => 2_500,
+    # The same answer from a LinkedIn profile URL. Dearer because a profile
+    # carries no domain: the format cannot be reused, so every one of these is
+    # a provider call. Still well under what the providers themselves charge.
+    "email.linkedin" => 15_000,
     # A phone number costs ten times an address: the data is scarcer, the
     # providers charge more for it, and it cannot be derived from a pattern the
     # way an address can.
@@ -28,6 +33,9 @@ defmodule CsuiteFinder.Billing.Pricing do
     # Per person returned. The phone-bearing route buys a lookup for each one.
     "company.people" => 25_000,
     "email.company.people" => 2_500,
+    # Per person returned. The providers behind this are free far more often
+    # than not, which is what lets a role search be priced like an address.
+    "people.search" => 2_500,
     # Per company returned. An account list is the top of the funnel and every
     # row is a domain the rest of the API takes as input, so it is priced like
     # an address rather than like a person.
@@ -150,7 +158,7 @@ defmodule CsuiteFinder.Billing.Pricing do
   @doc "Endpoints billed per result rather than per call."
   @spec per_result?(String.t()) :: boolean()
   def per_result?(endpoint),
-    do: endpoint in ~w(company.people email.company.people company.search)
+    do: endpoint in ~w(company.people email.company.people company.search people.search)
 
   @doc "Does this endpoint cost anything, or is it included with a balance?"
   @spec metered?(String.t()) :: boolean()

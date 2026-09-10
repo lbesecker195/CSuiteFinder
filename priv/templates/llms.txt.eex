@@ -95,6 +95,35 @@ curl -H "Authorization: Bearer $KEY" \
 
 `found: false` means no address was resolved — and you were not charged.
 
+### POST /csuitefinder/people/search — $<%= @email_price %> per person returned
+
+Who holds a job, anywhere. The counterpart to `/company/people`: that one sweeps
+a company you already know, this one searches across companies for a role.
+
+- `title` — e.g. `VP of Engineering`, `Head of Procurement`
+- `company_domain` — narrow to one company, or leave it out to search the market
+- `country` — ISO code, where the data supports it
+- `q` — a free-text description when the filters do not fit
+- `full_name` — when you are looking for a specific person
+- `limit` — rows to return, 1-50 (default 10). **This is the price dial.**
+
+At least one filter is required. Rows carry `verified: false` **always**: an
+address here is a directory listing, not a checked mailbox. Run
+`/csuitefinder/email/deliverable` on it before you send, or use
+`/csuitefinder/email/find` with the name and domain to resolve it properly.
+
+### POST /csuitefinder/email/linkedin — $<%= @linkedin_price %>
+
+The same answer as `/email/find`, from a LinkedIn profile URL instead of a name
+and a domain. Dearer, and deliberately so: a profile carries no domain, so the
+company-format shortcut that makes `/email/find` cheap cannot apply and every
+one of these reaches a provider.
+
+- `linkedin_url` (required) — e.g. `https://www.linkedin.com/in/jensenhuang`
+
+**If you have the person's name and their company domain, use
+`/csuitefinder/email/find` instead** — same answer, six times cheaper.
+
 ### POST /csuitefinder/company/search — $<%= @email_price %> per company returned
 
 Companies matching a description, for building an account list. This is the step

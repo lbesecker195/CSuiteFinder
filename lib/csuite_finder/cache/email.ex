@@ -11,6 +11,9 @@ defmodule CsuiteFinder.Cache.Email do
     field :first_name, :string
     field :last_name, :string
     field :email, :string
+    # The profile this row was resolved from, when it came in that way. A
+    # second index into the same address, not a second address.
+    field :linkedin_url, :string
     field :found, :boolean, default: false
     field :source, :string
     field :pattern_used, :string
@@ -26,7 +29,7 @@ defmodule CsuiteFinder.Cache.Email do
     timestamps()
   end
 
-  @fields ~w(name_key domain full_name first_name last_name email found source
+  @fields ~w(name_key domain full_name first_name last_name email linkedin_url found source
              pattern_used confidence verification_status provider
              provider_cost_micro raw expires_at last_found_at refresh_failures)a
 

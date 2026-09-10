@@ -117,6 +117,7 @@ defmodule CsuiteFinderWeb.PageController do
       seat_usd: delimit(Plans.seat_usd()),
       email_price: format(Pricing.price_usd("email.find")),
       phone_price: format(Pricing.price_usd("phone.find")),
+      linkedin_price: format(Pricing.price_usd("email.linkedin")),
       min_bundle: delimit(Pricing.min_bundle_usd()),
       sheet: SampleSheet.rows(),
       sheet_date: Calendar.strftime(SampleSheet.generated_on(), "%-d %B %Y"),

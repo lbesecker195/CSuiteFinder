@@ -10,6 +10,11 @@ defmodule CsuiteFinder.Budgets do
   @budgets %{
     email_find: 0.02,
     email_verify: 0.002,
+    # A profile URL carries no domain, so the pattern trick cannot help and
+    # every one of these reaches a provider. The cheapest that takes a
+    # linkedin_url is $0.0048; this leaves room for the next one up without
+    # reaching the $0.04 tail.
+    email_find_linkedin: 0.02,
     person_enrich: 0.005,
     email_pattern: 0.01,
     company_enrich: 0.005,
@@ -18,6 +23,9 @@ defmodule CsuiteFinder.Budgets do
     # the waterfall to try a dearer one — and stops a single call wandering into
     # the $0.38 provider at the bottom of the route.
     company_search: 0.06,
+    # A page of people for a role search. The first two providers are free, so
+    # this is headroom for the waterfall rather than an expected spend.
+    people_search: 0.05,
     # A page of ten people. The provider charges ceil(limit/10) credits, so a
     # 50-row sweep needs headroom for five.
     company_people: 0.05,

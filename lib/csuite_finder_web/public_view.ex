@@ -17,7 +17,7 @@ defmodule CsuiteFinderWeb.PublicView do
   """
 
   @email_find ~w(email full_name domain found confidence verification_status
-                 last_verified_at)a
+                 linkedin_url last_verified_at)a
 
   @deliverable ~w(email deliverable status sub_status score catch_all disposable
                   role_account free_provider mx_found smtp_check checked_at)a
@@ -53,6 +53,12 @@ defmodule CsuiteFinderWeb.PublicView do
   @company_row ~w(domain name industry employee_count employee_range country city
                   website linkedin_url description tech_stack)a
 
+  # A person from a title search. `verified` is always false and is listed on
+  # purpose: the row carries an address the caller can see, and leaving the
+  # field out would let them assume it had been checked.
+  @person_search_row ~w(full_name first_name last_name title company company_domain
+                        linkedin_url location email verified)a
+
   @company_info ~w(domain found name legal_name description industry
                    employee_count employee_range founded_year revenue_range
                    country city website linkedin_url logo_url tech_stack
@@ -68,6 +74,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def render(:company_find, result), do: take(result, @company_find)
   def render(:company_info, result), do: take(result, @company_info)
   def render(:company_row, result), do: take(result, @company_row)
+  def render(:person_search_row, result), do: take(result, @person_search_row)
   def render(:person, result), do: take(result, @person)
   def render(:person_with_phone, result), do: take(result, @person_with_phone)
 
@@ -81,6 +88,7 @@ defmodule CsuiteFinderWeb.PublicView do
   def fields(:company_find), do: @company_find
   def fields(:company_info), do: @company_info
   def fields(:company_row), do: @company_row
+  def fields(:person_search_row), do: @person_search_row
   def fields(:person), do: @person
   def fields(:person_with_phone), do: @person_with_phone
 

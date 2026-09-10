@@ -59,6 +59,16 @@
   <thead><tr><th>Method</th><th>Path</th><th>Parameters</th><th>What it does</th></tr></thead>
   <tbody>
     <tr>
+      <td>POST</td><td><code>/csuitefinder/people/search</code></td>
+      <td><code>title</code>, <code>company_domain</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
+      <td>Who holds a job, across companies — not just at one you already know. Addresses come back unverified; check them before sending. $<%= @email_price %> per person.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/email/linkedin</code></td>
+      <td><code>linkedin_url</code></td>
+      <td>A work email from a LinkedIn profile URL. $<%= @linkedin_price %> — dearer than <code>/email/find</code>, because a profile carries no domain to reuse.</td>
+    </tr>
+    <tr>
       <td>POST</td><td><code>/csuitefinder/company/search</code></td>
       <td><code>industry</code>, <code>technology</code>, <code>size</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
       <td>Companies matching a description — an account list for lead generation. Every row is a domain the rest of the API takes as input. $<%= @email_price %> per company.</td>

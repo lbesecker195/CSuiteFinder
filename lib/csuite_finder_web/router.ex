@@ -33,6 +33,9 @@ defmodule CsuiteFinderWeb.Router do
     get "/email/find", EmailController, :find
     post "/email/find", EmailController, :find
 
+    get "/email/linkedin", EmailController, :linkedin
+    post "/email/linkedin", EmailController, :linkedin
+
     get "/email/deliverable", EmailController, :deliverable
     post "/email/deliverable", EmailController, :deliverable
 
@@ -56,6 +59,9 @@ defmodule CsuiteFinderWeb.Router do
 
     get "/company/find", CompanyController, :find
     post "/company/find", CompanyController, :find
+
+    get "/people/search", PeopleController, :search
+    post "/people/search", PeopleController, :search
 
     get "/company/search", CompanyController, :search
     post "/company/search", CompanyController, :search

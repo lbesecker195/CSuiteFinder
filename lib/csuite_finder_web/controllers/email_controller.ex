@@ -79,6 +79,21 @@ defmodule CsuiteFinderWeb.EmailController do
 
   defp truthy(value), do: value in [true, "true", "1", 1]
 
+  @doc """
+  POST/GET /csuitefinder/email/linkedin — an address from a profile URL.
+
+  The same answer as `/email/find`, from the other input people actually hold.
+  Priced separately because a profile carries no domain: the company-format
+  shortcut cannot apply, so each of these is a provider call.
+  """
+  def linkedin(conn, params) do
+    with {:ok, url} <- require_param(params, "linkedin_url"),
+         {:ok, result} <- Finder.find_by_linkedin(url, refresh: truthy(params["refresh"])) do
+      meter(conn, result, %{linkedin_url: url})
+      json(conn, PublicView.render(:email_find, result))
+    end
+  end
+
   defp meter(conn, result, request) do
     Billing.settle(%{
       account: conn.assigns[:account],

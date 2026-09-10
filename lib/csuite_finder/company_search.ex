@@ -20,6 +20,15 @@ defmodule CsuiteFinder.CompanySearch do
   ways — different case, different parameter order, a stray space — is one
   purchase rather than two.
 
+  ## Why every search carries a free-text `q`
+
+  The providers behind this route are ordered cheapest first, and the cheapest
+  are free — but they match on `q`, while an industry-only request offers them
+  nothing to match on and falls through to a paid one. treg sends each provider
+  only the fields it accepts, so adding a `q` built from the filters costs
+  nothing and makes the free providers eligible. The filters still ride along
+  for the providers that take them; this only widens who can answer.
+
   ## On headcount
 
   Providers disagree about what a size filter even is, and most of the ones this
@@ -198,12 +207,14 @@ defmodule CsuiteFinder.CompanySearch do
       filters
       |> Map.put(:limit, limit)
       |> maybe_widen(size)
+      |> with_query()
 
     result =
       Client.call(@endpoint,
         method: :post,
         body: body,
-        max_cost: Budgets.usd(:company_search)
+        max_cost: Budgets.usd(:company_search),
+        prefer: CostModel.preferred(@capability)
       )
 
     case result do
@@ -244,6 +255,31 @@ defmodule CsuiteFinder.CompanySearch do
   defp maybe_widen(body, size) do
     hint = "#{size.label} employees"
     Map.update(body, :q, hint, fn existing -> existing <> " " <> hint end)
+  end
+
+  # The cheapest providers for this capability are free and match on `q` alone.
+  # A caller who sent only `industry` would sail past them into a paid one, so
+  # the filters are restated as a description. Costs nothing, changes nothing
+  # for the providers that read the structured fields, and is the difference
+  # between a free row and a paid one.
+  defp with_query(body) do
+    case Map.get(body, :q) do
+      existing when is_binary(existing) and existing != "" ->
+        body
+
+      _ ->
+        described =
+          [
+            body[:industry] && "#{body[:industry]} companies",
+            body[:technology] && "using #{body[:technology]}",
+            body[:country] && "in #{body[:country]}",
+            body[:name]
+          ]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join(" ")
+
+        if described == "", do: body, else: Map.put(body, :q, described)
+    end
   end
 
   defp within?(_company, nil), do: true

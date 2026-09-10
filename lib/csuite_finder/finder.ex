@@ -129,6 +129,152 @@ defmodule CsuiteFinder.Finder do
     end
   end
 
+  @doc """
+  Find the work email behind a LinkedIn profile URL.
+
+  A different shape of the same job, and a dearer one. The cheap path — buy a
+  company's format once, then resolve everyone there for nothing — needs a
+  domain, and a profile URL does not carry one. So this always reaches a
+  provider, which is why it is priced separately rather than folded into
+  `find/3`.
+
+  The answer is stored in the ordinary address cache, keyed by name and domain
+  like everything else, with the profile URL as a second index into it. A
+  company whose format we learn this way makes the *next* person there free on
+  the cheap path.
+  """
+  @spec find_by_linkedin(String.t(), keyword()) :: {:ok, result()} | {:error, atom()}
+  def find_by_linkedin(url, opts \\ []) do
+    with {:ok, url} <- normalize_linkedin(url) do
+      case cached_by_linkedin(url, opts) do
+        %Email{} = row -> {:ok, present(row, Lookup.hit(), from_cache: true)}
+        nil -> resolve_linkedin(url)
+      end
+    end
+  end
+
+  # Canonical enough that the same profile written three ways is one purchase:
+  # scheme and www dropped, query and trailing slash dropped, lower-cased.
+  defp normalize_linkedin(url) when is_binary(url) do
+    trimmed =
+      url
+      |> String.trim()
+      |> String.downcase()
+      |> String.replace(~r"^https?://", "")
+      |> String.replace(~r"^([a-z]{2,3}\.)?www\.", "")
+      |> String.split(~r"[?#]", parts: 2)
+      |> hd()
+      |> String.trim_trailing("/")
+
+    if Regex.match?(~r"^([a-z]{2,3}\.)?linkedin\.com/(in|pub)/[^/]+$", trimmed) do
+      {:ok, "https://www." <> String.replace(trimmed, ~r"^[a-z]{2,3}\.", "")}
+    else
+      {:error, :invalid_linkedin_url}
+    end
+  end
+
+  defp normalize_linkedin(_), do: {:error, :invalid_linkedin_url}
+
+  defp cached_by_linkedin(url, opts) do
+    if Keyword.get(opts, :refresh, false) do
+      nil
+    else
+      row =
+        Email
+        |> where([e], e.linkedin_url == ^url)
+        |> order_by([e], desc: e.found)
+        |> limit(1)
+        |> Repo.one()
+
+      if Cache.fresh?(row), do: row, else: nil
+    end
+  end
+
+  defp resolve_linkedin(url) do
+    result =
+      Client.call(@endpoint,
+        method: :post,
+        body: %{linkedin_url: url},
+        max_cost: Budgets.usd(:email_find_linkedin),
+        prefer: CostModel.preferred(@capability)
+      )
+
+    case result do
+      {:ok, payload, meta} ->
+        CostModel.record_waterfall(@capability, meta.tried, latency_ms: meta.latency_ms)
+        lookup = Lookup.miss(meta.cost_micro)
+
+        case extract_email(payload) do
+          nil -> {:ok, present(store_linkedin_missing(url, lookup, meta), lookup)}
+          email -> {:ok, present(store_linkedin_found(url, email, payload, lookup, meta), lookup)}
+        end
+
+      {:miss, meta} ->
+        CostModel.record_waterfall(@capability, meta.tried, latency_ms: meta.latency_ms)
+        lookup = Lookup.miss(meta.cost_micro)
+        {:ok, present(store_linkedin_missing(url, lookup, meta), lookup)}
+
+      {:error, _reason, meta} ->
+        CostModel.record_waterfall(@capability, meta.tried, latency_ms: meta.latency_ms)
+        # A provider outage is not evidence the profile has no address, so it is
+        # not cached as a miss.
+        {:error, :provider_unavailable}
+    end
+  end
+
+  defp store_linkedin_found(url, email, payload, lookup, meta) do
+    [_, domain] = String.split(email, "@", parts: 2)
+    full_name = payload_name(payload)
+
+    # The format this address reveals is worth more than the address: it makes
+    # everyone else at that company resolvable for nothing.
+    if full_name, do: PatternStore.learn(domain, email, full_name)
+
+    store(%{
+      name_key: (full_name && Names.name_key(full_name)) || "linkedin:" <> url,
+      domain: domain,
+      full_name: full_name || email,
+      email: email,
+      linkedin_url: url,
+      found: true,
+      source: "provider",
+      confidence: confidence_of(payload),
+      verification_status: verification_of(payload),
+      provider: meta.served_by,
+      provider_cost_micro: lookup.spent_micro,
+      raw: payload,
+      expires_at: Cache.expires_at(:email_found)
+    })
+  end
+
+  # A profile that resolved to nothing still gets a row, so the same URL is not
+  # bought twice. It is keyed on the URL rather than a person, because a miss
+  # is exactly the case where we never learned who they are.
+  defp store_linkedin_missing(url, lookup, meta) do
+    store(%{
+      name_key: "linkedin:" <> url,
+      domain: "linkedin.com",
+      full_name: url,
+      linkedin_url: url,
+      found: false,
+      source: "provider",
+      provider: meta.served_by,
+      provider_cost_micro: lookup.spent_micro,
+      expires_at: Cache.expires_at(:email_missing)
+    })
+  end
+
+  defp payload_name(payload) when is_map(payload) do
+    Enum.find_value(["full_name", "name", "fullName"], fn key ->
+      case get_in(payload, ["output", key]) || Map.get(payload, key) do
+        value when is_binary(value) and value != "" -> value
+        _ -> nil
+      end
+    end)
+  end
+
+  defp payload_name(_), do: nil
+
   defp find_via_provider(full_name, parts, name_key, domain, lookup) do
     body =
       %{full_name: full_name, domain: domain}
@@ -255,6 +401,7 @@ defmodule CsuiteFinder.Finder do
       email: row.email,
       full_name: row.full_name,
       domain: row.domain,
+      linkedin_url: row.linkedin_url,
       pattern: row.pattern_used,
       pattern_source: Keyword.get(opts, :pattern_source),
       confidence: row.confidence,
