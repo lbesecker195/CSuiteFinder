@@ -369,3 +369,4 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 | `can't find include lib "public_key/include/public_key.hrl"` | Erlang installed without its full OTP set; install `esl-erlang`, or `erlang-dev erlang-public-key erlang-ssl erlang-crypto erlang-asn1` |
 | Lookups return `treg_configured: false` | `TREG_TOKEN` not in the environment file |
 | Enrichment never fills in a job title | `ANTHROPIC_API_KEY` unset — the fallback is skipped silently, by design |
+| A customer has forgotten their password | There is no reset email and no mail server. They sign in on /account with their API key and set a new one. If they have lost the key too, mint one for them: `bin/csuite_finder rpc 'CsuiteFinder.Accounts.get_account(ID) \|> CsuiteFinder.Accounts.create_api_key("recovery")'` |

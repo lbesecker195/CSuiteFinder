@@ -20,6 +20,21 @@ defmodule CsuiteFinder.Accounts do
   alias CsuiteFinder.Repo
 
   @key_prefix "csf_live_"
+  @session_prefix "csf_sess_"
+
+  # Long enough to be worth having, with no composition rules — a rule that
+  # forces a symbol produces "Password1!" and nothing else.
+  @min_password 12
+
+  # Brute force is the entire risk of putting a password on a system that had
+  # none. Five wrong guesses buys a quarter of an hour of silence.
+  @max_attempts 5
+  @lockout_seconds 15 * 60
+
+  # A browser session, not an API credential. It expires on its own, so a
+  # laptop left in a hotel stops being a way in eventually even if nobody
+  # thinks to revoke it.
+  @session_days 30
 
   @doc "Create an account."
   @spec create_account(map()) :: {:ok, Account.t()} | {:error, Ecto.Changeset.t()}
@@ -74,6 +89,15 @@ defmodule CsuiteFinder.Accounts do
     Repo.transaction(fn ->
       case create_account(attrs) do
         {:ok, account} ->
+          # A password is optional here. Someone who sets one can sign in
+          # without keeping the key to hand; someone who does not carries on
+          # exactly as before.
+          account =
+            case field(attrs, :password) do
+              nil -> account
+              password -> with({:ok, updated} <- set_password(account, password), do: updated)
+            end
+
           {:ok, plaintext, _key} = create_api_key(account, "initial key")
           %{account: account, api_key: plaintext, credit_granted_micro: 0}
 
@@ -81,6 +105,143 @@ defmodule CsuiteFinder.Accounts do
           Repo.rollback(changeset)
       end
     end)
+  end
+
+  @doc """
+  Give an account a password, or change the one it has.
+
+  Optional, always. An account with no password signs in with its API key, which
+  is how every account worked before this and how machine callers still do —
+  the API is key-authenticated and a password has no part in it.
+
+  There is no reset flow, because there is no mail server to send one through.
+  Losing the password means signing in with the key and setting a new one, and
+  the page says so before it asks for one.
+  """
+  @spec set_password(Account.t(), String.t()) :: {:ok, Account.t()} | {:error, atom()}
+  def set_password(%Account{} = account, password) when is_binary(password) do
+    if String.length(String.trim(password)) < @min_password do
+      {:error, :password_too_short}
+    else
+      account
+      |> Account.changeset(%{
+        password_hash: Bcrypt.hash_pwd_salt(password),
+        failed_logins: 0,
+        locked_until: nil
+      })
+      |> Repo.update()
+      |> case do
+        {:ok, account} -> {:ok, account}
+        {:error, _changeset} -> {:error, :invalid}
+      end
+    end
+  end
+
+  def set_password(_account, _password), do: {:error, :password_too_short}
+
+  @doc "The shortest password we will accept."
+  @spec min_password_length() :: pos_integer()
+  def min_password_length, do: @min_password
+
+  @doc """
+  Sign in with an email address and a password.
+
+  Returns a **session token**, not the account's API key: we hold only a hash of
+  that key and could not return it if we wanted to, and minting something
+  separate means a browser session can expire without touching the credential a
+  script depends on.
+
+  Every failure answers `:invalid_login`, whether the address is unknown or the
+  password is wrong, and an unknown address still pays the cost of a hash — an
+  attacker must not be able to enumerate customers by timing the reply.
+  """
+  @spec login(String.t(), String.t()) ::
+          {:ok, Account.t(), String.t(), DateTime.t()}
+          | {:error, :invalid_login | :locked | :suspended}
+  def login(email, password) when is_binary(email) and is_binary(password) do
+    account = Repo.get_by(Account, email: String.downcase(String.trim(email)))
+
+    cond do
+      is_nil(account) or is_nil(account.password_hash) ->
+        # Same work, same answer, whether or not the account exists.
+        Bcrypt.no_user_verify()
+        {:error, :invalid_login}
+
+      locked?(account) ->
+        {:error, :locked}
+
+      account.status != "active" ->
+        {:error, :suspended}
+
+      Bcrypt.verify_pass(password, account.password_hash) ->
+        {:ok, account} = clear_failures(account)
+        {token, expires_at} = start_session(account)
+        {:ok, account, token, expires_at}
+
+      true ->
+        record_failure(account)
+        {:error, :invalid_login}
+    end
+  end
+
+  def login(_email, _password) do
+    Bcrypt.no_user_verify()
+    {:error, :invalid_login}
+  end
+
+  @doc "Mint a browser session token for an account. Returns the token and its expiry."
+  @spec start_session(Account.t()) :: {String.t(), DateTime.t()}
+  def start_session(%Account{} = account) do
+    secret = 32 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
+    token = @session_prefix <> secret
+    expires_at = DateTime.add(DateTime.utc_now(), @session_days * 86_400, :second)
+
+    {:ok, _key} =
+      %ApiKey{}
+      |> ApiKey.changeset(%{
+        account_id: account.id,
+        key_hash: hash(token),
+        prefix: String.slice(token, 0, 16),
+        label: "browser session",
+        kind: "session",
+        expires_at: expires_at
+      })
+      |> Repo.insert()
+
+    {token, expires_at}
+  end
+
+  @doc "End a browser session."
+  @spec end_session(ApiKey.t()) :: :ok
+  def end_session(%ApiKey{} = key) do
+    revoke_api_key(key)
+    :ok
+  end
+
+  defp locked?(%Account{locked_until: nil}), do: false
+
+  defp locked?(%Account{locked_until: until}),
+    do: DateTime.compare(until, DateTime.utc_now()) == :gt
+
+  defp clear_failures(%Account{failed_logins: 0, locked_until: nil} = account),
+    do: {:ok, account}
+
+  defp clear_failures(account) do
+    account |> Account.changeset(%{failed_logins: 0, locked_until: nil}) |> Repo.update()
+  end
+
+  defp record_failure(account) do
+    failures = (account.failed_logins || 0) + 1
+
+    account
+    |> Account.changeset(%{
+      failed_logins: failures,
+      locked_until:
+        if(failures >= @max_attempts,
+          do: DateTime.add(DateTime.utc_now(), @lockout_seconds, :second)
+        )
+    })
+    |> Repo.update()
   end
 
   @spec get_account(integer()) :: Account.t() | nil
@@ -118,9 +279,13 @@ defmodule CsuiteFinder.Accounts do
   def authenticate(presented) when is_binary(presented) do
     hashed = hash(presented)
 
+    now = DateTime.utc_now()
+
     query =
       from k in ApiKey,
-        where: k.key_hash == ^hashed and is_nil(k.revoked_at),
+        where:
+          k.key_hash == ^hashed and is_nil(k.revoked_at) and
+            (is_nil(k.expires_at) or k.expires_at > ^now),
         preload: [:account]
 
     case Repo.one(query) do

@@ -30,12 +30,40 @@
         <input type="email" id="email" placeholder="you@company.com" autocomplete="email"
                value="<%= @prefill_email %>">
       </div>
+      <div>
+        <label for="newpassword">Password <span class="muted">(optional)</span></label>
+        <input type="password" id="newpassword" placeholder="at least <%= @min_password %> characters"
+               autocomplete="new-password">
+      </div>
       <button id="register">Create account</button>
     </div>
   </div>
 
   <div class="card">
-    <h3 style="margin:0 0 4px;font-size:17px">Already have a key?</h3>
+    <h3 style="margin:0 0 4px;font-size:17px">Already have an account?</h3>
+    <p class="muted" style="margin-bottom:16px">Sign in with your email and password.</p>
+    <div class="row">
+      <div>
+        <label for="loginemail">Email</label>
+        <input type="email" id="loginemail" placeholder="you@company.com" autocomplete="email"
+               value="<%= @prefill_email %>">
+      </div>
+      <div>
+        <label for="loginpassword">Password</label>
+        <input type="password" id="loginpassword" placeholder="••••••••••••"
+               autocomplete="current-password">
+      </div>
+      <button id="signin-password">Sign in</button>
+    </div>
+    <p class="muted" style="margin:14px 0 0">
+      No password yet, or forgotten it? Sign in with your API key below and set one.
+      <strong>There is no email reset</strong> — we have no mail server, so your key is
+      the way back in.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 4px;font-size:17px">Have a key instead?</h3>
     <p class="muted" style="margin-bottom:16px">Paste it to see your balance and buy credit.</p>
     <div class="row">
       <div>
@@ -164,6 +192,24 @@
         <thead><tr><th>Endpoint</th><th class="num">Calls</th><th class="num">Found</th><th class="num" data-aud="developer" hidden>Spend</th></tr></thead>
         <tbody id="usage"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
       </table>
+    </div>
+  </div>
+
+  <h2>Password</h2>
+  <div class="card">
+    <p class="muted" style="margin-top:0">
+      Set one and you can sign in with your email instead of keeping a key on your
+      clipboard. At least <%= @min_password %> characters; length is the only rule.
+      <strong>There is no email reset</strong> — if you forget it, sign in with your API
+      key and set a new one.
+    </p>
+    <div class="row">
+      <div>
+        <label for="setpassword">New password</label>
+        <input type="password" id="setpassword" placeholder="••••••••••••"
+               autocomplete="new-password">
+      </div>
+      <button id="savepassword" class="ghost">Save password</button>
     </div>
   </div>
 
@@ -358,6 +404,9 @@
   }
 
   function signOut(msg) {
+    // Tell the server first, so a session token stops working everywhere rather
+    // than only in this browser. A key is untouched either way.
+    if (key && key.indexOf("csf_sess_") === 0) { api("/logout", { method: "POST", body: {} }); }
     key = null; drop();
     show("signedout");
     say(msg || "", msg ? "info" : null);
@@ -369,7 +418,11 @@
     if (!email) { say("Enter your email first.", "err"); return; }
     var btn = this; btn.disabled = true; say("Creating your account…", "info");
 
-    api("/register", { method: "POST", body: { email: email, audience: audience } }).then(function (res) {
+    var newPassword = $("newpassword") ? $("newpassword").value : "";
+    var payload = { email: email, audience: audience };
+    if (newPassword) payload.password = newPassword;
+
+    api("/register", { method: "POST", body: payload }).then(function (res) {
       btn.disabled = false;
       if (!res.ok) {
         var detail = res.body && res.body.details && res.body.details.email;
@@ -382,6 +435,56 @@
       // No credit comes with an account any more, so the next step is the
       // thing to say rather than a balance of zero.
       say("Account created. Buy the trial below to start looking things up.", "ok");
+    });
+  });
+
+  // ---- sign in with a password --------------------------------------------
+  $("signin-password").addEventListener("click", function () {
+    var email = $("loginemail").value.trim();
+    var password = $("loginpassword").value;
+    if (!email || !password) { say("Enter your email and password.", "err"); return; }
+
+    var btn = this;
+    btn.disabled = true;
+    say("Signing in…", "info");
+
+    // No key on this call — it is the one request that authenticates itself.
+    fetch(API + "/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: email, password: password })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; })
+        .then(function (body) { return { ok: r.ok, body: body }; });
+    }).then(function (res) {
+      btn.disabled = false;
+      $("loginpassword").value = "";
+
+      if (!res.ok) {
+        say((res.body && res.body.message) || "Could not sign you in.", "err");
+        return;
+      }
+      // A session token is kept exactly where a pasted key was: same storage,
+      // same header, and it expires on its own.
+      key = res.body.token;
+      save(key);
+      say("");
+      refresh();
+    });
+  });
+
+  $("savepassword").addEventListener("click", function () {
+    var value = $("setpassword").value;
+    if (!value) { say("Enter a password first.", "err"); return; }
+
+    var btn = this;
+    btn.disabled = true;
+
+    api("/password", { method: "POST", body: { password: value } }).then(function (res) {
+      btn.disabled = false;
+      $("setpassword").value = "";
+      say((res.body && res.body.message) || "Could not save that password.",
+          res.ok ? "ok" : "err");
     });
   });
 

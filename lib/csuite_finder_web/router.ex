@@ -91,6 +91,9 @@ defmodule CsuiteFinderWeb.Router do
   scope "/csuitefinder", CsuiteFinderWeb do
     pipe_through [:api, :authenticated]
 
+    post "/password", SessionController, :set_password
+    post "/logout", SessionController, :delete
+
     get "/keys", KeyController, :index
     post "/keys", KeyController, :create
     delete "/keys/:id", KeyController, :delete
@@ -123,6 +126,7 @@ defmodule CsuiteFinderWeb.Router do
 
     post "/billing/webhook", BillingController, :webhook
     post "/register", RegistrationController, :create
+    post "/login", SessionController, :create
     get "/health", HealthController, :index
     get "/pricing", PageController, :pricing
   end

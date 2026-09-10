@@ -16,7 +16,8 @@ defmodule CsuiteFinderWeb.RegistrationController do
     case Accounts.register(%{
            email: params["email"],
            name: params["name"],
-           audience: params["audience"]
+           audience: params["audience"],
+           password: params["password"]
          }) do
       {:ok, %{account: account, api_key: key, credit_granted_micro: granted}} ->
         conn

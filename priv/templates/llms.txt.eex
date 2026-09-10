@@ -44,6 +44,14 @@ Authorization: Bearer <key>
 
 `X-API-Key: <key>` also works. The key never rides in the URL path.
 
+There is also a password login, and it is **not for you**. It exists so a person
+can open the account page without keeping a key on their clipboard:
+`POST /csuitefinder/login` with `{email, password}` returns a browser session
+token that expires. An agent should hold the API key and nothing else — a key
+does not expire, and minting sessions from a script leaves a trail of
+credentials nobody revokes. `POST /csuitefinder/password` sets one, if the
+person you are working for asks.
+
 ## Pricing
 
 Priced in **US dollars**, charged per answer:
