@@ -125,6 +125,18 @@ defmodule CsuiteFinderWeb.AdminController do
   def num(value) when is_float(value), do: num(round(value))
   def num(_), do: "0"
 
+  @doc """
+  A growth figure, signed.
+
+  The `+` is the whole point: the number beside it is the total we hold, which
+  only ever rises, so without a sign the two read as the same kind of quantity
+  and the growth is easy to mistake for a share of the total.
+  """
+  def delta(nil), do: "—"
+  def delta(0), do: "no new"
+  def delta(value) when is_integer(value) and value > 0, do: "+" <> num(value)
+  def delta(value) when is_integer(value), do: num(value)
+
   @doc "CSS class for a figure that is good when high, bad when negative."
   def tone(value) when is_number(value) and value < 0, do: "bad"
   def tone(value) when is_number(value) and value > 0, do: "good"

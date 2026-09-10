@@ -23,6 +23,11 @@
 
 <div class="grid">
   <div class="card">
+    <div class="label">Unique emails found</div>
+    <div class="value"><%= CsuiteFinderWeb.AdminController.num(@corpus.total) %></div>
+    <div class="sub"><%= CsuiteFinderWeb.AdminController.delta(@corpus.new_in_window) %> in <%= @days %>d</div>
+  </div>
+  <div class="card">
     <div class="label">Requests</div>
     <div class="value"><%= CsuiteFinderWeb.AdminController.num(@headline.requests) %></div>
     <div class="sub"><%= CsuiteFinderWeb.AdminController.pct(@headline.found_rate) %> answered</div>
@@ -213,11 +218,6 @@
 <h2>Email corpus</h2>
 
 <div class="grid">
-  <div class="card">
-    <div class="label">Total emails held</div>
-    <div class="value"><%= CsuiteFinderWeb.AdminController.num(@corpus.total) %></div>
-    <div class="sub">distinct addresses</div>
-  </div>
   <div class="card">
     <div class="label">Found</div>
     <div class="value"><%= CsuiteFinderWeb.AdminController.num(@corpus.found) %></div>

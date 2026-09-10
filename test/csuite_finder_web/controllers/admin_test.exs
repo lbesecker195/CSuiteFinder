@@ -68,6 +68,21 @@ defmodule CsuiteFinderWeb.AdminTest do
       assert html =~ "No requests in this window yet."
     end
 
+    test "leads with the unique email count, above the request count", %{conn: conn} do
+      html = conn |> get(~p"/admin?token=#{@token}") |> html_response(200)
+
+      assert html =~ "Unique emails found"
+
+      # It is the first card. The point of the metric is that it is the first
+      # thing read, so its position is part of the behaviour, not decoration.
+      assert :binary.match(html, "Unique emails found") <
+               :binary.match(html, "Requests")
+
+      # Nothing held yet, and nothing added — both stated, rather than a bare 0
+      # that could equally mean the query failed.
+      assert html =~ "no new"
+    end
+
     test "keeps the token on the window links so they stay clickable", %{conn: conn} do
       html = conn |> get(~p"/admin?token=#{@token}") |> html_response(200)
 

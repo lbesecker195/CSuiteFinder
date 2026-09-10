@@ -237,4 +237,64 @@ defmodule CsuiteFinder.MetricsTest do
       key
     end
   end
+
+  describe "corpus/1 growth" do
+    defp email_row(address, inserted_at) do
+      %CsuiteFinder.Cache.Email{}
+      |> CsuiteFinder.Cache.Email.changeset(%{
+        name_key: "k-" <> address,
+        domain: "acme.com",
+        full_name: "A Person",
+        email: address,
+        found: true,
+        source: "test"
+      })
+      |> Repo.insert!()
+      |> Ecto.Changeset.change(inserted_at: inserted_at)
+      |> Repo.update!()
+    end
+
+    defp swept_row(address, inserted_at) do
+      %CsuiteFinder.Cache.CompanyPerson{}
+      |> CsuiteFinder.Cache.CompanyPerson.changeset(%{
+        domain: "acme.com",
+        email: address,
+        full_name: "A Person",
+        source: "test"
+      })
+      |> Repo.insert!()
+      |> Ecto.Changeset.change(inserted_at: inserted_at)
+      |> Repo.update!()
+    end
+
+    defp days_ago(n), do: DateTime.add(DateTime.utc_now(), -n * 86_400, :second)
+
+    test "counts only addresses we did not already hold" do
+      # Held before the window, and swept again inside it. The second sighting
+      # is not a new address, and this is the case the EXCEPT exists for.
+      email_row("old@acme.com", days_ago(60))
+      swept_row("old@acme.com", days_ago(2))
+
+      # Genuinely new inside the window.
+      email_row("new@acme.com", days_ago(3))
+
+      corpus = Metrics.corpus(days_ago(30))
+
+      assert corpus.total == 2
+      assert corpus.new_in_window == 1
+    end
+
+    test "an address found by two routes inside the window counts once" do
+      email_row("both@acme.com", days_ago(5))
+      swept_row("both@acme.com", days_ago(4))
+
+      assert Metrics.corpus(days_ago(30)).new_in_window == 1
+    end
+
+    test "without a window there is no growth figure to report" do
+      email_row("x@acme.com", days_ago(1))
+
+      assert Metrics.corpus().new_in_window == nil
+    end
+  end
 end

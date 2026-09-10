@@ -52,7 +52,7 @@ defmodule CsuiteFinder.Metrics do
       by_endpoint: by_endpoint(since),
       latency: latency(since),
       cache: cache_stats(),
-      corpus: corpus(),
+      corpus: corpus(since),
       accounts: accounts_stats(since),
       payments: payments_stats(),
       providers: CostModel.report()
@@ -332,9 +332,15 @@ defmodule CsuiteFinder.Metrics do
   Two ways in, and they overlap — an address found by name can later turn up in
   a domain sweep. The total is a UNION rather than a sum, so it counts people
   rather than rows.
+
+  `new_in_window` is how many of those addresses we did not have before `since`.
+  It is the only figure here that moves with the window control, and it is the
+  one that answers "are we still finding people?" — a total that only ever goes
+  up cannot answer that, because it looks identical whether last week added ten
+  thousand addresses or none.
   """
-  @spec corpus() :: map()
-  def corpus do
+  @spec corpus(DateTime.t() | nil) :: map()
+  def corpus(since \\ nil) do
     found =
       Repo.one(
         from e in Email,
@@ -362,8 +368,40 @@ defmodule CsuiteFinder.Metrics do
       found: found,
       received: received,
       total: total,
-      overlap: found + received - total
+      overlap: found + received - total,
+      new_in_window: new_addresses(since)
     }
+  end
+
+  # Addresses we hold now and did not hold before `since`.
+  #
+  # EXCEPT rather than a date filter alone. An address can arrive twice — found
+  # by name in March, swept from its domain in April — and the April row is not
+  # a new address, it is a second sighting of one we already had. Filtering by
+  # date alone would count it again and report growth we did not get. EXCEPT
+  # also dedupes on its own, so the count needs no further DISTINCT.
+  defp new_addresses(nil), do: nil
+
+  defp new_addresses(since) do
+    %Postgrex.Result{rows: [[count]]} =
+      Repo.query!(
+        """
+        SELECT COUNT(*) FROM (
+          (SELECT lower(email::text) AS address FROM emails
+             WHERE found AND email IS NOT NULL AND inserted_at >= $1
+           UNION
+           SELECT lower(email::text) FROM company_people WHERE inserted_at >= $1)
+          EXCEPT
+          (SELECT lower(email::text) FROM emails
+             WHERE found AND email IS NOT NULL AND inserted_at < $1
+           UNION
+           SELECT lower(email::text) FROM company_people WHERE inserted_at < $1)
+        ) AS newly_held
+        """,
+        [since]
+      )
+
+    count
   end
 
   @doc "Customers, and the tokens they are still owed."
