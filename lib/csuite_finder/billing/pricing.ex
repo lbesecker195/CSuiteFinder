@@ -209,12 +209,18 @@ defmodule CsuiteFinder.Billing.Pricing do
       seat_usd_per_month: seat,
       credit_usd_per_month: seat,
       credit_rolls_over: false,
-      free_trial_usd: trial_usd(),
-      free_trial_months: @trial_months,
+      # There is no free trial on this side. Reporting one would be quoting a
+      # product we do not sell.
+      trial_usd: @seat_trial_usd,
+      trial_months: @trial_months,
+      trial_credit_expires: true,
       billing_rules: [
         "$#{seat} per person per month, billed monthly.",
         "Each seat gets $#{seat} of lookup credit every month.",
         "Unused credit does not roll over — every month starts at $#{seat}.",
+        "Trying it first costs $#{@seat_trial_usd}, once. That credit expires after " <>
+          "#{@trial_months} month, the same as a seat's does — it is a trial of the seat, " <>
+          "so it behaves like one.",
         "A lookup that finds nothing does not use any credit.",
         "Cancel any time; the month you have paid for runs to its end."
       ]

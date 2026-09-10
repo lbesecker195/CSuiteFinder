@@ -19,9 +19,15 @@
 
   <div class="card">
     <h3 style="margin:0 0 4px;font-size:17px">New here?</h3>
-    <p class="muted" style="margin-bottom:16px">
+    <p class="muted" style="margin-bottom:16px" data-aud="developer" hidden>
       Registering is instant and gives you <strong>$<%= @trial_usd %> of free credit</strong>
-      — real lookups, no card.
+      — real lookups, no card. It expires after <%= @trial_months %> month; credit you buy
+      does not.
+    </p>
+    <p class="muted" style="margin-bottom:16px" data-aud="sales">
+      Registering is instant and free. There is no free credit on this side — a
+      <strong>$<%= @trial_price %> trial</strong> buys $<%= @trial_price %> of credit and every
+      lookup a seat gets, for <%= @trial_months %> month.
     </p>
     <div class="row">
       <div>
@@ -590,7 +596,14 @@
       .then(function (res) {
         clean();
         if (res.ok && res.body.status === "credited") {
-          say("Payment complete — $" + (res.body.credited_usd || 0).toFixed(2) + " of credit added.", "ok");
+          var added = "Payment complete — $" + (res.body.credited_usd || 0).toFixed(2) +
+                      " of credit added.";
+          if (res.body.kind === "seat_trial") {
+            // The one thing a trial buyer must not discover later.
+            added += " It expires in " + (res.body.expires_in_months || 1) +
+                     " month — spend it before then.";
+          }
+          say(added, "ok");
         } else {
           say("We could not confirm that payment yet. If you approved it, your credit will " +
               "appear shortly — PayPal notifies us separately.", "err");

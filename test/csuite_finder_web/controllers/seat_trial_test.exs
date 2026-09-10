@@ -111,6 +111,53 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
     end
   end
 
+  describe "saying that it expires" do
+    test "the sales terms quote the paid trial and its month, not a free one" do
+      terms = Pricing.terms("sales")
+
+      assert terms.trial_usd == 29.99
+      assert terms.trial_months == 1
+      assert terms.trial_credit_expires == true
+      refute Map.has_key?(terms, :free_trial_usd)
+
+      rules = Enum.join(terms.billing_rules, " ")
+      assert rules =~ "expires after 1 month"
+    end
+
+    test "/teams says the month rather than alluding to it", %{conn: conn} do
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ "The credit expires after 1 month"
+    end
+
+    test "the home page says it on the way in", %{conn: conn} do
+      html = conn |> get(~p"/") |> html_response(200)
+
+      assert html =~ "good for\n  1 month" or html =~ "good for 1 month"
+      assert html =~ "the credit lasts"
+    end
+
+    test "the signup card promises the right thing to each audience", %{conn: conn} do
+      # Telling a seat buyer they get free credit is a promise we no longer
+      # keep, and they find out at the first lookup.
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      assert html =~ "There is no free credit on this side"
+      # And the developer's dollar expires too, which was never stated here.
+      assert html =~ "It expires after 1 month; credit you buy\n      does not." or
+               html =~ "It expires after 1 month"
+    end
+
+    test "and the account page says it at the moment of payment", %{conn: conn} do
+      # A trial buyer who finds out at expiry found out too late.
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      assert html =~ "It expires in"
+      assert html =~ "spend it before then"
+      assert html =~ "for one month"
+    end
+  end
+
   describe "the pages" do
     test "/teams sells the trial rather than giving one away", %{conn: conn} do
       html = conn |> get(~p"/teams") |> html_response(200)

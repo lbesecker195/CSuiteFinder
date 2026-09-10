@@ -47,6 +47,7 @@ defmodule CsuiteFinderWeb.AccountController do
     %{
       minimum_usd_label: delimit(Pricing.min_bundle_usd()),
       trial_price: :erlang.float_to_binary(Pricing.seat_trial_usd(), decimals: 2),
+      trial_months: Pricing.trial_months(),
       seat_usd: Plans.seat_usd(),
       seat_usd_label: delimit(Plans.seat_usd()),
       email_price:

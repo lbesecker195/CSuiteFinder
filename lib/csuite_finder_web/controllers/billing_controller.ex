@@ -192,8 +192,13 @@ defmodule CsuiteFinderWeb.BillingController do
         json(conn, %{
           paypal_order_id: payment.paypal_order_id,
           status: payment.status,
+          kind: payment.kind,
           credited_usd: Pricing.usd(payment.credit_micro),
-          paid_usd: Float.round(payment.amount_micro / 1_000_000, 2)
+          paid_usd: Float.round(payment.amount_micro / 1_000_000, 2),
+          # Said at the moment of payment, not only on the page that sold it.
+          # Someone who has just handed over money is the person most owed a
+          # plain statement of what they got.
+          expires_in_months: if(payment.kind == "seat_trial", do: Pricing.trial_months())
         })
 
       {:error, :unknown_order} ->

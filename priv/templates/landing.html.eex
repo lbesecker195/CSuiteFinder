@@ -44,8 +44,9 @@
 </div>
 
 <p class="cta-note" style="margin-top:18px">
-  Sales starts with a <a href="/account#pricing">$<%= @trial_price %> trial</a>;
-  developers start with <a href="/account">free credit</a>. No call either way.
+  Sales starts with a <a href="/account#pricing">$<%= @trial_price %> trial</a>, good for
+  <%= @trial_months %> month; developers start with <a href="/account">free credit</a>.
+  No call either way.
 </p>
 
 <%= CsuiteFinderWeb.Layout.sheet(
@@ -107,7 +108,8 @@
 </div>
 
 <p class="cta-note" style="margin-top:16px">
-  <span data-aud="sales">Trying it first is $<%= @trial_price %>, once. Building on this instead?
+  <span data-aud="sales">Trying it first is $<%= @trial_price %>, once, and the credit lasts
+  <%= @trial_months %> month. Building on this instead?
   <a href="/developers">The developer plan is here →</a></span>
   <span data-aud="developer" hidden>Buying for a sales team instead? <a href="/teams">The seat plan is here →</a></span>
 </p>

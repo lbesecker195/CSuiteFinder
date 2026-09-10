@@ -13,12 +13,14 @@
   </p>
   <div class="hero-cta">
     <a class="btn btn-primary" href="/account#pricing">Reserve a Seat, now! — $<%= @seat_usd %>/month</a>
-    <a class="btn btn-ghost" href="/account#pricing">Try it for $<%= @trial_price %></a>
+    <a class="btn btn-ghost" href="/account#pricing">Try it for $<%= @trial_price %> — <%= @trial_months %> month</a>
   </div>
   <p class="cta-note">
-    Not ready for a seat? <strong>$<%= @trial_price %> buys a month's trial</strong> —
-    $<%= @trial_price %> of credit, the same lookups, the same expiry. Run your own
-    list through it before deciding anything.
+    Not ready for a seat? <strong>$<%= @trial_price %> buys a trial</strong> —
+    $<%= @trial_price %> of credit and every lookup a seat gets.
+    <strong>The credit expires after <%= @trial_months %> month</strong>, the same way a
+    seat's does, because it is a trial of the seat rather than a bundle of credit.
+    Run your own list through it before deciding anything.
   </p>
 </header>
 
