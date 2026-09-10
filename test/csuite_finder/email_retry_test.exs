@@ -2,15 +2,16 @@ defmodule CsuiteFinder.EmailRetryTest do
   @moduledoc """
   Asking again for someone whose address turned out to be dead.
 
-  A caller repeating a request is the demand signal: the address we gave them
-  does not work. Handing back the same dead address helps nobody — but neither
-  does re-billing them on every request once we have genuinely run out of
-  methods, so most of this is about knowing the difference.
+  We never check an address ourselves, so "dead" always means the customer told
+  us — they ran /email/deliverable on what we gave them and it bounced. Asking
+  again after that is the demand signal, and handing back the same dead address
+  helps nobody. But neither does re-billing them once we have genuinely run out
+  of methods, so most of this is about knowing the difference.
   """
 
   use CsuiteFinder.DataCase, async: true
 
-  alias CsuiteFinder.{Finder, Repo, TregStub}
+  alias CsuiteFinder.{Finder, Repo, TregStub, Verifier}
   alias CsuiteFinder.Cache.Email
 
   defp one_pattern, do: %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}
@@ -25,28 +26,28 @@ defmodule CsuiteFinder.EmailRetryTest do
   end
 
   describe "a second ask for someone whose address bounced" do
-    test "tries a format it has not tried yet" do
-      # first.last is rejected on the first ask. The second ask must not simply
-      # replay it — the company has another format and nobody has tried it.
+    test "buys the answer when the company has no other format to try" do
       TregStub.stub(fn
         "thecompaniesapi.companies.email_pattern", _ ->
           {200, one_pattern(), 1_900}
 
-        "treg.people.email.verify", %{"email" => "jane.doe@acme.com"} ->
-          {200, TregStub.routed(%{"valid" => false, "status" => "invalid"}, cost: 1_500), 1_500}
-
         "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+          {200, TregStub.routed(%{"valid" => false, "status" => "invalid"}, cost: 1_500), 1_500}
 
         "treg.people.email.find", _ ->
           {200, TregStub.routed(%{"email" => "jdoe@acme.com"}, cost: 5_000), 5_000}
       end)
 
       {:ok, first} = Finder.find("Jane Doe", "acme.com")
-      # Nothing in the pattern worked, so it was bought — and the bought one is
-      # checked, because this person's first address was already wrong.
-      assert first.email == "jdoe@acme.com"
+      assert first.email == "jane.doe@acme.com"
 
+      # The customer checks it and it bounces. That is the only way we ever find
+      # out, and it is what makes the next ask worth re-resolving.
+      {:ok, _, _} = Verifier.verify("jane.doe@acme.com")
+
+      {:ok, second} = Finder.find("Jane Doe", "acme.com")
+
+      assert second.email == "jdoe@acme.com"
       row = Finder.cached_row("jane doe", "acme.com")
       assert "jane.doe@acme.com" in row.rejected
       assert row.provider_tried
@@ -57,17 +58,19 @@ defmodule CsuiteFinder.EmailRetryTest do
         "thecompaniesapi.companies.email_pattern", _ ->
           {200, two_patterns(), 1_900}
 
-        "treg.people.email.verify", %{"email" => "jane.doe@acme.com"} ->
-          {200, TregStub.routed(%{"valid" => false, "status" => "invalid"}, cost: 1_500), 1_500}
-
         "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+          {200, TregStub.routed(%{"valid" => false, "status" => "invalid"}, cost: 1_500), 1_500}
       end)
 
-      {:ok, result} = Finder.find("Jane Doe", "acme.com")
+      {:ok, first} = Finder.find("Jane Doe", "acme.com")
+      assert first.email == "jane.doe@acme.com"
 
-      # The second format answered; the first is recorded as dead for her.
-      assert result.email == "jdoe@acme.com"
+      {:ok, _, _} = Verifier.verify("jane.doe@acme.com")
+
+      # The company's other format, not the one she has been proved not to use.
+      {:ok, second} = Finder.find("Jane Doe", "acme.com")
+
+      assert second.email == "jdoe@acme.com"
       assert "jane.doe@acme.com" in Finder.cached_row("jane doe", "acme.com").rejected
     end
 
@@ -87,6 +90,9 @@ defmodule CsuiteFinder.EmailRetryTest do
       end)
 
       {:ok, _} = Finder.find("Jane Doe", "acme.com")
+      {:ok, _, _} = Verifier.verify("jane.doe@acme.com")
+      {:ok, _} = Finder.find("Jane Doe", "acme.com")
+      {:ok, _, _} = Verifier.verify("jdoe@acme.com")
       spent = TregStub.call_count()
 
       {:ok, _} = Finder.find("Jane Doe", "acme.com")
@@ -105,6 +111,7 @@ defmodule CsuiteFinder.EmailRetryTest do
       end)
 
       {:ok, _} = Finder.find("Jane Doe", "acme.com")
+      {:ok, _, _} = Verifier.verify("jane.doe@acme.com")
       spent = TregStub.call_count()
 
       {:ok, again} = Finder.find("Jane Doe", "acme.com")
@@ -123,10 +130,13 @@ defmodule CsuiteFinder.EmailRetryTest do
         "treg.people.email.verify", _ ->
           {200, TregStub.routed(%{"valid" => false, "status" => "invalid"}, cost: 1_500), 1_500}
 
-        # The paid lookup returns exactly the address the mailbox just rejected.
+        # The paid lookup returns exactly the address the customer just proved dead.
         "treg.people.email.find", _ ->
           {200, TregStub.routed(%{"email" => "jane.doe@acme.com"}, cost: 5_000), 5_000}
       end)
+
+      {:ok, _} = Finder.find("Jane Doe", "acme.com")
+      {:ok, _, _} = Verifier.verify("jane.doe@acme.com")
 
       {:ok, result} = Finder.find("Jane Doe", "acme.com")
 

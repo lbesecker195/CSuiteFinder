@@ -50,7 +50,13 @@ defmodule CsuiteFinder.Verifier do
     case result do
       {:ok, payload, meta} ->
         CostModel.record_waterfall(@capability, meta.tried, latency_ms: meta.latency_ms)
-        {:ok, store(email, domain, payload, meta), CsuiteFinder.Lookup.miss(meta.cost_micro)}
+        row = store(email, domain, payload, meta)
+
+        # The caller paid for this answer; it costs nothing to learn from it.
+        # See CsuiteFinder.Finder.record_verification/3.
+        CsuiteFinder.Finder.record_verification(email, row.status, row.catch_all)
+
+        {:ok, row, CsuiteFinder.Lookup.miss(meta.cost_micro)}
 
       {:miss, meta} ->
         CostModel.record_waterfall(@capability, meta.tried, latency_ms: meta.latency_ms)

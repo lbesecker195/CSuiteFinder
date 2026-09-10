@@ -7,12 +7,8 @@ defmodule CsuiteFinderWeb.BillingTest do
     test "charges for an answer and debits the balance", %{conn: conn} do
       {account, key} = Fixtures.account_with_key(usd: 1.0)
 
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
       end)
 
       conn
@@ -55,12 +51,8 @@ defmodule CsuiteFinderWeb.BillingTest do
       {account, key} = Fixtures.account_with_key(usd: 1.0)
       conn = put_req_header(conn, "authorization", "Bearer " <> key)
 
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
       end)
 
       post(conn, ~p"/csuitefinder/email/find", %{full_name: "Jane Doe", domain: "acme.com"})
@@ -124,12 +116,8 @@ defmodule CsuiteFinderWeb.BillingTest do
       {account, key} = Fixtures.account_with_key(usd: 0.0025)
       conn = put_req_header(conn, "authorization", "Bearer " <> key)
 
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
       end)
 
       json_response(

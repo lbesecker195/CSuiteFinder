@@ -18,12 +18,8 @@ defmodule CsuiteFinder.DurableCacheTest do
 
   describe "a refresh that finds nothing keeps the old value" do
     test "email patterns survive a provider going empty" do
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
       end)
 
       {:ok, first, _} = PatternStore.get_or_fetch("acme.com")
@@ -31,12 +27,8 @@ defmodule CsuiteFinder.DurableCacheTest do
 
       expire!(EmailPattern)
 
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => []}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => []}, 1_900}
       end)
 
       {:ok, second, _} = PatternStore.get_or_fetch("acme.com")
@@ -50,23 +42,15 @@ defmodule CsuiteFinder.DurableCacheTest do
     end
 
     test "a failed refresh backs off instead of re-asking every request" do
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => [%{"pattern" => "[F]", "usagePercentage" => 90.0}]}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => [%{"pattern" => "[F]", "usagePercentage" => 90.0}]}, 1_900}
       end)
 
       PatternStore.get_or_fetch("acme.com")
       expire!(EmailPattern)
 
-      TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
-        "thecompaniesapi.companies.email_pattern", _ ->
-          {200, %{"patterns" => []}, 1_900}
+      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => []}, 1_900}
       end)
 
       PatternStore.get_or_fetch("acme.com")

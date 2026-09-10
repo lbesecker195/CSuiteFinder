@@ -17,9 +17,6 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
 
   defp stub_pattern(pattern, usage \\ 95.0) do
     TregStub.stub(fn
-      "treg.people.email.verify", _ ->
-        {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
       "thecompaniesapi.companies.email_pattern", _params ->
         {200, %{"patterns" => [%{"pattern" => pattern, "usagePercentage" => usage}]}, 1_900}
 
@@ -49,10 +46,7 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
       row = CsuiteFinder.Finder.cached_row("jane doe", "acme.com")
       assert row.source == "pattern"
       assert row.pattern_used == "{first}.{last}"
-      # The format, plus the mailbox check that confirmed an address built from
-      # it. The check is bought once per company, not once per person.
-      assert row.provider_cost_micro == 3_400
-      assert row.verification_status == "deliverable"
+      assert row.provider_cost_micro == 1_900
     end
 
     test "a second person at the same company costs nothing", %{conn: conn} do
@@ -67,8 +61,7 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["email"] == "jroe@acme.com"
-      # The pattern was already held and already proved on this domain, so the
-      # second person cost neither a lookup nor a check.
+      # The pattern was already held; nothing new was bought.
       assert TregStub.call_count() == calls_after_first
       assert CsuiteFinder.Finder.cached_row("john roe", "acme.com").provider_cost_micro == 0
     end
@@ -83,9 +76,8 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["email"] == "jane.doe@acme.com"
-      # Two upstream calls the first time — the pattern, and the mailbox check
-      # that confirms an address built from it — and nothing since.
-      assert TregStub.call_count() == 2
+      # One upstream call for the pattern, and nothing since.
+      assert TregStub.call_count() == 1
     end
 
     test "falls back to a paid find when the domain has no pattern", %{conn: conn} do
@@ -110,15 +102,9 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
       assert row.provider_cost_micro == 6_900
     end
 
-    test "learns the pattern from a paid find, then proves it once and stops paying",
+    test "learns the pattern from a paid find, so the next colleague is free",
          %{conn: conn} do
-      # A provider's unverified answer is a guess like ours, so the format it
-      # reveals is checked against a real mailbox once. After that the company
-      # is settled and colleagues resolve for nothing.
       TregStub.stub(fn
-        "treg.people.email.verify", _ ->
-          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
-
         "thecompaniesapi.companies.email_pattern", _ ->
           {200, %{"patterns" => []}, 1_900}
 
@@ -135,17 +121,10 @@ defmodule CsuiteFinderWeb.EmailControllerTest do
         |> json_response(200)
 
       assert body["email"] == "spoe@acme.com"
-      assert CsuiteFinder.Finder.cached_row("sam poe", "acme.com").source == "pattern"
-      # One check for the second person, to prove the learned format.
-      assert TregStub.call_count() == after_paid_find + 1
-
-      # And nothing at all for the third.
-      conn
-      |> post(~p"/csuitefinder/email/find", %{full_name: "Ada Vale", domain: "acme.com"})
-      |> json_response(200)
-
-      assert TregStub.call_count() == after_paid_find + 1
-      assert CsuiteFinder.Finder.cached_row("ada vale", "acme.com").provider_cost_micro == 0
+      row = CsuiteFinder.Finder.cached_row("sam poe", "acme.com")
+      assert row.source == "pattern"
+      assert row.provider_cost_micro == 0
+      assert TregStub.call_count() == after_paid_find
     end
 
     test "rejects a missing parameter", %{conn: conn} do
