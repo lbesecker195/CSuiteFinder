@@ -298,6 +298,13 @@
 </div>
 
 <footer>
+  <!-- This page deliberately carries no nav — it is an operator's, not a
+       customer's. That left no way back to the site at all, which reads as a
+       broken page rather than a focused one. -->
+  <a href="/">Home</a> ·
+  <a href="/teams">Sales</a> ·
+  <a href="/developers">Developers</a> ·
+  <a href="/account">Account</a> ·
   <a href="<%= CsuiteFinderWeb.AdminController.esc(@base_path) %>/metrics.json<%= if @token, do: "?token=" <> CsuiteFinderWeb.AdminController.esc(URI.encode_www_form(@token)) %>">metrics.json</a>
   · $<%= :erlang.float_to_binary(CsuiteFinder.Billing.Pricing.price_usd("email.find"), [:compact, decimals: 4]) %> an email, $<%= :erlang.float_to_binary(CsuiteFinder.Billing.Pricing.price_usd("phone.find"), [:compact, decimals: 4]) %> a phone
 </footer>

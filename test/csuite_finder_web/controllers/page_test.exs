@@ -424,8 +424,13 @@ defmodule CsuiteFinderWeb.PageTest do
 
         assert html =~ ~s|class="sitenav"|, "#{path} has no nav"
         assert html =~ ~s|href="#pricing"|, "#{path} has no in-page pricing link"
-        assert html =~ ~s|id="pricing"|, "#{path} has nothing for #pricing to land on"
         assert html =~ ~s|href="/account"|, "#{path} is missing the account link"
+
+        # The account page's anchor moves between its signed-in and signed-out
+        # halves, because an id inside a hidden section is an id the browser
+        # will not scroll to. Either form counts as somewhere to land.
+        assert html =~ ~s|id="pricing"| or html =~ "data-pricing-anchor",
+               "#{path} has nothing for #pricing to land on"
       end
     end
 
@@ -455,6 +460,35 @@ defmodule CsuiteFinderWeb.PageTest do
       assert html =~ ~s|id="nav-account"|
       assert html =~ ~s|localStorage.getItem("csf_api_key")|
       assert html =~ ~s|"Dashboard"|
+    end
+
+    test "the account page moves its anchor to whichever half is showing", %{conn: conn} do
+      # Signed out, #pricing sat inside the hidden signed-in section, so the nav
+      # link did nothing at all — the bug that made the site look broken.
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      assert html =~ "data-pricing-anchor"
+      assert html =~ "el.closest(\"section[hidden]\")"
+      # Two candidates, one for each half. Counted as attributes on elements,
+      # so the selector in the script below does not inflate it.
+      anchors = Regex.scan(~r/<[^>]*\sdata-pricing-anchor/, html)
+      assert length(anchors) == 2
+    end
+
+    test "the admin page has a way back to the site", %{conn: conn} do
+      # It carries no nav on purpose, which left no links at all on it.
+      previous = Application.get_env(:csuite_finder, :admin_token)
+      Application.put_env(:csuite_finder, :admin_token, "nav-test-token")
+      on_exit(fn -> Application.put_env(:csuite_finder, :admin_token, previous) end)
+
+      html =
+        conn
+        |> put_req_header("x-admin-token", "nav-test-token")
+        |> get(~p"/admin")
+        |> html_response(200)
+
+      assert html =~ ~s|<a href="/">Home</a>|
+      assert html =~ ~s|href="/account"|
     end
 
     test "the pricing link has something to land on", %{conn: conn} do

@@ -17,7 +17,7 @@
   <h1>Your account</h1>
   <p class="lede">Get an API key, check your balance and buy credit — no headers required.</p>
 
-  <div class="card">
+  <div class="card" data-pricing-anchor>
     <h3 style="margin:0 0 4px;font-size:17px">New here?</h3>
     <p class="muted" style="margin-bottom:16px">
       Registering is instant and free, and gets you a key. There is no free tier: a
@@ -101,7 +101,7 @@
        #pricing fragment on every page, and which of these two a visitor sees
        is decided by their audience — a seat holder is never shown a per-answer
        price list, and a developer is never shown a seat they cannot use. -->
-  <div id="pricing">
+  <div data-pricing-anchor>
 
   <div data-aud="sales">
   <h2 id="trial">Try it — $<%= @trial_price %>, once</h2>
@@ -240,6 +240,15 @@
       $(id).hidden = (id !== which);
     });
     $("signout").hidden = (which !== "signedin");
+
+    // Every page's nav points at a bare #pricing, and on this page the thing it
+    // should land on depends on whether anyone is signed in. An id inside a
+    // hidden section is an id the browser will not scroll to, so it moves to
+    // whichever half is showing rather than sitting on one of them.
+    document.querySelectorAll("[data-pricing-anchor]").forEach(function (el) {
+      var visible = !el.closest("section[hidden]");
+      if (visible) { el.id = "pricing"; } else if (el.id === "pricing") { el.removeAttribute("id"); }
+    });
 
     // Sign-in and sign-out happen without a page load, so the header label
     // has to be updated here too or it goes stale mid-session.
