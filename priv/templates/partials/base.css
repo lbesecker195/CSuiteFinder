@@ -205,7 +205,28 @@
   .sheet .title-cell { font-weight: 600; }
 
   /* The cell the cursor is "in", so the grid reads as a live sheet. */
-  .sheet td.active { outline: 2px solid var(--s-accent); outline-offset: -2px; }
+  .sheet td.active { outline: 2px solid var(--s-accent); outline-offset: -2px; position: relative; }
+
+  /* A pointer resting on that cell, to put the reader's eye on the one address
+     that is theirs. Drawn rather than real: it never moves with the mouse and
+     never intercepts a click, so it cannot be mistaken for the cursor they are
+     actually holding. Sized and placed to sit inside the row — .sheet-scroll is
+     a scroll container, and anything hanging out of it would add a scrollbar. */
+  .sheet-cursor {
+    position: absolute; left: 58%; top: 3px; line-height: 0;
+    pointer-events: none; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .35));
+    animation: sheet-cursor-nudge 2.6s ease-in-out infinite;
+  }
+  @keyframes sheet-cursor-nudge {
+    0%, 62%, 100% { transform: translate(0, 0); }
+    70% { transform: translate(-3px, -3px); }
+    78% { transform: translate(0, 0); }
+    86% { transform: translate(-2px, -2px); }
+  }
+  /* Someone who has asked for less movement has asked for less movement. */
+  @media (prefers-reduced-motion: reduce) {
+    .sheet-cursor { animation: none; }
+  }
 
   /* Excel tints the row, not the word, and a reader scanning for the failures
      finds them faster that way. Kept pale enough that the monospace addresses

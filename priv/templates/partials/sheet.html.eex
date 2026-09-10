@@ -34,7 +34,7 @@
             <td class="row-head"><%= index + 2 %></td>
             <td><%= row.name %> <span class="empty-cell">· <%= row.company %></span></td>
             <td class="title-cell"><%= row.title %></td>
-            <td class="email<%= if index == 1, do: " active" %>"><%= row.email %></td>
+            <td class="email<%= if index == 1, do: " active" %>"><%= row.email %><%= if index == 1 do %><span class="sheet-cursor" aria-hidden="true"><svg viewBox="0 0 12 18" width="15" height="22"><path d="M1 1l9.2 8.1-4.2.3 2.3 5.2-2 .9-2.3-5.2-3 2.9z" fill="#fff" stroke="#1f1f1f" stroke-width="1.1" stroke-linejoin="round"/></svg></span><% end %></td>
             <td class="st <%= CsuiteFinderWeb.SampleSheet.status_class(row.status) %>"><%= CsuiteFinderWeb.SampleSheet.mark(row.status) %> <%= CsuiteFinderWeb.SampleSheet.label(row.status) %></td>
           </tr>
           <% end %>

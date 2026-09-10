@@ -311,6 +311,35 @@ defmodule CsuiteFinderWeb.PageTest do
       end
     end
 
+    test "a drawn cursor rests on the reader's own address", %{conn: conn} do
+      html =
+        conn
+        |> get(~p"/teams?name=Jane%20Doe&email=jane.doe@acme.com")
+        |> html_response(200)
+
+      # One pointer, in the cell holding their address — the same cell the
+      # formula bar is showing.
+      assert html =~ ~r/jane\.doe@acme\.com<span class="sheet-cursor"/
+      assert length(String.split(html, ~s|class="sheet-cursor"|)) == 2
+    end
+
+    test "and on the third row when the link carried nothing", %{conn: conn} do
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      third = CsuiteFinderWeb.SampleSheet.rows() |> Enum.at(1)
+      assert html =~ ~r/#{Regex.escape(third.email)}<span class="sheet-cursor"/
+    end
+
+    test "it cannot be mistaken for the real one", %{conn: conn} do
+      # It never moves with the mouse and never takes a click, so a reader who
+      # tries to use it is not left wondering why nothing happened.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ ~s|aria-hidden="true"|
+      assert html =~ "pointer-events: none"
+      assert html =~ "prefers-reduced-motion"
+    end
+
     test "the sheet publishes no working address", %{conn: conn} do
       # These are real people. The masking is the only thing standing between a
       # marketing page and ten inboxes, so it is worth a test of its own.
