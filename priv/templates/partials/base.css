@@ -207,12 +207,31 @@
   /* The cell the cursor is "in", so the grid reads as a live sheet. */
   .sheet td.active { outline: 2px solid var(--s-accent); outline-offset: -2px; }
 
+  /* Excel tints the row, not the word, and a reader scanning for the failures
+     finds them faster that way. Kept pale enough that the monospace addresses
+     stay readable on top. */
+  .sheet tr.ok-row td { background: #e9f5ec; }
+  .sheet tr.bad-row td { background: #fdeceb; }
+  .sheet tr.you-row td { background: #eceff1; }
+  .sheet tr.you-row td:not(.row-head) { font-weight: 600; }
+  @media (prefers-color-scheme: dark) {
+    .sheet tr.ok-row td { background: #17251c; }
+    .sheet tr.bad-row td { background: #2a1613; }
+    .sheet tr.you-row td { background: #26292b; }
+  }
+  /* The row-number gutter stays grey whatever the row is doing. */
+  .sheet tr.ok-row td.row-head,
+  .sheet tr.bad-row td.row-head,
+  .sheet tr.you-row td.row-head { background: var(--s-head); }
+
   .sheet .st { font-weight: 600; }
   .sheet .st.ok { color: #1a7f37; }
   .sheet .st.bad { color: #b42318; }
+  .sheet .st.you { color: #455a64; }
   @media (prefers-color-scheme: dark) {
     .sheet .st.ok { color: #57ab5a; }
     .sheet .st.bad { color: #e5534b; }
+    .sheet .st.you { color: #b0bec5; }
   }
 
   .sheet-foot {

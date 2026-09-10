@@ -89,6 +89,14 @@ defmodule CsuiteFinderWeb.Layout do
   @spec base_css() :: String.t()
   def base_css, do: @base_css
 
+  # Third in the sheet, which is the cell the cursor sits on — someone arriving
+  # from an emailed link finds their own address already selected.
+  defp with_visitor(rows, nil), do: rows
+
+  defp with_visitor([first | rest], visitor), do: [first, visitor | rest]
+
+  defp with_visitor([], visitor), do: [visitor]
+
   # One .css file per page, read at compile time. Keeping them beside the
   # templates rather than inside the controllers means a design change is a CSS
   # edit, and `@external_resource` makes the module recompile when one changes.
@@ -114,12 +122,14 @@ defmodule CsuiteFinderWeb.Layout do
   The sample spreadsheet, as shown on the home, sales and developer pages.
 
   Options: `:rows` (from `CsuiteFinderWeb.SampleSheet`), `:rows_label` for the
-  figure in the status bar, and `:date` for the caption.
+  figure in the status bar, `:date` for the caption, and `:visitor` — a row
+  built from the details an emailed link carried, slotted in third so it lands
+  under the cell cursor.
   """
   @spec sheet(keyword()) :: String.t()
   def sheet(opts) do
     render_sheet(%{
-      rows: Keyword.fetch!(opts, :rows),
+      rows: with_visitor(Keyword.fetch!(opts, :rows), Keyword.get(opts, :visitor)),
       rows_label: Keyword.fetch!(opts, :rows_label),
       date: Keyword.fetch!(opts, :date)
     })

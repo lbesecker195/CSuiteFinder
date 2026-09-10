@@ -51,7 +51,8 @@
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,
       rows_label: @sheet_rows,
-      date: @sheet_date
+      date: @sheet_date,
+      visitor: @visitor
     ) %>
 
 <h2 class="section-label">What it does, either way</h2>

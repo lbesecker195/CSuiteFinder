@@ -40,14 +40,14 @@ defmodule CsuiteFinderWeb.PageController do
   EEx.function_from_file(:defp, :render_llms, @llms_template, [:assigns])
 
   @doc "GET /"
-  def index(conn, _params) do
+  def index(conn, params) do
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(200, render_landing(assigns(conn)))
+    |> send_resp(200, render_landing(assigns(conn, params)))
   end
 
   @doc "GET /teams — the seat plan, for people who buy a tool rather than an API."
-  def teams(conn, _params) do
+  def teams(conn, params) do
     seat = Plans.seat()
 
     conn
@@ -55,7 +55,7 @@ defmodule CsuiteFinderWeb.PageController do
     |> send_resp(
       200,
       render_teams(
-        Map.merge(assigns(conn), %{
+        Map.merge(assigns(conn, params), %{
           seat_usd: delimit(seat.usd_per_month),
           seat_includes: seat.includes,
           seat_caveats: seat.caveats,
@@ -68,12 +68,12 @@ defmodule CsuiteFinderWeb.PageController do
   end
 
   @doc "GET /developers — the API, its prices and its reference."
-  def developers(conn, _params) do
+  def developers(conn, params) do
     conn
     |> put_resp_content_type("text/html")
     |> send_resp(
       200,
-      render_developers(Map.put(assigns(conn), :comparison, Plans.comparison()))
+      render_developers(Map.put(assigns(conn, params), :comparison, Plans.comparison()))
     )
   end
 
@@ -82,10 +82,10 @@ defmodule CsuiteFinderWeb.PageController do
   end
 
   @doc "GET /start"
-  def start(conn, _params) do
+  def start(conn, params) do
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(200, render_start(assigns(conn)))
+    |> send_resp(200, render_start(assigns(conn, params)))
   end
 
   @doc """
@@ -95,10 +95,10 @@ defmodule CsuiteFinderWeb.PageController do
   invoice uses — so an agent reading it is quoted what it will actually be
   charged. Served as text/plain so it renders in a terminal and a browser alike.
   """
-  def llms(conn, _params) do
+  def llms(conn, params) do
     conn
     |> put_resp_content_type("text/plain")
-    |> send_resp(200, render_llms(assigns(conn)))
+    |> send_resp(200, render_llms(assigns(conn, params)))
   end
 
   @doc """
@@ -111,8 +111,15 @@ defmodule CsuiteFinderWeb.PageController do
   def pricing(conn, params),
     do: json(conn, Pricing.terms(params["audience"] || "developer"))
 
-  defp assigns(conn) do
+  defp assigns(conn, params) do
     %{
+      # Carried by an emailed link so the reader finds their own row in the
+      # sheet. Escaped and shape-checked on the way in — see Prefill.
+      visitor:
+        CsuiteFinderWeb.SampleSheet.visitor(
+          CsuiteFinderWeb.Prefill.name(params["name"]),
+          CsuiteFinderWeb.Prefill.email(params["email"])
+        ),
       base_url: base_url(conn),
       seat_usd: delimit(Plans.seat_usd()),
       email_price: format(Pricing.price_usd("email.find")),

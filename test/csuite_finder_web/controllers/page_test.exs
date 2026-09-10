@@ -253,6 +253,64 @@ defmodule CsuiteFinderWeb.PageTest do
       assert conn |> get(~p"/llms.txt") |> response(200) =~ "/csuitefinder/phone/find"
     end
 
+    test "an emailed link puts the reader's own row in the sheet", %{conn: conn} do
+      html =
+        conn
+        |> get(~p"/teams?name=Jane%20Doe&email=jane.doe@acme.com")
+        |> html_response(200)
+
+      assert html =~ "Jane Doe"
+      assert html =~ "jane.doe@acme.com"
+      # Third in the sheet, which is the cell the cursor sits on.
+      assert html =~ ~r/row-head">3<\/td>\s*<td>Jane Doe/
+      assert html =~ ~s|<tr class="you-row">|
+    end
+
+    test "grey for the reader, green for confirmed, red for failed", %{conn: conn} do
+      html =
+        conn
+        |> get(~p"/teams?name=Jane%20Doe&email=jane.doe@acme.com")
+        |> html_response(200)
+
+      # The reader's own row is not another result and must not read as one.
+      assert html =~ ~s|<tr class="you-row">|
+      assert html =~ ~s|<tr class="ok-row">|
+      assert html =~ ~s|<tr class="bad-row">|
+    end
+
+    test "a name alone is not a row", %{conn: conn} do
+      # Without an address there is nothing to put in the Email column, and a
+      # half-filled row is worse than none.
+      html = conn |> get(~p"/teams?name=Jane%20Doe") |> html_response(200)
+      refute html =~ ~s|<tr class="you-row">|
+    end
+
+    test "the name is derived from the address when the link carries only one",
+         %{conn: conn} do
+      html = conn |> get(~p"/teams?email=sam.roe@acme.com") |> html_response(200)
+
+      assert html =~ "Sam Roe"
+      assert html =~ ~s|<tr class="you-row">|
+    end
+
+    test "neither value can carry markup into the page", %{conn: conn} do
+      # Both come from a URL anybody can build, into templates that escape
+      # nothing of their own.
+      for {name, email} <- [
+            {"<script>alert(1)</script>", "jane@acme.com"},
+            {"Jane Doe", "\"><script>alert(1)</script>"},
+            {"Jane\" onload=\"x", "jane@acme.com"}
+          ] do
+        html =
+          conn
+          |> get("/teams?name=#{URI.encode_www_form(name)}&email=#{URI.encode_www_form(email)}")
+          |> html_response(200)
+
+        refute html =~ "alert(1)"
+        refute html =~ "onload="
+      end
+    end
+
     test "the sheet publishes no working address", %{conn: conn} do
       # These are real people. The masking is the only thing standing between a
       # marketing page and ten inboxes, so it is worth a test of its own.

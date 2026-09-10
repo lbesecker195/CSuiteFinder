@@ -39,29 +39,9 @@ defmodule CsuiteFinderWeb.AccountController do
     )
   end
 
-  @doc """
-  The address to put in the signup field, or an empty string.
-
-  This value arrives in a URL that anybody can construct, and these templates
-  are plain EEx with no escaping of their own — so it lands in an HTML
-  attribute exactly as given unless something stops it. Two things do: it has
-  to look like an email address before it is used at all, and it is escaped
-  afterwards regardless. The shape check alone would be enough; the escape is
-  there because "the regex is tight" is a bad thing to be relying on the day
-  someone loosens the regex.
-  """
+  @doc "The address to put in the signup field, or an empty string."
   @spec prefill_email(term()) :: String.t()
-  def prefill_email(value) when is_binary(value) do
-    trimmed = value |> String.trim() |> String.slice(0, 254)
-
-    if Regex.match?(~r/^[^\s@<>"'&]+@[^\s@<>"'&]+\.[^\s@<>"'&]+$/, trimmed) do
-      Plug.HTML.html_escape(trimmed)
-    else
-      ""
-    end
-  end
-
-  def prefill_email(_), do: ""
+  def prefill_email(value), do: CsuiteFinderWeb.Prefill.email(value) || ""
 
   defp assigns do
     %{
