@@ -44,7 +44,7 @@
 
     <div class="sheet-foot">
       <div class="sheet-tabs">
-        <span class="sheet-tab on">Prospects</span>
+        <span class="sheet-tab on">Prospects.csv</span>
         <span class="sheet-tab">Sheet2</span>
         <span class="sheet-tab">+</span>
       </div>

@@ -11,7 +11,6 @@ defmodule CsuiteFinderWeb.AdminController do
 
   use CsuiteFinderWeb, :controller
 
-  alias CsuiteFinder.Billing.Pricing
   alias CsuiteFinder.Metrics
 
   require EEx
@@ -49,7 +48,7 @@ defmodule CsuiteFinderWeb.AdminController do
       windows: @windows,
       token: params["token"],
       base_path: conn.request_path,
-      chart: chart(data.daily),
+      chart: chart(data.daily)
     })
   end
 
