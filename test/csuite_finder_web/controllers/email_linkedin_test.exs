@@ -15,8 +15,12 @@ defmodule CsuiteFinderWeb.EmailLinkedinTest do
   end
 
   defp stub_find(email, name \\ "Jensen Huang") do
-    TregStub.stub(fn "treg.people.email.find", _ ->
-      {200, %{"output" => %{"email" => email, "full_name" => name}}, 8_900}
+    TregStub.stub(fn
+      "treg.people.email.verify", _ ->
+        {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+
+      "treg.people.email.find", _ ->
+        {200, %{"output" => %{"email" => email, "full_name" => name}}, 8_900}
     end)
   end
 

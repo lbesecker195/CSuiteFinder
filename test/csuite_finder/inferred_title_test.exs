@@ -99,8 +99,12 @@ defmodule CsuiteFinder.InferredTitleTest do
 
   describe "an email pattern nobody sells" do
     test "is inferred, stored and marked" do
-      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
-        {200, %{"patterns" => []}, 1_900}
+      TregStub.stub(fn
+        "treg.people.email.verify", _ ->
+          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => []}, 1_900}
       end)
 
       InferenceStub.stub("{first}.{last}")
@@ -113,8 +117,12 @@ defmodule CsuiteFinder.InferredTitleTest do
     end
 
     test "carries a confidence that says it is a guess" do
-      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
-        {200, %{"patterns" => []}, 1_900}
+      TregStub.stub(fn
+        "treg.people.email.verify", _ ->
+          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => []}, 1_900}
       end)
 
       InferenceStub.stub("{f}{last}")
@@ -124,8 +132,12 @@ defmodule CsuiteFinder.InferredTitleTest do
     end
 
     test "a provider's pattern is never replaced by a guess" do
-      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
-        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 92.0}]}, 1_900}
+      TregStub.stub(fn
+        "treg.people.email.verify", _ ->
+          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 92.0}]}, 1_900}
       end)
 
       InferenceStub.stub("{f}{last}")
@@ -136,8 +148,12 @@ defmodule CsuiteFinder.InferredTitleTest do
     end
 
     test "a refused guess is stored as the miss it is" do
-      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
-        {200, %{"patterns" => []}, 1_900}
+      TregStub.stub(fn
+        "treg.people.email.verify", _ ->
+          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => []}, 1_900}
       end)
 
       InferenceStub.stub("no idea sorry")
@@ -148,8 +164,12 @@ defmodule CsuiteFinder.InferredTitleTest do
     end
 
     test "the guess is cached, so the second caller does not pay to ask again" do
-      TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
-        {200, %{"patterns" => []}, 1_900}
+      TregStub.stub(fn
+        "treg.people.email.verify", _ ->
+          {200, TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500), 1_500}
+
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => []}, 1_900}
       end)
 
       InferenceStub.stub("{first}{last}")

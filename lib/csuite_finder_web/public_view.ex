@@ -31,8 +31,11 @@ defmodule CsuiteFinderWeb.PublicView do
 
   # `pattern` is the answer this endpoint exists to give, so it stays. What goes
   # is `source`, which named the upstream that supplied it.
+  # `delivery` and `accepts_all` are listed deliberately: which format actually
+  # lands on this domain, and whether the server accepts everything, are the two
+  # things that decide whether a constructed address is worth sending to.
   @pattern ~w(domain found pattern pattern_provider_notation example confidence
-              alternatives queried_email last_verified_at)a
+              alternatives delivery accepts_all queried_email last_verified_at)a
 
   @who ~w(email found full_name first_name last_name position position_inferred
           company_name linkedin_url confidence)a

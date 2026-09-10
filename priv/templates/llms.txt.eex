@@ -75,7 +75,14 @@ All accept GET (query string) or POST (JSON body).
 
 ### POST /csuitefinder/email/find — $<%= @email_price %>
 
-Resolve a name + company domain to a work email. **The only billable endpoint.**
+Resolve a name + company domain to a work email.
+
+An address built from a company's format is checked against the live mailbox
+before it is returned, and `verification_status` says what came back:
+`deliverable` (confirmed), `accept_all` (the server accepts everything, so it
+could not be confirmed either way) or absent (the format was already proved on
+this domain). Where a company uses more than one format, each is tried until one
+is accepted — you get the address that exists, not the most common one.
 
 - `full_name` (required) — "Jensen Huang". Handles "Huang, Jensen" and accents.
 - `domain` (required) — "nvidia.com". A scheme, `www.` and any path are stripped.
@@ -253,6 +260,11 @@ a worked example, and a confidence score.
 A domain nobody has patterned may come back with a plausible pattern and a
 confidence of 0.5 or lower. Treat that as a starting point: build the address,
 then check it with `/email/deliverable` before you send.
+
+`delivery` reports what real mailboxes said about each format on this domain —
+how many addresses built from it were accepted and how many were rejected. It is
+empty until something has been checked. `accepts_all: true` means the server
+accepts every address, so no check can tell two formats apart there.
 
 - `email` (required) — any address at the company; only the domain is used.
 

@@ -191,6 +191,178 @@ defmodule CsuiteFinder.PatternStore do
     :ok
   end
 
+  @doc """
+  Every pattern worth trying for this domain, best first.
+
+  "Best" means what we have *seen work*, then what the provider says is common.
+  A pattern that has verified deliverable here outranks one with a higher
+  published usage share, because the published share is the whole company and
+  the observation is this company's actual mail server answering.
+
+  Capped, because each one we try costs a verification and the tail is guesses.
+  """
+  @spec candidates(String.t(), pos_integer()) :: [String.t()]
+  def candidates(domain, limit \\ 3) do
+    case get_cached(domain) do
+      %EmailPattern{found: true} = row ->
+        observed = observed_counts(row)
+
+        ranked =
+          row.candidates
+          |> Map.get("ranked", [])
+          |> Enum.map(&{&1["pattern"], &1["usage"] || 0.0})
+
+        # Anything ever seen deliverable here, then the provider's ranking,
+        # then the stored headline pattern — de-duplicated, order preserved.
+        ([row.pattern] ++ deliverable_first(observed) ++ Enum.map(ranked, &elem(&1, 0)))
+        |> Enum.reject(&is_nil/1)
+        |> Enum.uniq()
+        |> Enum.sort_by(&score(&1, observed), :desc)
+        |> Enum.take(limit)
+
+      _ ->
+        []
+    end
+  end
+
+  # A pattern with a confirmed delivery is worth more than one with none; one
+  # with confirmed *failures* here is worth less than nothing and sinks.
+  defp score(pattern, observed) do
+    counts = Map.get(observed, pattern) || %{}
+    Map.get(counts, "deliverable", 0) * 10 - Map.get(counts, "undeliverable", 0) * 20
+  end
+
+  defp deliverable_first(observed) do
+    observed
+    |> Enum.filter(fn {_p, counts} -> (counts["deliverable"] || 0) > 0 end)
+    |> Enum.sort_by(fn {_p, counts} -> counts["deliverable"] end, :desc)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp observed_counts(%EmailPattern{candidates: candidates}) do
+    case Map.get(candidates || %{}, "observed") do
+      %{} = observed -> observed
+      _ -> %{}
+    end
+  end
+
+  @doc """
+  Record what the mailbox said about an address built from `pattern`.
+
+  This is how a domain's patterns get ranked by evidence rather than by a
+  provider's national average. The counts are also what `/email/pattern`
+  reports as a ratio, so a caller can see which format actually lands.
+  """
+  @spec record_outcome(String.t(), String.t(), String.t()) :: :ok
+  def record_outcome(domain, pattern, status)
+      when status in ["deliverable", "undeliverable"] do
+    case Repo.get_by(EmailPattern, domain: domain) do
+      nil ->
+        :ok
+
+      row ->
+        counts =
+          row
+          |> observed_counts()
+          |> Map.update(pattern, %{status => 1}, fn existing ->
+            Map.update(existing, status, 1, &(&1 + 1))
+          end)
+
+        row
+        |> EmailPattern.changeset(%{
+          candidates: Map.put(row.candidates || %{}, "observed", counts)
+        })
+        |> Repo.update()
+
+        :ok
+    end
+  end
+
+  def record_outcome(_domain, _pattern, _status), do: :ok
+
+  @doc """
+  Remember that a domain accepts every address.
+
+  On a catch-all domain a verification cannot tell two candidate patterns
+  apart — every one of them comes back accepting. Trying more is money spent to
+  learn nothing, so the fact is recorded once and the attempt is never repeated.
+  """
+  @spec mark_catch_all(String.t()) :: :ok
+  def mark_catch_all(domain) do
+    case Repo.get_by(EmailPattern, domain: domain) do
+      nil ->
+        :ok
+
+      row ->
+        row
+        |> EmailPattern.changeset(%{
+          candidates: Map.put(row.candidates || %{}, "catch_all", true)
+        })
+        |> Repo.update()
+
+        :ok
+    end
+  end
+
+  @doc """
+  Has this exact format been seen to deliver on this domain?
+
+  The question `Finder` asks before spending a check: a format with a delivery
+  behind it does not need another one.
+  """
+  @spec proven?(String.t(), String.t()) :: boolean()
+  def proven?(domain, pattern) do
+    case get_cached(domain) do
+      %EmailPattern{} = row ->
+        counts = row |> observed_counts() |> Map.get(pattern) || %{}
+        Map.get(counts, "deliverable", 0) > 0
+
+      _ ->
+        false
+    end
+  end
+
+  @doc "Does this domain accept every address, making verification useless here?"
+  @spec catch_all?(String.t()) :: boolean()
+  def catch_all?(domain) do
+    case get_cached(domain) do
+      %EmailPattern{candidates: %{"catch_all" => true}} -> true
+      _ -> false
+    end
+  end
+
+  @doc """
+  The observed delivery ratio per pattern for a domain, for `/email/pattern`.
+
+  Empty until something has actually been checked here — a ratio invented from
+  a provider's usage share would look like evidence and not be any.
+  """
+  @spec ratios(String.t()) :: [map()]
+  def ratios(domain) do
+    case get_cached(domain) do
+      %EmailPattern{} = row ->
+        row
+        |> observed_counts()
+        |> Enum.map(fn {pattern, counts} ->
+          delivered = counts["deliverable"] || 0
+          failed = counts["undeliverable"] || 0
+          checked = delivered + failed
+
+          %{
+            pattern: pattern,
+            checked: checked,
+            deliverable: delivered,
+            undeliverable: failed,
+            share: if(checked > 0, do: Float.round(delivered / checked, 3), else: nil)
+          }
+        end)
+        |> Enum.sort_by(& &1.deliverable, :desc)
+
+      _ ->
+        []
+    end
+  end
+
   defp provider_backed(domain) do
     EmailPattern
     |> where([p], p.domain == ^domain and p.found == true and p.source == "thecompaniesapi")
@@ -270,6 +442,11 @@ defmodule CsuiteFinder.PatternStore do
       example: example_for(row.pattern, row.domain),
       confidence: row.confidence,
       alternatives: Map.get(row.candidates || %{}, "ranked", []),
+      # What the mailboxes actually said, per format, on this domain. Empty
+      # until something has been checked here — a ratio invented from a
+      # provider's usage share would look like evidence and not be any.
+      delivery: ratios(row.domain),
+      accepts_all: Map.get(row.candidates || %{}, "catch_all", false),
       source: row.source,
       queried_email: email,
       cached: lookup.cached,

@@ -97,8 +97,14 @@ defmodule CsuiteFinderWeb.AdminTest do
     test "shows traffic once there is some", %{conn: conn} do
       {account, key} = CsuiteFinder.Fixtures.account_with_key(usd: 1.0)
 
-      CsuiteFinder.TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
-        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
+      CsuiteFinder.TregStub.stub(fn
+        "treg.people.email.verify", _ ->
+          {200,
+           CsuiteFinder.TregStub.routed(%{"valid" => true, "status" => "valid"}, cost: 1_500),
+           1_500}
+
+        "thecompaniesapi.companies.email_pattern", _ ->
+          {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
       end)
 
       build_conn()
