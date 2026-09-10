@@ -59,17 +59,20 @@ defmodule CsuiteFinder.Accounts do
   `trial_granted_at` is the guard against re-registering the same address for
   another free grant — the trial is per account, once.
 
-  The trial is granted, not sold, so it expires (see `Pricing.trial_months/0`).
-  Anything the account buys later lands in the permanent pool and outlives it.
+  The free trial is for developers only, and it expires (see
+  `Pricing.trial_months/0`). There is no free tier on the seat side: someone
+  evaluating the seat buys a trial instead, which is what
+  `CsuiteFinder.Billing.PayPal.create_trial_order/2` sells. A sales account
+  therefore starts at zero and is refused every lookup until it pays — which is
+  the intended shape, not an oversight.
   """
   @spec register(map()) ::
           {:ok, %{account: Account.t(), api_key: String.t(), credit_granted_micro: integer()}}
           | {:error, Ecto.Changeset.t()}
   def register(attrs) do
-    grant = Pricing.trial_micro()
-
     Repo.transaction(fn ->
       with {:ok, account} <- create_account(attrs),
+           grant = free_trial_for(account),
            {:ok, account} <- grant_trial(account, grant) do
         {:ok, plaintext, _key} = create_api_key(account, "initial key")
         %{account: account, api_key: plaintext, credit_granted_micro: grant}
@@ -78,6 +81,14 @@ defmodule CsuiteFinder.Accounts do
       end
     end)
   end
+
+  # Developers get a dollar to try the API with. Seat buyers do not — theirs is
+  # a paid trial, so handing them free credit here would give it away.
+  defp free_trial_for(%Account{audience: audience}) do
+    if Audience.developer?(audience), do: Pricing.trial_micro(), else: 0
+  end
+
+  defp grant_trial(account, 0), do: {:ok, account}
 
   defp grant_trial(%Account{trial_granted_at: nil} = account, micro) do
     now = DateTime.utc_now()

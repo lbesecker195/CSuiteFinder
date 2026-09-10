@@ -16,7 +16,7 @@ defmodule CsuiteFinder.ReleaseCreditTest do
   alias CsuiteFinder.Billing.Pricing
 
   defp account(email) do
-    {:ok, %{account: account}} = Accounts.register(%{email: email})
+    {:ok, %{account: account}} = Accounts.register(%{email: email, audience: "developer"})
     account
   end
 

@@ -11,6 +11,8 @@ defmodule CsuiteFinder.Billing.Payment do
     field :credit_micro, :integer, default: 0
     field :currency, :string, default: "USD"
     field :status, :string, default: "created"
+    # "topup" (permanent credit) or "seat_trial" (a month of the seat).
+    field :kind, :string, default: "topup"
     field :credited_at, :utc_datetime_usec
     field :raw, :map
 
@@ -29,11 +31,13 @@ defmodule CsuiteFinder.Billing.Payment do
       :credit_micro,
       :currency,
       :status,
+      :kind,
       :credited_at,
       :raw
     ])
     |> validate_required([:account_id, :paypal_order_id, :amount_micro])
     |> validate_inclusion(:status, ~w(created approved captured credited failed))
+    |> validate_inclusion(:kind, ~w(topup seat_trial))
     |> unique_constraint(:paypal_order_id)
   end
 end

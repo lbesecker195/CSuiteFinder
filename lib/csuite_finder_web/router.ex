@@ -98,6 +98,7 @@ defmodule CsuiteFinderWeb.Router do
     get "/billing/balance", BillingController, :balance
     get "/billing/usage", BillingController, :usage
     post "/billing/topup", BillingController, :topup
+    post "/billing/trial", BillingController, :trial
     post "/billing/capture", BillingController, :capture
 
     post "/billing/audience", BillingController, :audience

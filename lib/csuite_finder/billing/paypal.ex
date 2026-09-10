@@ -35,8 +35,8 @@ defmodule CsuiteFinder.Billing.PayPal do
       intent: "CAPTURE",
       purchase_units: [
         %{
-          reference_id: "topup_account_#{account.id}",
-          description: "CSuiteFinder — $#{Pricing.usd(credit_micro)} of API credit",
+          reference_id: "#{Keyword.get(opts, :kind, "topup")}_account_#{account.id}",
+          description: description(Keyword.get(opts, :kind, "topup"), credit_micro),
           amount: %{
             currency_code: "USD",
             value: :erlang.float_to_binary(amount_usd / 1, decimals: 2)
@@ -61,6 +61,7 @@ defmodule CsuiteFinder.Billing.PayPal do
           paypal_order_id: response["id"],
           amount_micro: round(amount_usd * 1_000_000),
           credit_micro: credit_micro,
+          kind: Keyword.get(opts, :kind, "topup"),
           status: "created",
           raw: response
         })
@@ -76,6 +77,12 @@ defmodule CsuiteFinder.Billing.PayPal do
         error
     end
   end
+
+  defp description("seat_trial", credit_micro),
+    do: "CSuiteFinder — seat trial, $#{Pricing.usd(credit_micro)} of credit for one month"
+
+  defp description(_kind, credit_micro),
+    do: "CSuiteFinder — $#{Pricing.usd(credit_micro)} of API credit"
 
   @doc """
   Capture an approved order and credit the account.
@@ -123,14 +130,12 @@ defmodule CsuiteFinder.Billing.PayPal do
   # them cannot leave an account credited for an order still marked capturable.
   defp credit_once(payment, capture_id, amount_micro, response) do
     # Credit is derived from what PayPal actually captured, never from what the
-    # client asked for — a tampered amount buys exactly what it paid for. Run
-    # through the bundles so a larger purchase gets the bonus it was quoted
-    # rather than only its face value.
+    # client asked for — a tampered amount buys exactly what it paid for.
     credit_micro = Pricing.credit_for_purchase(amount_micro / 1_000_000)
 
     Repo.transaction(fn ->
       account = Repo.get!(Account, payment.account_id)
-      {:ok, _account} = Billing.credit(account, credit_micro)
+      apply_credit(account, payment.kind, credit_micro)
 
       payment
       |> Payment.changeset(%{
@@ -143,6 +148,21 @@ defmodule CsuiteFinder.Billing.PayPal do
       })
       |> Repo.update!()
     end)
+  end
+
+  # A top-up is credit bought outright and never expires. A seat trial is a
+  # month of the seat, so it lands in the expiring pool and is stamped as taken
+  # — the trial is once per account, and `trial_granted_at` is what says so.
+  defp apply_credit(account, "seat_trial", credit_micro) do
+    {:ok, _account} = Billing.grant(account, credit_micro, Pricing.trial_expires_at())
+
+    account
+    |> Account.changeset(%{trial_granted_at: DateTime.utc_now()})
+    |> Repo.update!()
+  end
+
+  defp apply_credit(account, _kind, credit_micro) do
+    {:ok, _account} = Billing.credit(account, credit_micro)
   end
 
   defp captured_amount(%{"status" => "COMPLETED"} = response) do
@@ -196,6 +216,30 @@ defmodule CsuiteFinder.Billing.PayPal do
       error ->
         error
     end
+  end
+
+  @doc """
+  Sell one trial of the seat.
+
+  A fixed price rather than an amount the caller chooses, so the bundle minimum
+  does not apply and cannot be talked around. One per account: `trial_granted_at`
+  is stamped when the payment captures, and a second attempt is refused rather
+  than sold.
+  """
+  @spec create_trial_order(Account.t(), keyword()) ::
+          {:ok, Payment.t(), map()} | {:error, term()}
+  def create_trial_order(account, opts \\ [])
+
+  def create_trial_order(%Account{trial_granted_at: taken}, _opts) when not is_nil(taken),
+    do: {:error, :trial_already_taken}
+
+  def create_trial_order(%Account{} = account, opts) do
+    do_create_order(
+      account,
+      Pricing.seat_trial_usd(),
+      Pricing.seat_trial_micro(),
+      Keyword.put(opts, :kind, "seat_trial")
+    )
   end
 
   # ------------------------------------------------------ seat subscriptions

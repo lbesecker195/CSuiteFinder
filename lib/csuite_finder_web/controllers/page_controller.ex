@@ -134,6 +134,7 @@ defmodule CsuiteFinderWeb.PageController do
       sheet_rows: delimit(Plans.seat_lookups().emails),
       trial_usd: "$" <> format(Pricing.trial_usd()),
       trial_months: Pricing.trial_months(),
+      trial_price: :erlang.float_to_binary(Pricing.seat_trial_usd(), decimals: 2),
       bundles:
         for b <- Pricing.bundles() do
           %{

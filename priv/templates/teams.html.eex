@@ -13,11 +13,12 @@
   </p>
   <div class="hero-cta">
     <a class="btn btn-primary" href="/account#pricing">Reserve a Seat, now! — $<%= @seat_usd %>/month</a>
-    <a class="btn btn-ghost" href="/account">Try it free first</a>
+    <a class="btn btn-ghost" href="/account#pricing">Try it for $<%= @trial_price %></a>
   </div>
   <p class="cta-note">
-    <%= @trial_usd %> of credit, no card, good for <%= @trial_months %> month.
-    Run your own list through it before deciding anything.
+    Not ready for a seat? <strong>$<%= @trial_price %> buys a month's trial</strong> —
+    $<%= @trial_price %> of credit, the same lookups, the same expiry. Run your own
+    list through it before deciding anything.
   </p>
 </header>
 

@@ -71,7 +71,7 @@ almost certainly want credit instead — same price per lookup, and it keeps.
 
 ## Commands
 
-Shorthands for the ten things people actually ask for. **They are not routes** —
+Shorthands for the eleven things people actually ask for. **They are not routes** —
 there is no `GET /find`. They are phrasings a person can type at you, and this
 section says which endpoints to chain for each. If someone types one, do the
 work described here rather than looking for a matching URL.
@@ -82,6 +82,33 @@ address has been through `/email/deliverable`.
 And none of them edits what the caller gave you. Where a command produces a
 file, write a new one and leave the input exactly as it was — a row you delete
 is a row nobody can get back, and a verdict you deleted it on can be wrong.
+
+### /demo
+Spend up to $1 and come back with as many C-suite addresses as it buys. What to
+run when someone wants to see what this does rather than read about it — a new
+developer account starts with exactly $1 of credit, so this is that dollar.
+
+1. `/company/search?industry=…&limit=20` — about $0.05, and any industry will do.
+   Skip it if they named the companies.
+2. `/email/company/people?domain=…&department=executive&limit=…` per domain,
+   until the budget is gone. $<%= @email_price %> a person, so the remaining
+   $0.95 is roughly 380 rows.
+3. `/email/deliverable` on every address. It is included, so checking all of
+   them costs nothing.
+4. Hand back everything, in the order it arrived.
+
+**Do not filter and do not de-duplicate.** Someone appearing under two
+departments is two rows, and that is fine — it is what was returned.
+
+*Two things to say when you hand it over, because the numbers invite a wrong
+reading. Quote the count as **rows**, not people: a sweep of 90 domains returned
+1,157 rows and 400 distinct addresses, and someone comparing the bill to the
+per-address price will otherwise think they were overcharged. And quote the
+deliverable count separately — on a catch-all domain `accept_all` is not a pass,
+and a list that treats it as one is a list that bounces.*
+
+*Check `/billing/balance` before you start and again as you go. Stop at the
+budget; do not let a demo run into money the account needed.*
 
 ### /find <name> at <company>
 The core job. One person, one address.

@@ -37,6 +37,8 @@ defmodule CsuiteFinderWeb.BillingController do
           on_free_trial:
             not is_nil(account.trial_granted_at) and account.balance_micro == 0 and
               balances.granted_usd > 0,
+          # Once, per account, whether it was granted or bought.
+          trial_taken: not is_nil(account.trial_granted_at),
           status: account.status,
           # A per-answer price list is the developer's offer and the
           # salesperson's distraction — $0.0025 read next to $999 makes the seat
@@ -135,6 +137,48 @@ defmodule CsuiteFinderWeb.BillingController do
           error: "paypal_not_configured",
           message: "Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
         })
+
+      other ->
+        other
+    end
+  end
+
+  @doc """
+  POST /csuitefinder/billing/trial — buy one trial of the seat.
+
+  A fixed price, once per account. There is no free tier on this side: a card up
+  front is what separates someone evaluating a seat from a drive-by signup.
+  """
+  def trial(conn, params) do
+    with {:ok, account} <- authed(conn),
+         {:ok, payment, response} <-
+           PayPal.create_trial_order(account,
+             return_url: params["return_url"] || "",
+             cancel_url: params["cancel_url"] || ""
+           ) do
+      json(conn, %{
+        paypal_order_id: payment.paypal_order_id,
+        amount_usd: Pricing.seat_trial_usd(),
+        credit_usd: Pricing.usd(payment.credit_micro),
+        expires_in_months: Pricing.trial_months(),
+        approve_url: PayPal.approve_link(response),
+        notice:
+          "One trial per account. The credit expires after " <>
+            "#{Pricing.trial_months()} month, the same way a seat's does."
+      })
+    else
+      {:error, :trial_already_taken} ->
+        conn
+        |> put_status(:conflict)
+        |> json(%{
+          error: "trial_already_taken",
+          message: "This account has already had its trial. A seat is the next step."
+        })
+
+      {:error, :paypal_not_configured} ->
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{error: "paypal_not_configured"})
 
       other ->
         other

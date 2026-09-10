@@ -64,11 +64,20 @@ defmodule CsuiteFinder.Billing.Pricing do
   # no bonus, nothing to reconcile later.
   @bundles [1_000, 2_000, 3_000]
 
-  # Credit granted to a new account, with no card and no commitment. It is a
-  # grant, so it expires: a trial is an invitation to try the thing this month,
-  # not a dollar someone can hold indefinitely and spend in two years.
+  # Credit granted to a new DEVELOPER account, with no card and no commitment.
+  # It is a grant, so it expires: a trial is an invitation to try the thing this
+  # month, not a dollar someone can hold indefinitely and spend in two years.
+  #
+  # There is no free tier on the seat side. Someone evaluating the seat buys a
+  # trial (see `seat_trial_usd/0`) — a card up front filters for people who
+  # intend to buy, and a seat is sold to teams rather than to drive-by signups.
   @trial_micro 1_000_000
   @trial_months 1
+
+  # The paid trial of the seat: one per account, once. It grants its own value
+  # in credit and expires with the month, so it behaves exactly like the seat it
+  # is a trial of — which is the only honest way to trial a thing.
+  @seat_trial_usd 29.99
 
   @doc "Charge for an endpoint, in micro-USD."
   @spec charge_for(String.t()) :: non_neg_integer()
@@ -93,6 +102,14 @@ defmodule CsuiteFinder.Billing.Pricing do
   @doc "The free trial grant, in USD."
   @spec trial_usd() :: float()
   def trial_usd, do: usd(@trial_micro)
+
+  @doc "What a trial of the seat costs, in USD."
+  @spec seat_trial_usd() :: float()
+  def seat_trial_usd, do: @seat_trial_usd
+
+  @doc "What a trial of the seat grants, in micro-USD. A dollar for a dollar."
+  @spec seat_trial_micro() :: pos_integer()
+  def seat_trial_micro, do: micro(@seat_trial_usd)
 
   @doc "How long the free trial lasts, in months."
   @spec trial_months() :: pos_integer()

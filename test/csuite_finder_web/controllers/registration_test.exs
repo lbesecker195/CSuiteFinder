@@ -6,10 +6,10 @@ defmodule CsuiteFinderWeb.RegistrationTest do
   alias CsuiteFinder.{Repo, TregStub}
 
   describe "POST /csuitefinder/register" do
-    test "issues a key and the free trial in one call", %{conn: conn} do
+    test "issues a key and the free trial to a developer in one call", %{conn: conn} do
       body =
         conn
-        |> post(~p"/csuitefinder/register", %{email: "new@company.com"})
+        |> post(~p"/csuitefinder/register", %{email: "new@company.com", audience: "developer"})
         |> json_response(201)
 
       assert body["credit_granted_usd"] == 1.0
@@ -18,10 +18,24 @@ defmodule CsuiteFinderWeb.RegistrationTest do
       assert body["api_key_notice"] =~ "shown once"
     end
 
+    test "gives a seat account a key and nothing else", %{conn: conn} do
+      # There is no free tier on the seat side. Registering gets them an
+      # account; the trial is bought, not granted.
+      body =
+        conn
+        |> post(~p"/csuitefinder/register", %{email: "seat@company.com"})
+        |> json_response(201)
+
+      assert body["audience"] == "sales"
+      assert body["credit_granted_usd"] == 0
+      assert body["balance_usd"] == 0
+      assert String.starts_with?(body["api_key"], "csf_live_")
+    end
+
     test "the issued key works immediately", %{conn: conn} do
       key =
         conn
-        |> post(~p"/csuitefinder/register", %{email: "new@company.com"})
+        |> post(~p"/csuitefinder/register", %{email: "new@company.com", audience: "developer"})
         |> json_response(201)
         |> Map.fetch!("api_key")
 

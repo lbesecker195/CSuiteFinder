@@ -87,6 +87,22 @@
   <div id="pricing">
 
   <div data-aud="sales">
+  <h2 id="trial">Try it — $<%= @trial_price %>, once</h2>
+  <p class="muted" style="margin-top:-6px">
+    $<%= @trial_price %> buys $<%= @trial_price %> of credit for one month — the same
+    lookups a seat gets, on the same terms, so what you are trying is the thing you
+    would buy. One per account. There is no free tier on this side.
+  </p>
+
+  <div class="card" id="trialcard">
+    <div class="row">
+      <button id="buytrial">Start the trial — $<%= @trial_price %></button>
+      <p class="muted" style="margin:0;flex:1;min-width:210px">
+        You'll be sent to PayPal to approve, then straight back here.
+      </p>
+    </div>
+  </div>
+
   <h2 id="seats">Seats — $<%= @seat_usd_label %> a month</h2>
   <p class="muted" style="margin-top:-6px">
     A seat is billed $<%= @seat_usd_label %> a month through PayPal and puts
@@ -231,6 +247,7 @@
     $("balance").textContent = "$" + usd.toFixed(2);
     $("balanceusd").textContent = "of credit";
     renderSplit(b);
+    renderTrial(b);
     var perEmail = (b.prices_usd && b.prices_usd["email.find"]) || 0.0025;
     $("findsleft").textContent = usd > 0
       ? commas(Math.floor(usd / perEmail)) + " more work email addresses. " +
@@ -276,6 +293,13 @@
       ? "$" + commas(n * SEAT_USD) + " a month, and $" + commas(n * SEAT_USD) +
         " of credit added each month."
       : "Enter how many people need a seat.";
+  }
+
+  function renderTrial(b) {
+    // Offered only until it has been taken. `on_free_trial` is the developer
+    // flag; what settles it here is whether a trial was ever granted at all.
+    var card = $("trialcard");
+    if (card) card.hidden = b.trial_taken === true;
   }
 
   function renderSeats(s) {
@@ -431,6 +455,33 @@
       $("newkeyvalue").textContent = res.body.api_key;
       show("newkey");
       say("New key created. The one you are signed in with still works.", "ok");
+    });
+  });
+
+  // ---- trial --------------------------------------------------------------
+  $("buytrial").addEventListener("click", function () {
+    var btn = this;
+    var back = window.location.origin + window.location.pathname;
+    btn.disabled = true;
+    say("Setting up your trial…", "info");
+
+    api("/billing/trial", { method: "POST", body: {
+      return_url: back + "#pricing", cancel_url: back + "?cancelled=1#pricing"
+    }}).then(function (res) {
+      btn.disabled = false;
+      if (res.ok && res.body.approve_url) {
+        say("Redirecting you to PayPal…", "info");
+        window.location.href = res.body.approve_url;
+        return;
+      }
+      if (res.body && res.body.error === "trial_already_taken") {
+        say(res.body.message, "err");
+        $("trialcard").hidden = true;
+      } else if (res.body && res.body.error === "paypal_not_configured") {
+        say("Payments are not switched on yet. Please try again later.", "err");
+      } else {
+        say("Could not start that trial. Nothing was charged.", "err");
+      }
     });
   });
 

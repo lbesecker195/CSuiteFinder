@@ -90,6 +90,7 @@ defmodule CsuiteFinder.Billing.Plans do
       # capacity and knows it.
       caveats: [
         "Unused credit does not roll over — each month starts at $#{delimit(@seat_usd_per_month)}.",
+        "Trying it first costs $#{Pricing.seat_trial_usd()}, once, and that credit expires with the month too.",
         "Credit you buy outright never expires, and a seat does not touch it.",
         "Cancel any time; the month you have paid for runs to its end."
       ]

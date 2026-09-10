@@ -201,7 +201,10 @@ defmodule CsuiteFinder.GrantedCreditTest do
   describe "the free trial" do
     test "registering grants expiring credit, not a permanent balance" do
       {:ok, %{account: account}} =
-        Accounts.register(%{email: "trial#{System.unique_integer([:positive])}@test.com"})
+        Accounts.register(%{
+          email: "trial#{System.unique_integer([:positive])}@test.com",
+          audience: "developer"
+        })
 
       assert account.balance_micro == 0
       assert account.granted_micro == Pricing.trial_micro()
@@ -214,7 +217,10 @@ defmodule CsuiteFinder.GrantedCreditTest do
 
     test "the trial is spendable while it lasts and worthless after" do
       {:ok, %{account: account}} =
-        Accounts.register(%{email: "trial#{System.unique_integer([:positive])}@test.com"})
+        Accounts.register(%{
+          email: "trial#{System.unique_integer([:positive])}@test.com",
+          audience: "developer"
+        })
 
       assert Billing.ensure_funds(account, "email.find") == :ok
 

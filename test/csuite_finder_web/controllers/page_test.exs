@@ -534,13 +534,28 @@ defmodule CsuiteFinderWeb.PageTest do
 
       commands = Regex.scan(~r/^### (\/[a-z]+)/m, body) |> Enum.map(&List.last/1)
 
-      assert length(commands) == 10, "expected ten commands, got #{inspect(commands)}"
+      assert length(commands) == 11, "expected eleven commands, got #{inspect(commands)}"
       assert "/find" in commands
       assert "/verify" in commands
+      assert "/demo" in commands
 
       # Without this an agent will try to GET /find and get a 404 it cannot
       # recover from.
       assert body =~ "They are not routes"
+    end
+
+    test "/demo holds to its budget and reports rows honestly", %{conn: conn} do
+      body = conn |> get(~p"/llms.txt") |> response(200)
+      [demo | _] = String.split(body, "### /find", parts: 2)
+      [_, demo] = String.split(demo, "### /demo", parts: 2)
+      # This is prose, so it wraps. Assert on the words, not the line breaks.
+      demo = String.replace(demo, ~r/\s+/, " ")
+
+      # An unattended demo that overspends is worse than no demo.
+      assert demo =~ "Stop at the budget"
+      # And a row count read as a headcount is the mistake the last receipt made.
+      assert demo =~ "as **rows**, not people"
+      assert demo =~ "`accept_all` is not a pass"
     end
 
     test "no command edits what the caller gave it", %{conn: conn} do
