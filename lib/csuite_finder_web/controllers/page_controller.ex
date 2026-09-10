@@ -142,11 +142,46 @@ defmodule CsuiteFinderWeb.PageController do
             phones: delimit(b.phones)
           }
         end,
-      price_rows:
-        Pricing.list_usd()
-        |> Enum.sort_by(fn {endpoint, _} -> endpoint end)
-        |> Enum.map(fn {endpoint, usd} -> {endpoint, usd, format(usd)} end)
+      price_groups: price_groups()
     }
+  end
+
+  # The families a reader already thinks in, dearest first inside each, because
+  # what someone scans a price list for is the number that will hurt.
+  #
+  # `email`, `phone` and `company` are pinned in that order — they are the
+  # product, and an alphabetical list buries the headline price of each family
+  # among the free ones. Anything added later falls in behind them
+  # alphabetically rather than needing this list edited, which is the point:
+  # a new family should appear in the right shape without anyone remembering to
+  # come back here.
+  @pinned_families ~w(email phone company)
+
+  defp price_groups do
+    Pricing.list_usd()
+    |> Enum.group_by(fn {endpoint, _usd} -> family(endpoint) end)
+    |> Enum.sort_by(fn {family, _rows} -> family_rank(family) end)
+    |> Enum.map(fn {family, rows} ->
+      %{
+        family: family,
+        rows:
+          rows
+          # Descending by price, then alphabetical, so the free ones inside a
+          # family are still in a predictable order rather than whatever the
+          # map happened to hold.
+          |> Enum.sort_by(fn {endpoint, usd} -> {-usd, endpoint} end)
+          |> Enum.map(fn {endpoint, usd} -> {endpoint, usd, format(usd)} end)
+      }
+    end)
+  end
+
+  defp family(endpoint), do: endpoint |> String.split(".") |> hd()
+
+  defp family_rank(family) do
+    case Enum.find_index(@pinned_families, &(&1 == family)) do
+      nil -> {1, family}
+      index -> {0, index}
+    end
   end
 
   defp base_url(conn) do

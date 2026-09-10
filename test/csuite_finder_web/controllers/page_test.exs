@@ -56,6 +56,38 @@ defmodule CsuiteFinderWeb.PageTest do
         assert html =~ endpoint, "developer page does not mention #{endpoint}"
       end
     end
+
+    test "prices are grouped by family, product families first", %{conn: conn} do
+      # Alphabetical buries each family's headline price among its free ones.
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      families =
+        Regex.scan(~r{<th colspan="2" scope="colgroup">([a-z]+)</th>}, html)
+        |> Enum.map(&List.last/1)
+
+      assert Enum.take(families, 3) == ~w(email phone company)
+      # Anything else falls in behind, alphabetically, without this list being
+      # edited — which is the bit that has to keep working as endpoints are added.
+      rest = Enum.drop(families, 3)
+      assert rest == Enum.sort(rest)
+    end
+
+    test "and dearest first inside each family", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      [_, email_block | _] = String.split(html, ~s|scope="colgroup">|)
+
+      prices =
+        Regex.scan(~r{<td class="num">(?:\$([\d.]+)|included)</td>}, email_block)
+        |> Enum.map(fn
+          [_, ""] -> 0.0
+          [_, value] -> String.to_float(value)
+          [_] -> 0.0
+        end)
+
+      assert prices == Enum.sort(prices, :desc), "email prices are not descending"
+      assert hd(prices) == Pricing.price_usd("email.linkedin")
+    end
   end
 
   defp fmt(usd), do: :erlang.float_to_binary(usd, [:compact, decimals: 4])

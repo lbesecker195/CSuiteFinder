@@ -224,16 +224,21 @@ Verify every address before you give it to me.</code></pre>
 <h3 class="sub-label">Per-endpoint cost</h3>
 
 <div class="table-scroll">
-<table>
+<table class="prices">
   <thead><tr><th>Endpoint</th><th class="num">Price</th></tr></thead>
-  <tbody>
-    <%= for {endpoint, usd, label} <- @price_rows do %>
+  <%= for group <- @price_groups do %>
+  <tbody class="family">
+    <tr class="family-head">
+      <th colspan="2" scope="colgroup"><%= group.family %></th>
+    </tr>
+    <%= for {endpoint, usd, label} <- group.rows do %>
     <tr>
       <td><code><%= endpoint %></code></td>
       <td class="num"><%= if usd > 0, do: "$" <> label, else: "included" %></td>
     </tr>
     <% end %>
   </tbody>
+  <% end %>
 </table>
 </div>
 

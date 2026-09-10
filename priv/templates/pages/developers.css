@@ -14,3 +14,24 @@
   .compare table { min-width: 640px; }
   .compare th:first-child { width: 26%; }
   .compare .seat { background: var(--accent-soft); }
+
+  /* The price table reads as families rather than one long list: each starts
+     with its own caption and a rule heavy enough to be a break rather than
+     another row line. The caption carries the accent so the eye lands on the
+     boundary before it lands on the numbers. */
+  .prices tbody.family + tbody.family tr:first-child th {
+    border-top: 3px solid var(--accent);
+  }
+  .prices .family-head th {
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  /* The dearest row in a family is the one people are looking for. */
+  .prices tbody.family tr:nth-child(2) td { font-weight: 600; }
