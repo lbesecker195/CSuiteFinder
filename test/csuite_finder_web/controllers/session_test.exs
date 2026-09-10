@@ -235,4 +235,75 @@ defmodule CsuiteFinderWeb.SessionTest do
       assert {:ok, _account, _key} = Accounts.authenticate(key)
     end
   end
+
+  describe "the API is untouched by any of this" do
+    # A password is how a person reaches the account page. It is not how an
+    # agent reaches the API, and it must never become a precondition for one.
+
+    test "a key still works after a password is set on the account", %{conn: conn} do
+      {_account, key, _email} = registered()
+
+      # The order that matters: the key was minted first, the password second.
+      # Setting one must not revoke, rotate or invalidate the other.
+      conn
+      |> put_req_header("authorization", "Bearer " <> key)
+      |> post(~p"/csuitefinder/password", %{password: @password})
+      |> json_response(200)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", "Bearer " <> key)
+        |> get(~p"/csuitefinder/billing/balance")
+        |> json_response(200)
+
+      assert body["status"] == "active"
+    end
+
+    test "an account with no password is a working API account", %{conn: conn} do
+      # This is what POST /register gives an agent following llms.txt: a key,
+      # and no password anywhere. It has to be enough on its own.
+      {account, key, _email} = registered()
+
+      assert is_nil(Repo.get!(Account, account.id).password_hash)
+
+      assert conn
+             |> put_req_header("authorization", "Bearer " <> key)
+             |> get(~p"/csuitefinder/billing/balance")
+             |> json_response(200)
+    end
+
+    test "a lookup runs on a key alone, password or not", %{conn: conn} do
+      CsuiteFinder.TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
+        {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
+      end)
+
+      {account, key, _email} = registered()
+      {:ok, _} = CsuiteFinder.Billing.credit(account, 5_000_000)
+      {:ok, _} = Accounts.set_password(account, @password)
+
+      body =
+        conn
+        |> put_req_header("authorization", "Bearer " <> key)
+        |> get(~p"/csuitefinder/email/find?full_name=Jane%20Doe&domain=acme.com")
+        |> json_response(200)
+
+      assert body["email"] == "jane.doe@acme.com"
+    end
+
+    test "the password endpoint is the only one a password could reach", %{conn: conn} do
+      # A password is not a bearer token. If this ever starts returning 200 the
+      # login has grown a second, weaker key.
+      {_account, _key, email} = registered()
+
+      assert conn
+             |> put_req_header("authorization", "Bearer " <> @password)
+             |> get(~p"/csuitefinder/billing/balance")
+             |> json_response(401)
+
+      assert conn
+             |> put_req_header("authorization", "Bearer " <> email)
+             |> get(~p"/csuitefinder/billing/balance")
+             |> json_response(401)
+    end
+  end
 end
