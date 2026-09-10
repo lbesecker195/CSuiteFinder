@@ -99,11 +99,19 @@ defmodule CsuiteFinderWeb.EmailController do
       account: conn.assigns[:account],
       api_key: conn.assigns[:api_key],
       endpoint: conn.assigns[:endpoint_name],
-      found: Map.get(result, :found, false),
+      # An address we have just told the caller will bounce is not an answer
+      # they can use, and charging for it would be charging for the work rather
+      # than the result. The same rule as a miss.
+      found: billable_answer?(result),
       cached: Map.get(result, :cached, false),
       duration_ms: CsuiteFinderWeb.Plugs.Timing.elapsed_ms(conn),
       provider_cost_micro: get_in(result, [:cost, :provider_micro]) || 0,
       request: request
     })
+  end
+
+  defp billable_answer?(result) do
+    Map.get(result, :found, false) and
+      Map.get(result, :verification_status) != "undeliverable"
   end
 end

@@ -76,7 +76,45 @@ defmodule CsuiteFinder.Finder do
       nil
     else
       row = cached_row(name_key, domain)
-      if Cache.fresh?(row), do: row, else: nil
+
+      cond do
+        not Cache.fresh?(row) -> nil
+        worth_another_try?(row) -> nil
+        true -> row
+      end
+    end
+  end
+
+  @doc """
+  Should a repeat request for this person be re-resolved rather than answered
+  from the cache?
+
+  Only when what we hold is an address the mailbox has rejected AND there is a
+  method left we have not spent — another of the company's formats, or the paid
+  lookup. A caller asking again is the demand signal: the address they were
+  given does not work, and handing back the same dead address a second time
+  helps nobody.
+
+  When everything has been tried this returns false, so a caller hammering an
+  unresolvable person is answered from the cache rather than re-billed on every
+  request.
+  """
+  @spec worth_another_try?(Email.t() | nil) :: boolean()
+  def worth_another_try?(%Email{verification_status: "undeliverable"} = row) do
+    not row.provider_tried or untried_patterns?(row)
+  end
+
+  def worth_another_try?(_row), do: false
+
+  defp untried_patterns?(%Email{} = row) do
+    case Names.split(row.full_name || "") do
+      {:ok, parts} ->
+        row.domain
+        |> buildable(parts, row.rejected || [])
+        |> Enum.any?()
+
+      _ ->
+        false
     end
   end
 
@@ -97,7 +135,7 @@ defmodule CsuiteFinder.Finder do
 
     case pattern_row do
       %{found: true, pattern: pattern} when is_binary(pattern) ->
-        case buildable(domain, parts) do
+        case buildable(domain, parts, rejected_for(name_key, domain)) do
           [] ->
             # The company's format needs a name part this person does not have
             # (a `{last}` pattern against a mononym) — fall through and buy it.
@@ -115,7 +153,7 @@ defmodule CsuiteFinder.Finder do
   # Every pattern this domain might use, turned into an address for this person.
   # Patterns needing a name part they do not have are dropped rather than
   # producing a half-built address.
-  defp buildable(domain, parts) do
+  defp buildable(domain, parts, rejected) do
     domain
     |> PatternStore.candidates()
     |> Enum.flat_map(fn pattern ->
@@ -125,6 +163,16 @@ defmodule CsuiteFinder.Finder do
       end
     end)
     |> Enum.uniq_by(&elem(&1, 1))
+    # An address this person has already been proved not to have is not a
+    # candidate, however common the format is at their company.
+    |> Enum.reject(fn {_pattern, email} -> email in rejected end)
+  end
+
+  defp rejected_for(name_key, domain) do
+    case cached_row(name_key, domain) do
+      %Email{rejected: rejected} when is_list(rejected) -> rejected
+      _ -> []
+    end
   end
 
   # Build the address, then ask the mailbox whether it exists.
@@ -145,13 +193,14 @@ defmodule CsuiteFinder.Finder do
 
     if worth_checking?(candidates, domain, top_pattern) do
       case walk(candidates, domain, lookup) do
-        {:deliverable, pattern, email, lookup} ->
+        {:deliverable, pattern, email, rejected, lookup} ->
           {:ok,
            accept(email, pattern, full_name, parts, name_key, domain, pattern_row, lookup,
-             verification: "deliverable"
+             verification: "deliverable",
+             rejected: rejected
            )}
 
-        {:undecidable, lookup} ->
+        {:undecidable, _rejected, lookup} ->
           # A catch-all domain accepts everything, so no check can separate the
           # candidates. Take the best-ranked one and say it is unconfirmed.
           {:ok,
@@ -159,10 +208,13 @@ defmodule CsuiteFinder.Finder do
              verification: "accept_all"
            )}
 
-        {:exhausted, lookup} ->
+        {:exhausted, rejected, lookup} ->
           # Every format we know for this company was rejected for this person.
-          # Our guesses are disproved, so buy the answer rather than return one.
-          find_via_provider(full_name, parts, name_key, domain, lookup)
+          # Our guesses are disproved, so buy the answer rather than return one
+          # — and remember which addresses are dead, so a later attempt spends
+          # its money somewhere new.
+          remember_rejected(name_key, domain, rejected)
+          find_via_provider(full_name, parts, name_key, domain, lookup, rejected)
       end
     else
       {:ok,
@@ -178,11 +230,11 @@ defmodule CsuiteFinder.Finder do
     not (PatternStore.catch_all?(domain) or PatternStore.proven?(domain, top_pattern))
   end
 
-  defp walk(candidates, domain, lookup), do: walk(candidates, domain, lookup, :exhausted)
+  defp walk(candidates, domain, lookup), do: walk(candidates, domain, lookup, :exhausted, [])
 
-  defp walk([], _domain, lookup, outcome), do: {outcome, lookup}
+  defp walk([], _domain, lookup, outcome, rejected), do: {outcome, rejected, lookup}
 
-  defp walk([{pattern, email} | rest], domain, lookup, outcome) do
+  defp walk([{pattern, email} | rest], domain, lookup, outcome, rejected) do
     case Verifier.verify(email) do
       {:ok, row, verify_lookup} ->
         lookup =
@@ -191,15 +243,15 @@ defmodule CsuiteFinder.Finder do
         cond do
           row.catch_all == true ->
             PatternStore.mark_catch_all(domain)
-            {:undecidable, lookup}
+            {:undecidable, rejected, lookup}
 
           row.status == "deliverable" ->
             PatternStore.record_outcome(domain, pattern, "deliverable")
-            {:deliverable, pattern, email, lookup}
+            {:deliverable, pattern, email, rejected, lookup}
 
           row.status == "undeliverable" ->
             PatternStore.record_outcome(domain, pattern, "undeliverable")
-            walk(rest, domain, lookup, outcome)
+            walk(rest, domain, lookup, outcome, [email | rejected])
 
           true ->
             # "unknown" is not evidence either way — a verifier that could not
@@ -207,13 +259,31 @@ defmodule CsuiteFinder.Finder do
             # remember that the run is now inconclusive rather than exhaustive,
             # so an all-unknown sweep returns the best guess instead of paying
             # to replace addresses nobody disproved.
-            walk(rest, domain, lookup, :undecidable)
+            walk(rest, domain, lookup, :undecidable, rejected)
         end
 
       {:error, _reason} ->
         # A verifier outage must not turn a resolvable address into a miss.
-        {:undecidable, lookup}
+        {:undecidable, rejected, lookup}
     end
+  end
+
+  # Dead addresses are kept against the person, not the company: the format is
+  # still the company's format, and only this person is the exception to it.
+  defp remember_rejected(_name_key, _domain, []), do: :ok
+
+  defp remember_rejected(name_key, domain, rejected) do
+    case cached_row(name_key, domain) do
+      %Email{} = row ->
+        row
+        |> Email.changeset(%{rejected: Enum.uniq((row.rejected || []) ++ rejected)})
+        |> Repo.update()
+
+      nil ->
+        :ok
+    end
+
+    :ok
   end
 
   defp accept(email, pattern, full_name, parts, name_key, domain, pattern_row, lookup, opts) do
@@ -230,6 +300,9 @@ defmodule CsuiteFinder.Finder do
         pattern_used: pattern,
         confidence: pattern_row.confidence,
         verification_status: Keyword.get(opts, :verification),
+        # Formats ruled out for this person on the way to the one that worked,
+        # so a later attempt never rebuilds them.
+        rejected: Enum.uniq(rejected_for(name_key, domain) ++ Keyword.get(opts, :rejected, [])),
         provider_cost_micro: lookup.spent_micro,
         expires_at: Cache.expires_at(:email_found)
       })
@@ -383,7 +456,7 @@ defmodule CsuiteFinder.Finder do
 
   defp payload_name(_), do: nil
 
-  defp find_via_provider(full_name, parts, name_key, domain, lookup) do
+  defp find_via_provider(full_name, parts, name_key, domain, lookup, ruled_out \\ []) do
     body =
       %{full_name: full_name, domain: domain}
       |> maybe_put(:first_name, parts.first)
@@ -404,9 +477,19 @@ defmodule CsuiteFinder.Finder do
 
         case choose_email(extract_emails(payload), domain, lookup) do
           {nil, lookup} ->
-            {:ok, store_missing(name_key, domain, full_name, parts, lookup, meta)}
+            {:ok,
+             store_missing(
+               name_key,
+               domain,
+               full_name,
+               parts,
+               lookup,
+               meta,
+               Enum.uniq(rejected_for(name_key, domain) ++ ruled_out)
+             )}
 
           {email, lookup} ->
+            known_dead = Enum.uniq(rejected_for(name_key, domain) ++ ruled_out)
             # The answer carries the company's format for free — bank it. And if
             # the provider says it checked the mailbox, that is an observed
             # delivery for this format: the next colleague can be built from it
@@ -421,6 +504,8 @@ defmodule CsuiteFinder.Finder do
               end
             end
 
+            {email, verification, lookup} = confirm_bought(email, known_dead, lookup)
+
             row =
               store(%{
                 name_key: name_key,
@@ -429,11 +514,13 @@ defmodule CsuiteFinder.Finder do
                 first_name: parts.first,
                 last_name: parts.last,
                 email: email,
-                found: true,
+                rejected: known_dead,
+                provider_tried: true,
+                verification_status: verification,
+                found: email != nil,
                 source: "provider",
-                pattern_used: derive_or_nil(email, full_name),
+                pattern_used: email && derive_or_nil(email, full_name),
                 confidence: confidence_of(payload),
-                verification_status: verification_of(payload),
                 provider: meta.served_by,
                 provider_cost_micro: lookup.spent_micro,
                 raw: payload,
@@ -490,7 +577,7 @@ defmodule CsuiteFinder.Finder do
     end
   end
 
-  defp store_missing(name_key, domain, full_name, parts, lookup, meta) do
+  defp store_missing(name_key, domain, full_name, parts, lookup, meta, ruled_out \\ []) do
     row =
       store(%{
         name_key: name_key,
@@ -500,6 +587,9 @@ defmodule CsuiteFinder.Finder do
         last_name: parts.last,
         found: false,
         source: "provider",
+        rejected: ruled_out,
+        # The paid lookup has been spent on this person, whatever it returned.
+        provider_tried: true,
         provider: meta.served_by,
         provider_cost_micro: lookup.spent_micro,
         expires_at: Cache.expires_at(:email_missing)
@@ -548,6 +638,32 @@ defmodule CsuiteFinder.Finder do
   defp extract_email(%{"output" => %{"email" => email}}) when is_binary(email), do: email
   defp extract_email(%{"email" => email}) when is_binary(email), do: email
   defp extract_email(_), do: nil
+
+  # A bought address for a person whose earlier address bounced gets checked
+  # too. They are the case where a provider's confident answer has already been
+  # wrong once, and buying a second dead address without noticing is how a
+  # person stays unresolvable forever.
+  #
+  # An address the provider hands back that we have ALREADY disproved is not an
+  # answer at all — it is the dead end we started from — so it is reported as a
+  # miss rather than sold again.
+  defp confirm_bought(email, [], lookup), do: {email, nil, lookup}
+
+  defp confirm_bought(email, known_dead, lookup) do
+    if email in known_dead do
+      {nil, nil, lookup}
+    else
+      case Verifier.verify(email) do
+        {:ok, %{status: status} = row, verify_lookup} ->
+          lookup = add_unless_cached(lookup, verify_lookup)
+          verification = if row.catch_all == true, do: "accept_all", else: status
+          {email, verification, lookup}
+
+        {:error, _reason} ->
+          {email, nil, lookup}
+      end
+    end
+  end
 
   # Providers sometimes return more than one address for a person — the headline
   # answer plus alternatives. All of them, best-guess first.
