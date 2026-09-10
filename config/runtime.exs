@@ -194,6 +194,15 @@ config :csuite_finder, CsuiteFinder.Treg.Client,
   token: System.get_env("TREG_TOKEN"),
   org: System.get_env("TREG_ORG")
 
+# --- inference fallback ---------------------------------------------------
+# Used only when a provider has already missed: a job title enrichment did not
+# return, or an email pattern nobody sells. Unset the key and the fallback
+# simply does not run — see CsuiteFinder.Inference.
+config :csuite_finder, CsuiteFinder.Inference,
+  api_key: System.get_env("ANTHROPIC_API_KEY"),
+  model: System.get_env("ANTHROPIC_MODEL"),
+  base_url: System.get_env("ANTHROPIC_BASE_URL")
+
 # --- PayPal ---------------------------------------------------------------
 config :csuite_finder, CsuiteFinder.Billing.PayPal,
   base_url:

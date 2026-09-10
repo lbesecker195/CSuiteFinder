@@ -150,6 +150,11 @@ sudo nano /etc/csuite-finder.env
 Fill in at minimum `DATABASE_URL`, `SECRET_KEY_BASE`, `PHX_HOST`, `TREG_TOKEN`
 and `ADMIN_TOKEN`.
 
+`ANTHROPIC_API_KEY` is optional. It buys a last-resort answer when a provider
+has already missed — a job title, or a company's email pattern — capped at 8
+and 10 output tokens respectively. Unset, that fallback is skipped and nothing
+else changes.
+
 `DATABASE_URL` is a **full connection URL**, not a host and port:
 
 ```
@@ -363,3 +368,4 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 | `/admin` returns 503 | `ADMIN_TOKEN` is unset — deliberate, set it and restart |
 | `can't find include lib "public_key/include/public_key.hrl"` | Erlang installed without its full OTP set; install `esl-erlang`, or `erlang-dev erlang-public-key erlang-ssl erlang-crypto erlang-asn1` |
 | Lookups return `treg_configured: false` | `TREG_TOKEN` not in the environment file |
+| Enrichment never fills in a job title | `ANTHROPIC_API_KEY` unset — the fallback is skipped silently, by design |

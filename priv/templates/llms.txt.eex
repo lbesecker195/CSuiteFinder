@@ -184,6 +184,10 @@ is free.
 The person behind an address: name, job title, seniority, department, employer,
 location. `confidence` grades the answer.
 
+`position_inferred: true` means the job title is our best guess rather than a
+figure any provider stated — everything else on the record still is. Worth
+checking before you address someone by it.
+
 - `email` (required)
 
 ### POST /csuitefinder/email/name — included
@@ -199,6 +203,10 @@ phone equivalent is `/phone/name`.
 How a company formats its addresses, with every alternative and how common each
 is. Returns a readable form (`{first}.{last}`), the same in `[F].[L]` notation,
 a worked example, and a confidence score.
+
+A domain nobody has patterned may come back with a plausible pattern and a
+confidence of 0.5 or lower. Treat that as a starting point: build the address,
+then check it with `/email/deliverable` before you send.
 
 - `email` (required) — any address at the company; only the domain is used.
 

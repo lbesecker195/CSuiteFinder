@@ -36,6 +36,13 @@ config :csuite_finder, CsuiteFinder.Treg.Client,
   token: "test-token",
   plug: CsuiteFinder.TregStub
 
+# The model fallback is answered by a plug in-process; tests that want it opt in
+# by stubbing, and everything else sees it as switched off.
+config :csuite_finder, CsuiteFinder.Inference,
+  base_url: "http://inference.test",
+  api_key: nil,
+  plug: CsuiteFinder.InferenceStub
+
 # Exercise the real auth path in tests.
 config :csuite_finder, :require_api_key, true
 

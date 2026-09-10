@@ -22,8 +22,11 @@ defmodule CsuiteFinderWeb.PublicView do
   @deliverable ~w(email deliverable status sub_status score catch_all disposable
                   role_account free_provider mx_found smtp_check checked_at)a
 
-  @enrich ~w(email found full_name first_name last_name position seniority
-             department company_name linkedin_url twitter location phone
+  # `position_inferred` is listed deliberately: a guessed job title and a
+  # provider's stated one look identical in the response otherwise, and the
+  # caller is the one about to address someone by it.
+  @enrich ~w(email found full_name first_name last_name position position_inferred
+             seniority department company_name linkedin_url twitter location phone
              confidence last_verified_at)a
 
   # `pattern` is the answer this endpoint exists to give, so it stays. What goes
@@ -31,8 +34,8 @@ defmodule CsuiteFinderWeb.PublicView do
   @pattern ~w(domain found pattern pattern_provider_notation example confidence
               alternatives queried_email last_verified_at)a
 
-  @who ~w(email found full_name first_name last_name position company_name
-          linkedin_url confidence)a
+  @who ~w(email found full_name first_name last_name position position_inferred
+          company_name linkedin_url confidence)a
 
   @company_find ~w(queried_email domain found name legal_name website
                    linkedin_url logo_url last_verified_at note)a

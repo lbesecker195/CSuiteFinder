@@ -20,6 +20,11 @@ defmodule CsuiteFinder.Cache do
   @ttls %{
     pattern_found: 180 * @day,
     pattern_missing: 14 * @day,
+    # An inferred pattern is held far shorter than a bought one: it is a good
+    # guess, and if the provider learns the domain in the meantime we want the
+    # bought answer instead. The durable cache keeps the guess in the row either
+    # way, so expiry only decides when we look again.
+    pattern_inferred: 21 * @day,
     email_found: 90 * @day,
     email_missing: 30 * @day,
     verify_deliverable: 30 * @day,

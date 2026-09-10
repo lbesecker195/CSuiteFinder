@@ -11,6 +11,8 @@ defmodule CsuiteFinder.Cache.PersonEnrichment do
     field :first_name, :string
     field :last_name, :string
     field :position, :string
+    # "provider" or "inferred" — see CsuiteFinder.Inference.
+    field :position_source, :string
     field :seniority, :string
     field :department, :string
     field :company_name, :string
@@ -31,7 +33,7 @@ defmodule CsuiteFinder.Cache.PersonEnrichment do
     timestamps()
   end
 
-  @fields ~w(email domain full_name first_name last_name position seniority department
+  @fields ~w(email domain full_name first_name last_name position position_source seniority department
              company_name linkedin_url twitter location phone found source confidence
              provider provider_cost_micro raw expires_at last_found_at refresh_failures)a
 

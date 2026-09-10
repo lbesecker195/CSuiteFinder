@@ -15,11 +15,20 @@ defmodule CsuiteFinder.People do
   from provider data later. Returning a guess dressed as a verified record would
   poison the cache for every later caller and put bounces in someone's sending
   reputation, so the guess is offered — clearly marked — rather than disguised.
+
+  ## On the job title
+
+  The address cannot tell us what someone does, and providers routinely return a
+  person with no position at all. When that happens and we know who they are and
+  where they work, `CsuiteFinder.Inference` is asked — a single short question
+  with an eight-token ceiling. The answer lands in `position` with
+  `position_source: "inferred"`, which is what stops a guessed title inheriting
+  a provider row's credibility. Callers see it as `position_inferred`.
   """
 
   import Ecto.Query
 
-  alias CsuiteFinder.{Budgets, Cache, CostModel, PatternStore, Patterns, Repo}
+  alias CsuiteFinder.{Budgets, Cache, CostModel, Inference, PatternStore, Patterns, Repo}
   alias CsuiteFinder.Cache.PersonEnrichment
   alias CsuiteFinder.Cache.Writer
   alias CsuiteFinder.Treg.Client
@@ -122,6 +131,7 @@ defmodule CsuiteFinder.People do
       raw: payload,
       expires_at: Cache.expires_at(:enrichment_provider)
     })
+    |> with_title(domain)
     |> upsert()
   end
 
@@ -146,7 +156,38 @@ defmodule CsuiteFinder.People do
       provider_cost_micro: spent_micro,
       expires_at: Cache.expires_at(:enrichment_inferred)
     })
+    |> with_title(domain)
     |> upsert()
+  end
+
+  # A title, if the row does not already have one and we know enough to ask.
+  # Only ever fills a gap: a provider's own position is never overwritten, and
+  # the source is recorded so the two can be told apart afterwards. Runs after
+  # the cost has been set, because what the question costs is added to it.
+  defp with_title(%{position: position} = attrs, _domain)
+       when is_binary(position) and position != "" do
+    Map.put(attrs, :position_source, "provider")
+  end
+
+  defp with_title(attrs, domain) do
+    company = attrs[:company_name] || domain
+
+    case attrs[:full_name] do
+      name when is_binary(name) and name != "" ->
+        case Inference.title(name, company) do
+          {:ok, title, cost_micro} ->
+            attrs
+            |> Map.put(:position, title)
+            |> Map.put(:position_source, "inferred")
+            |> Map.update(:provider_cost_micro, cost_micro, &(&1 + cost_micro))
+
+          :unknown ->
+            attrs
+        end
+
+      _ ->
+        attrs
+    end
   end
 
   defp infer_name_parts(local, domain) do
@@ -315,6 +356,7 @@ defmodule CsuiteFinder.People do
       first_name: row.first_name,
       last_name: row.last_name,
       position: row.position,
+      position_inferred: row.position_source == "inferred",
       seniority: row.seniority,
       department: row.department,
       company_name: row.company_name,

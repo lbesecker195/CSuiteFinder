@@ -76,7 +76,7 @@ defmodule CsuiteFinder.PatternStore do
           latency_ms: meta.latency_ms
         )
 
-        {:ok, store_missing(domain, "thecompaniesapi"), CsuiteFinder.Lookup.miss(meta.cost_micro)}
+        {:ok, infer_or_miss(domain, meta.cost_micro), CsuiteFinder.Lookup.miss(meta.cost_micro)}
 
       {:error, _reason, meta} ->
         CostModel.record_attempt(@capability, @endpoint, false,
@@ -105,7 +105,7 @@ defmodule CsuiteFinder.PatternStore do
 
     case ranked do
       [] ->
-        store_missing(domain, "thecompaniesapi")
+        infer_or_miss(domain, meta.cost_micro)
 
       [top | _] = all ->
         upsert(%{
@@ -121,6 +121,32 @@ defmodule CsuiteFinder.PatternStore do
           raw: normalize_raw(body),
           expires_at: Cache.expires_at(:pattern_found)
         })
+    end
+  end
+
+  # Nobody sells a pattern for this domain. One pattern resolves every employee
+  # at a company for free afterwards, so before writing the miss it is worth a
+  # ten-token question — clearly marked, held for a shorter time than a bought
+  # pattern, and only ever reached after the provider has already failed.
+  defp infer_or_miss(domain, spent_micro) do
+    case CsuiteFinder.Inference.email_pattern(domain) do
+      {:ok, pattern, cost_micro} ->
+        upsert(%{
+          domain: domain,
+          pattern: pattern,
+          # Deliberately low. It is a plausible pattern, not an observed one,
+          # and everything downstream that weighs confidence should treat it
+          # that way.
+          confidence: 0.5,
+          candidates: %{},
+          source: "inferred",
+          found: true,
+          provider_cost_micro: spent_micro + cost_micro,
+          expires_at: Cache.expires_at(:pattern_inferred)
+        })
+
+      :unknown ->
+        store_missing(domain, "thecompaniesapi")
     end
   end
 
