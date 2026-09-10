@@ -88,9 +88,12 @@ is a row nobody can get back, and a verdict you deleted it on can be wrong.
 
 ### /demo
 Spend up to $1 and come back with as many C-suite addresses as it buys. What to
-run when someone wants to see what this does rather than read about it. It
-spends the account's own credit, so buy the $<%= @trial_price %> trial first if
-there is none.
+run when someone wants to see what this does rather than read about it.
+
+Works on any account. A key is a key: whether it was opened as a sales seat or
+as a developer account changes what the website shows and nothing about what the
+API will do. It spends the account's own credit, so buy the
+$<%= @trial_price %> trial first if there is none.
 
 1. `/company/search?industry=…&limit=20` — about $0.05, and any industry will do.
    Skip it if they named the companies.
