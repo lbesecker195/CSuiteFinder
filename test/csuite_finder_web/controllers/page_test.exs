@@ -529,6 +529,32 @@ defmodule CsuiteFinderWeb.PageTest do
       assert body =~ "This is the discovery route"
     end
 
+    test "offers ten commands, and says they are not routes", %{conn: conn} do
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      commands = Regex.scan(~r/^### (\/[a-z]+)/m, body) |> Enum.map(&List.last/1)
+
+      assert length(commands) == 10, "expected ten commands, got #{inspect(commands)}"
+      assert "/find" in commands
+      assert "/verify" in commands
+
+      # Without this an agent will try to GET /find and get a 404 it cannot
+      # recover from.
+      assert body =~ "They are not routes"
+    end
+
+    test "every command names the endpoints it runs", %{conn: conn} do
+      # A command nobody can execute is a decoration. Each block has to point at
+      # something real in the reference below it.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+      [_intro, commands] = String.split(body, "## Commands", parts: 2)
+      [commands, _rest] = String.split(commands, "## Endpoints", parts: 2)
+
+      for block <- String.split(commands, "\n### ") |> Enum.drop(1) do
+        assert block =~ ~r{`/[a-z/]+}, "a command block names no endpoint: #{block}"
+      end
+    end
+
     test "names no supplier", %{conn: conn} do
       body = conn |> get(~p"/llms.txt") |> response(200) |> String.downcase()
 

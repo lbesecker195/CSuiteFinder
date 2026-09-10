@@ -69,6 +69,88 @@ API: $<%= @seat_usd %> per person per month, which grants $<%= @seat_usd %> of
 credit each month and does not roll over. If you are reading this file you
 almost certainly want credit instead — same price per lookup, and it keeps.
 
+## Commands
+
+Shorthands for the ten things people actually ask for. **They are not routes** —
+there is no `GET /find`. They are phrasings a person can type at you, and this
+section says which endpoints to chain for each. If someone types one, do the
+work described here rather than looking for a matching URL.
+
+Every one of them ends the same way: nothing goes out to a human until the
+address has been through `/email/deliverable`.
+
+### /find <name> at <company>
+The core job. One person, one address.
+`/email/find?full_name=…&domain=…` → `/email/deliverable`.
+$<%= @email_price %> when it resolves, nothing when it does not.
+*Second person at the same company is free — the format is already bought.*
+
+### /room <domain>
+Everyone at a company, with titles and addresses. Add "executives" for the
+C-suite: `/email/company/people?domain=…&department=executive`.
+$<%= @email_price %> per person returned; `limit` is the price dial.
+*Ask once per company. The rows are cached per person, so a narrower question
+later is usually free — but a second sweep of the same domain is not.*
+
+### /list <who you sell to>
+An account list from a description: "fintechs in Germany, 50-200 people, running
+Snowflake". `/company/search?industry=…&technology=…&size=…&country=…`.
+$<%= @email_price %> per company returned.
+*Every row carries a domain, which is the input to everything else here.*
+
+### /reach <who you sell to>
+The whole funnel in one ask, and the most expensive thing on this list:
+`/company/search` → `/email/company/people?department=executive` per domain →
+`/email/deliverable` per address → hand back a CSV.
+Roughly $<%= @email_price %> per company plus $<%= @email_price %> per person.
+*Agree a budget first. Say what it will cost before you spend it, and use
+`limit` on both steps to hold to that.*
+
+### /titles <role> [at <company> | in <country>]
+People by job title across companies, rather than at one you already know:
+`/people/search?title=…&country=…`.
+$<%= @email_price %> per person returned.
+*Rows come back `verified: false` — they are directory listings. Resolve each
+properly with `/email/find`, or at minimum verify, before anyone writes to them.*
+
+### /verify <address...>
+Is this deliverable? `/email/deliverable?email=…`, one call per address.
+Included — it costs nothing beyond having a balance.
+*`deliverable` is safe, `undeliverable` is dead, `accept_all` means the server
+takes everything and proves nothing. Never send to an address you did not check.*
+
+### /clean <a list of addresses>
+List hygiene before a send: verify every address, drop the dead, and re-resolve
+the ones worth saving. Verify → for each failure, `/email/find` with the name and
+domain again, which will route around the format that just bounced.
+Verification is included; only the re-resolves cost anything.
+*This is the highest-value thing you can do with an old list. A bounce costs the
+sender far more than the lookup did.*
+
+### /whois <email, phone or domain>
+What is this thing. An address or a number gives you the person — name, title,
+employer — through `/email/enrich` or `/phone/enrich`. A domain gives you the
+company: industry, headcount, founding year, location, tech, through
+`/company/info`. All included.
+*Two things worth reading rather than skipping: `position_inferred: true` means
+the job title is our best guess rather than a figure anyone stated, so do not
+greet someone by it; and `/email/pattern` on the same domain returns the
+company's address format plus, where anyone has checked one, which format
+actually lands.*
+
+### /whocalled <number>
+A number that rang you, matched back to a person and their company.
+`/phone/name?phone=…`, then `/phone/company?phone=…`. Included.
+*Answered from numbers this service has already found. Nowhere else in the
+catalogue does this, and it is free with a balance.*
+
+### /spend
+What is left and where it went: `/billing/balance` and `/billing/usage?days=30`.
+Included.
+*`balance_usd` is everything spendable. `granted_usd` is the part that expires —
+a seat's monthly credit or a trial — and `purchased_usd` is the part that does
+not.*
+
 ## Endpoints
 
 All accept GET (query string) or POST (JSON body).
