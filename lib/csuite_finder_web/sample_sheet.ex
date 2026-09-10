@@ -50,13 +50,22 @@ defmodule CsuiteFinderWeb.SampleSheet do
       raw: :confirmed
     },
     %{
-      name: "Sachin Mehra",
-      company: "Mastercard",
-      title: "CFO",
-      email: "sa••••_me•••@mastercard.com",
+      name: "Sasan Goodarzi",
+      company: "Intuit",
+      title: "CEO",
+      email: "sa•••_go••••••@intuit.com",
       status: :deliverable,
       title_source: :enrichment,
       raw: :confirmed
+    },
+    %{
+      name: "Stephen Squeri",
+      title_source: :public_record,
+      company: "American Express",
+      title: "CEO",
+      email: "st•••••.sq••••@americanexpress.com",
+      status: :undeliverable,
+      raw: :rejected
     },
     %{
       name: "Chris Suh",
@@ -68,6 +77,15 @@ defmodule CsuiteFinderWeb.SampleSheet do
       raw: :accept_all
     },
     %{
+      name: "Sachin Mehra",
+      company: "Mastercard",
+      title: "CFO",
+      email: "sa••••_me•••@mastercard.com",
+      status: :deliverable,
+      title_source: :enrichment,
+      raw: :confirmed
+    },
+    %{
       name: "Alex Chriss",
       company: "PayPal",
       title: "CEO",
@@ -77,22 +95,13 @@ defmodule CsuiteFinderWeb.SampleSheet do
       raw: :accept_all
     },
     %{
-      name: "Jamie Miller",
-      company: "PayPal",
-      title: "CFO",
-      email: "jm•••••@paypal.com",
-      status: :deliverable,
-      title_source: :enrichment,
-      raw: :accept_all
-    },
-    %{
-      name: "Sasan Goodarzi",
-      company: "Intuit",
+      name: "Michael Shepherd",
+      title_source: :public_record,
+      company: "Discover",
       title: "CEO",
-      email: "sa•••_go••••••@intuit.com",
-      status: :deliverable,
-      title_source: :enrichment,
-      raw: :confirmed
+      email: "mi•••••••••••••@discover.com",
+      status: :undeliverable,
+      raw: :rejected
     },
     %{
       name: "Sandeep Aujla",
@@ -113,22 +122,13 @@ defmodule CsuiteFinderWeb.SampleSheet do
       raw: :accept_all
     },
     %{
-      name: "Stephen Squeri",
-      title_source: :public_record,
-      company: "American Express",
-      title: "CEO",
-      email: "st•••••.sq••••@americanexpress.com",
-      status: :undeliverable,
-      raw: :rejected
-    },
-    %{
-      name: "Michael Shepherd",
-      title_source: :public_record,
-      company: "Discover",
-      title: "CEO",
-      email: "mi•••••••••••••@discover.com",
-      status: :undeliverable,
-      raw: :rejected
+      name: "Jamie Miller",
+      company: "PayPal",
+      title: "CFO",
+      email: "jm•••••@paypal.com",
+      status: :deliverable,
+      title_source: :enrichment,
+      raw: :accept_all
     }
   ]
 

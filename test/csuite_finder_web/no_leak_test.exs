@@ -25,7 +25,7 @@ defmodule CsuiteFinderWeb.NoLeakTest do
                      tried refresh_failures)
 
   # Vendor names that must never reach a customer.
-  @forbidden_terms ~w(treg thecompaniesapi trykitt tomba hunter findymail
+  @forbidden_terms ~w(treg thecompaniesapi trykitt tomba hunter findymail anthropic haiku
                       leadmagic apollo contactout millionverifier icypeas
                       companyenrich leadsforge aviato pdl lusha fiber-ai)
 
