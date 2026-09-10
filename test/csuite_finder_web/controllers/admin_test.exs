@@ -131,7 +131,9 @@ defmodule CsuiteFinderWeb.AdminTest do
       assert body["days"] == 30
       assert body["headline"]["requests"] == 0
       assert length(body["daily"]) == 30
-      assert body["find_economics"]["price_micro"] == 2_500
+      # Blended across whatever actually sold rather than one endpoint's list
+      # price, so with no traffic in the window there is nothing to average.
+      assert body["find_economics"]["price_micro"] == 0.0
     end
 
     test "honours the window parameter", %{conn: conn} do

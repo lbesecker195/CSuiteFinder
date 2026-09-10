@@ -58,30 +58,32 @@
   </div>
 </div>
 
-<h2>Find economics</h2>
+<h2>Lookup economics</h2>
 
 <div class="panel">
-  <h3>Every email found sells for <%= CsuiteFinderWeb.AdminController.micro_usd(@find_price_micro) %></h3>
+  <h3>Every billable answer sells for <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.price_micro) %> on average</h3>
   <p class="hint">
-    A cached find costs us nothing. A fresh one falls through to a paid provider
-    and can cost more than it earns — so the mix, not the average, is what
-    decides whether finds make money.
+    Across every route that charges — addresses, numbers, company rows, people
+    rows. A cached answer costs us nothing. A fresh one falls through to a paid
+    provider and can cost more than it earns, so the mix, not the average, is
+    what decides whether lookups make money. Break-even sits at 0% whenever a
+    fresh answer already pays for itself.
   </p>
 
   <div class="split">
     <div class="seg win">
       <div class="n"><%= CsuiteFinderWeb.AdminController.num(@find_economics.cached.calls) %></div>
-      <div class="k">cached finds · <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.cached.margin_micro) %> each</div>
+      <div class="k">cached answers · <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.cached.margin_micro) %> each</div>
     </div>
     <div class="seg <%= if @find_economics.fresh.margin_micro < 0, do: "lose", else: "win" %>">
       <div class="n"><%= CsuiteFinderWeb.AdminController.num(@find_economics.fresh.calls) %></div>
-      <div class="k">fresh finds · <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.fresh.margin_micro) %> each</div>
+      <div class="k">fresh answers · <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.fresh.margin_micro) %> each</div>
     </div>
     <div class="seg">
       <div class="n <%= CsuiteFinderWeb.AdminController.tone(@find_economics.margin_per_find_micro) %>">
         <%= CsuiteFinderWeb.AdminController.micro_usd(@find_economics.margin_per_find_micro) %>
       </div>
-      <div class="k">blended margin per find</div>
+      <div class="k">blended margin per answer</div>
     </div>
   </div>
 

@@ -204,8 +204,37 @@ defmodule CsuiteFinder.MetricsTest do
       assert is_map(data.providers)
     end
 
-    test "the price it prices finds at matches what billing charges" do
-      assert Metrics.find_economics(since()).price_micro == Pricing.charge_for("email.find")
+    test "the headline price is what answers actually sold for, blended" do
+      # There are several billable routes at different prices now, so one
+      # endpoint's list price is not something the margin below can be measured
+      # against. With no traffic there is nothing to average, and it is zero.
+      assert Metrics.find_economics(since()).price_micro == 0
+    end
+
+    test "and it counts every billable route, not just /email/find" do
+      # The panel used to look frozen for anyone whose traffic was company or
+      # people rows, because it silently excluded them.
+      {account, key} = CsuiteFinder.Fixtures.account_with_key(usd: 5.0)
+
+      {:ok, _} =
+        CsuiteFinder.Billing.settle(%{
+          account: account,
+          api_key: key_row(key),
+          endpoint: "company.people",
+          found: true,
+          units: 2,
+          provider_cost_micro: 3_000
+        })
+
+      economics = Metrics.find_economics(since())
+
+      assert economics.calls == 1
+      assert economics.price_micro == Pricing.charge_for("company.people") * 2
+    end
+
+    defp key_row(plaintext) do
+      {:ok, _account, key} = CsuiteFinder.Accounts.authenticate(plaintext)
+      key
     end
   end
 end

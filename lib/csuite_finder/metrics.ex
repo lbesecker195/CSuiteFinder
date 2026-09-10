@@ -104,9 +104,16 @@ defmodule CsuiteFinder.Metrics do
   """
   @spec find_economics(DateTime.t()) :: map()
   def find_economics(since) do
+    # Every billable endpoint, not just /email/find. The panel used to count
+    # that one route, which was true when it was the only thing that charged —
+    # and became quietly misleading as four more per-result endpoints arrived. A
+    # customer sweeping /email/company/people produced no data here at all, so
+    # the section looked frozen while the business was working.
+    billable = billable_endpoints()
+
     rows =
       from(e in UsageEvent,
-        where: e.inserted_at >= ^since and e.endpoint == "email.find",
+        where: e.inserted_at >= ^since and e.endpoint in ^billable,
         group_by: e.cache_hit,
         select: %{
           cache_hit: e.cache_hit,
@@ -129,8 +136,13 @@ defmodule CsuiteFinder.Metrics do
     total_charged = cached.charged_micro + fresh.charged_micro
     revenue_micro = total_charged
 
+    # What an answer sells for on average, rather than one endpoint's list
+    # price. With several billable routes at different prices, the blend is the
+    # only figure the margin below can honestly be measured against.
+    avg_revenue_micro = per_call(revenue_micro, total_calls)
+
     %{
-      price_micro: Pricing.charge_for("email.find"),
+      price_micro: avg_revenue_micro,
       calls: total_calls,
       cached: segment(cached),
       fresh: segment(fresh),
@@ -139,7 +151,7 @@ defmodule CsuiteFinder.Metrics do
       margin_per_find_micro: per_call(revenue_micro - total_cost, total_calls),
       # Above this share of cached finds, the blend is profitable. Below it, each
       # additional find loses money — the single most useful number on the page.
-      breakeven_cache_rate: breakeven_cache_rate(fresh)
+      breakeven_cache_rate: breakeven_cache_rate(fresh, avg_revenue_micro)
     }
   end
 
@@ -155,17 +167,26 @@ defmodule CsuiteFinder.Metrics do
   # A cached find costs us nothing and earns the token price. A fresh one earns
   # the same and costs whatever the providers charged. Solving for the mix that
   # nets to zero gives the hit rate we must hold.
-  defp breakeven_cache_rate(%{calls: 0}), do: nil
+  defp breakeven_cache_rate(%{calls: 0}, _revenue), do: nil
+  defp breakeven_cache_rate(_fresh, revenue) when revenue <= 0, do: nil
 
-  defp breakeven_cache_rate(fresh) do
-    price = Pricing.charge_for("email.find")
+  # The share of answers that must come from cache for the blend to break even.
+  # Zero whenever a fresh answer already earns more than it costs, which is the
+  # usual state here and is why this marker sits at 0% rather than being stuck.
+  defp breakeven_cache_rate(fresh, revenue) do
     avg_fresh_cost = fresh.provider_cost_micro / fresh.calls
 
-    cond do
-      avg_fresh_cost <= price -> 0.0
-      price == 0 -> nil
-      true -> Float.round((avg_fresh_cost - price) / avg_fresh_cost, 4)
+    if avg_fresh_cost <= revenue do
+      0.0
+    else
+      Float.round((avg_fresh_cost - revenue) / avg_fresh_cost, 4)
     end
+  end
+
+  defp billable_endpoints do
+    Pricing.list()
+    |> Enum.filter(fn {_endpoint, micro} -> micro > 0 end)
+    |> Enum.map(&elem(&1, 0))
   end
 
   # ---------------------------------------------------------------- timeseries
