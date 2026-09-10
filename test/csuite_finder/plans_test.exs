@@ -41,8 +41,8 @@ defmodule CsuiteFinder.PlansTest do
   end
 
   describe "the free trial" do
-    test "is a dollar, and it expires" do
-      assert Pricing.trial_usd() == 1.0
+    test "is bought rather than given, and it expires" do
+      assert Pricing.trial_usd() == 29.99
       assert Pricing.trial_months() == 1
     end
 

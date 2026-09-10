@@ -19,15 +19,10 @@
 
   <div class="card">
     <h3 style="margin:0 0 4px;font-size:17px">New here?</h3>
-    <p class="muted" style="margin-bottom:16px" data-aud="developer" hidden>
-      Registering is instant and gives you <strong>$<%= @trial_usd %> of free credit</strong>
-      — real lookups, no card. It expires after <%= @trial_months %> month; credit you buy
-      does not.
-    </p>
-    <p class="muted" style="margin-bottom:16px" data-aud="sales">
-      Registering is instant and free. There is no free credit on this side — a
-      <strong>$<%= @trial_price %> trial</strong> buys $<%= @trial_price %> of credit and every
-      lookup a seat gets, for <%= @trial_months %> month.
+    <p class="muted" style="margin-bottom:16px">
+      Registering is instant and free, and gets you a key. There is no free tier: a
+      <strong>$<%= @trial_price %> trial</strong> buys $<%= @trial_price %> of credit for
+      <%= @trial_months %> month. Credit you buy afterwards does not expire.
     </p>
     <div class="row">
       <div>
@@ -384,7 +379,9 @@
       key = res.body.api_key; save(key);
       $("newkeyvalue").textContent = key;
       show("newkey");
-      say("Account created — $" + (res.body.credit_granted_usd || 0).toFixed(2) + " of free credit added.", "ok");
+      // No credit comes with an account any more, so the next step is the
+      // thing to say rather than a balance of zero.
+      say("Account created. Buy the trial below to start looking things up.", "ok");
     });
   });
 

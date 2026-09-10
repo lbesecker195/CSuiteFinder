@@ -236,8 +236,8 @@ defmodule CsuiteFinder.Billing.PayPal do
   def create_trial_order(%Account{} = account, opts) do
     do_create_order(
       account,
-      Pricing.seat_trial_usd(),
-      Pricing.seat_trial_micro(),
+      Pricing.trial_usd(),
+      Pricing.trial_micro(),
       Keyword.put(opts, :kind, "seat_trial")
     )
   end

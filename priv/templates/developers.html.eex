@@ -1,6 +1,6 @@
 <%= CsuiteFinderWeb.Layout.head(
       title: "For developers — CSuiteFinder API",
-      description: "A JSON API for verified work email addresses. $#{@email_price} an address, billed only for answers. #{@trial_usd} of free credit to start.",
+      description: "A JSON API for verified work email addresses. $#{@email_price} an address, billed only for answers. A $#{@trial_price} trial to start.",
       nav: :developers,
       audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:developers),
@@ -13,7 +13,7 @@
     licence, no sales call. You pay for answers — a lookup that finds nothing is free.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
+    <a class="btn btn-primary" href="/start">Get started — $<%= @trial_price %> trial</a>
     <a class="btn btn-ghost" href="/llms.txt">llms.txt</a>
   </div>
   <p class="cta-note">
@@ -177,7 +177,7 @@ Register for a key, then find the work email for each person in my list.
 Verify every address before you give it to me.</code></pre>
 
 <p class="quiet">
-  It will register itself, take the <%= @trial_usd %> of free credit and start working. If your
+  It will register itself and be ready to work as soon as the trial is paid for. If your
   agent supports remembering instructions, drop the same URL into its project rules
   or <code>AGENTS.md</code> and it will keep the API available for later.
 </p>
@@ -216,8 +216,9 @@ Verify every address before you give it to me.</code></pre>
 <p class="quiet">
   Credit you buy <strong>never expires</strong> and a dollar buys a dollar of it. Purchases
   start at $<%= @min_bundle %> and go through PayPal. Start with
-  <strong><%= @trial_usd %> of free credit</strong> — real lookups, not a preview. Trial
-  credit lasts <%= @trial_months %> month.
+  <strong>$<%= @trial_price %> for a trial</strong> — $<%= @trial_price %> of credit and real
+  lookups, not a preview. Trial credit lasts <%= @trial_months %> month; credit you buy
+  afterwards does not expire.
 </p>
 
 <h3 class="sub-label">Per-endpoint cost</h3>
@@ -263,7 +264,7 @@ Verify every address before you give it to me.</code></pre>
 </div>
 
 <p style="margin-top:26px">
-  <a class="btn btn-primary" href="/start">Get started — <%= @trial_usd %> free credit</a>
+  <a class="btn btn-primary" href="/start">Get started — $<%= @trial_price %> trial</a>
 </p>
 
 <%= CsuiteFinderWeb.Layout.footer(:developer) %>

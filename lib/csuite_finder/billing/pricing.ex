@@ -64,20 +64,12 @@ defmodule CsuiteFinder.Billing.Pricing do
   # no bonus, nothing to reconcile later.
   @bundles [1_000, 2_000, 3_000]
 
-  # Credit granted to a new DEVELOPER account, with no card and no commitment.
-  # It is a grant, so it expires: a trial is an invitation to try the thing this
-  # month, not a dollar someone can hold indefinitely and spend in two years.
-  #
-  # There is no free tier on the seat side. Someone evaluating the seat buys a
-  # trial (see `seat_trial_usd/0`) — a card up front filters for people who
-  # intend to buy, and a seat is sold to teams rather than to drive-by signups.
-  @trial_micro 1_000_000
+  # There is no free tier. Registering gets you an account and a key; a trial is
+  # bought, once, and grants its own value in credit for a month. A card up
+  # front filters for people who intend to use the thing, and it means the
+  # credit someone is trying is the credit they would buy.
   @trial_months 1
-
-  # The paid trial of the seat: one per account, once. It grants its own value
-  # in credit and expires with the month, so it behaves exactly like the seat it
-  # is a trial of — which is the only honest way to trial a thing.
-  @seat_trial_usd 29.99
+  @trial_usd 29.99
 
   @doc "Charge for an endpoint, in micro-USD."
   @spec charge_for(String.t()) :: non_neg_integer()
@@ -95,23 +87,15 @@ defmodule CsuiteFinder.Billing.Pricing do
   @spec micro(number()) :: integer()
   def micro(amount), do: round(amount * @micro)
 
-  @doc "The free trial grant, in micro-USD."
-  @spec trial_micro() :: pos_integer()
-  def trial_micro, do: @trial_micro
-
-  @doc "The free trial grant, in USD."
+  @doc "What a trial costs, in USD. The same either side of the business."
   @spec trial_usd() :: float()
-  def trial_usd, do: usd(@trial_micro)
+  def trial_usd, do: @trial_usd
 
-  @doc "What a trial of the seat costs, in USD."
-  @spec seat_trial_usd() :: float()
-  def seat_trial_usd, do: @seat_trial_usd
+  @doc "What a trial grants, in micro-USD. A dollar for a dollar."
+  @spec trial_micro() :: pos_integer()
+  def trial_micro, do: micro(@trial_usd)
 
-  @doc "What a trial of the seat grants, in micro-USD. A dollar for a dollar."
-  @spec seat_trial_micro() :: pos_integer()
-  def seat_trial_micro, do: micro(@seat_trial_usd)
-
-  @doc "How long the free trial lasts, in months."
+  @doc "How long trial credit lasts, in months."
   @spec trial_months() :: pos_integer()
   def trial_months, do: @trial_months
 
@@ -209,16 +193,16 @@ defmodule CsuiteFinder.Billing.Pricing do
       seat_usd_per_month: seat,
       credit_usd_per_month: seat,
       credit_rolls_over: false,
-      # There is no free trial on this side. Reporting one would be quoting a
-      # product we do not sell.
-      trial_usd: @seat_trial_usd,
+      # There is no free tier at all. Reporting one would be quoting a product
+      # we do not sell.
+      trial_usd: @trial_usd,
       trial_months: @trial_months,
       trial_credit_expires: true,
       billing_rules: [
         "$#{seat} per person per month, billed monthly.",
         "Each seat gets $#{seat} of lookup credit every month.",
         "Unused credit does not roll over — every month starts at $#{seat}.",
-        "Trying it first costs $#{@seat_trial_usd}, once. That credit expires after " <>
+        "Trying it first costs $#{@trial_usd}, once. That credit expires after " <>
           "#{@trial_months} month, the same as a seat's does — it is a trial of the seat, " <>
           "so it behaves like one.",
         "A lookup that finds nothing does not use any credit.",
@@ -233,8 +217,9 @@ defmodule CsuiteFinder.Billing.Pricing do
       currency: "USD",
       prices_usd: list_usd(),
       minimum_purchase_usd: @min_bundle_usd,
-      free_trial_usd: trial_usd(),
-      free_trial_months: @trial_months,
+      trial_usd: @trial_usd,
+      trial_months: @trial_months,
+      trial_credit_expires: true,
       purchase_amounts_usd: @bundles,
       billing_rules: [
         "Charged per answer: $#{:erlang.float_to_binary(usd(@prices["email.find"]), [:compact, decimals: 4])} an email address, $#{:erlang.float_to_binary(usd(@prices["phone.find"]), [:compact, decimals: 4])} a phone number.",

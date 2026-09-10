@@ -2,7 +2,7 @@
 
 > Turn a person's name and their company's domain into their work email address,
 > then verify it, identify who is behind an address, and look up the company.
-> Self-serve: one POST gets you a key and <%= @trial_usd %> of free credit.
+> Self-serve: one POST gets you a key, and a $<%= @trial_price %> trial gets you credit.
 
 This file is for AI agents. It is generated from the live service, so the prices
 below are the prices you will be charged. Everything here is callable now.
@@ -30,8 +30,11 @@ curl -X POST <%= @base_url %>/csuitefinder/register \
 ```
 
 Returns `api_key` once and never again — only a hash is stored, so it cannot be
-resent. New accounts get <%= @trial_usd %> of free credit, good for
-<%= @trial_months %> month from sign-up.
+resent. Registering grants no credit — there is no free tier. A trial is
+$<%= @trial_price %>, once per account, and buys $<%= @trial_price %> of credit
+good for <%= @trial_months %> month. Buy it with
+`POST /csuitefinder/billing/trial`, which answers with a PayPal approval URL.
+Credit bought afterwards does not expire.
 
 Send it on every request:
 
@@ -58,8 +61,8 @@ Buy credit in amounts of <%= Enum.map_join(@bundles, ", ", &("$" <> &1.usd)) %>.
 A dollar buys a dollar of credit. Purchases start at $<%= @min_bundle %>, paid
 through PayPal, and **credit you buy never expires**.
 
-Credit you are *given* does expire: the free trial, and the monthly allowance
-that comes with a seat. `GET /csuitefinder/billing/balance` reports the split as
+Credit you are *given* does expire: the trial, and the monthly allowance that
+comes with a seat. `GET /csuitefinder/billing/balance` reports the split as
 `purchased_usd`, `granted_usd` and `granted_expires_at`. Granted credit is spent
 first, so a monthly allowance is never left to lapse while purchased credit is
 drawn down.
@@ -85,8 +88,9 @@ is a row nobody can get back, and a verdict you deleted it on can be wrong.
 
 ### /demo
 Spend up to $1 and come back with as many C-suite addresses as it buys. What to
-run when someone wants to see what this does rather than read about it — a new
-developer account starts with exactly $1 of credit, so this is that dollar.
+run when someone wants to see what this does rather than read about it. It
+spends the account's own credit, so buy the $<%= @trial_price %> trial first if
+there is none.
 
 1. `/company/search?industry=…&limit=20` — about $0.05, and any industry will do.
    Skip it if they named the companies.

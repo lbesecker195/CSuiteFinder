@@ -20,14 +20,17 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
   end
 
   describe "registering" do
-    test "a developer still gets the free dollar" do
-      {account, _} = account("developer")
+    test "nobody gets free credit, on either side" do
+      for audience <- ["developer", "sales"] do
+        {account, _} = account(audience)
 
-      assert account.granted_micro == Pricing.trial_micro()
-      assert account.trial_granted_at
+        assert account.granted_micro == 0
+        assert account.balance_micro == 0
+        assert account.trial_granted_at == nil
+      end
     end
 
-    test "a seat account gets nothing, and cannot spend" do
+    test "an account gets nothing, and cannot spend" do
       {account, _} = account("sales")
 
       assert account.granted_micro == 0
@@ -42,8 +45,8 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
 
   describe "the price" do
     test "is $29.99 and buys its own value in credit" do
-      assert Pricing.seat_trial_usd() == 29.99
-      assert Pricing.seat_trial_micro() == 29_990_000
+      assert Pricing.trial_usd() == 29.99
+      assert Pricing.trial_micro() == 29_990_000
     end
 
     test "is quoted to a seat holder in the terms, with no free trial alongside" do
@@ -65,8 +68,8 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
         |> Payment.changeset(%{
           account_id: account.id,
           paypal_order_id: "ORDER-#{System.unique_integer([:positive])}",
-          amount_micro: Pricing.seat_trial_micro(),
-          credit_micro: Pricing.seat_trial_micro(),
+          amount_micro: Pricing.trial_micro(),
+          credit_micro: Pricing.trial_micro(),
           kind: "seat_trial"
         })
         |> Repo.insert()
@@ -74,14 +77,14 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
       assert payment.kind == "seat_trial"
 
       # What capture would do, without PayPal in the way.
-      {:ok, _} = Billing.grant(account, Pricing.seat_trial_micro(), Pricing.trial_expires_at())
+      {:ok, _} = Billing.grant(account, Pricing.trial_micro(), Pricing.trial_expires_at())
 
       account
       |> Account.changeset(%{trial_granted_at: DateTime.utc_now()})
       |> Repo.update!()
 
       reloaded = Repo.get!(Account, account.id)
-      assert reloaded.granted_micro == Pricing.seat_trial_micro()
+      assert reloaded.granted_micro == Pricing.trial_micro()
       assert reloaded.balance_micro == 0
       assert reloaded.granted_expires_at
     end
@@ -90,8 +93,13 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
   describe "one per account" do
     test "a second trial is refused rather than sold" do
       {account, _} = account("developer")
-      # The free grant already stamped it, which is the same gate.
-      assert account.trial_granted_at
+      assert account.trial_granted_at == nil
+
+      # What a captured trial stamps.
+      {:ok, account} =
+        account
+        |> Account.changeset(%{trial_granted_at: DateTime.utc_now()})
+        |> Repo.update()
 
       assert {:error, :trial_already_taken} =
                CsuiteFinder.Billing.PayPal.create_trial_order(account)
@@ -137,15 +145,15 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
       assert html =~ "the credit lasts"
     end
 
-    test "the signup card promises the right thing to each audience", %{conn: conn} do
-      # Telling a seat buyer they get free credit is a promise we no longer
-      # keep, and they find out at the first lookup.
+    test "the signup card promises no credit to anyone", %{conn: conn} do
+      # Telling someone they get free credit is a promise we no longer keep, and
+      # they would find out at their first lookup.
       html = conn |> get(~p"/account") |> html_response(200)
 
-      assert html =~ "There is no free credit on this side"
-      # And the developer's dollar expires too, which was never stated here.
-      assert html =~ "It expires after 1 month; credit you buy\n      does not." or
-               html =~ "It expires after 1 month"
+      assert html =~ "There is no free tier"
+      assert html =~ "$29.99 trial"
+      assert html =~ "Credit you buy afterwards does not expire"
+      refute html =~ "of free credit"
     end
 
     test "and the account page says it at the moment of payment", %{conn: conn} do

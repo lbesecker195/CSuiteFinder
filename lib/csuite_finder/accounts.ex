@@ -17,8 +17,6 @@ defmodule CsuiteFinder.Accounts do
 
   alias CsuiteFinder.Accounts.{Account, ApiKey}
   alias CsuiteFinder.Audience
-  alias CsuiteFinder.Billing
-  alias CsuiteFinder.Billing.Pricing
   alias CsuiteFinder.Repo
 
   @key_prefix "csf_live_"
@@ -59,47 +57,31 @@ defmodule CsuiteFinder.Accounts do
   `trial_granted_at` is the guard against re-registering the same address for
   another free grant — the trial is per account, once.
 
-  The free trial is for developers only, and it expires (see
-  `Pricing.trial_months/0`). There is no free tier on the seat side: someone
-  evaluating the seat buys a trial instead, which is what
-  `CsuiteFinder.Billing.PayPal.create_trial_order/2` sells. A sales account
-  therefore starts at zero and is refused every lookup until it pays — which is
-  the intended shape, not an oversight.
+  Registering grants no credit, on either side of the business. There is no free
+  tier: a trial is bought once, for $#{CsuiteFinder.Billing.Pricing.trial_usd()},
+  and expires with the month — see
+  `CsuiteFinder.Billing.PayPal.create_trial_order/2`. A new account therefore
+  starts at zero and is refused every lookup until it pays, which is the
+  intended shape rather than an oversight.
+
+  `trial_granted_at` is still the guard that makes the trial once-per-account;
+  it is now stamped when the payment captures rather than at registration.
   """
   @spec register(map()) ::
           {:ok, %{account: Account.t(), api_key: String.t(), credit_granted_micro: integer()}}
           | {:error, Ecto.Changeset.t()}
   def register(attrs) do
     Repo.transaction(fn ->
-      with {:ok, account} <- create_account(attrs),
-           grant = free_trial_for(account),
-           {:ok, account} <- grant_trial(account, grant) do
-        {:ok, plaintext, _key} = create_api_key(account, "initial key")
-        %{account: account, api_key: plaintext, credit_granted_micro: grant}
-      else
-        {:error, changeset} -> Repo.rollback(changeset)
+      case create_account(attrs) do
+        {:ok, account} ->
+          {:ok, plaintext, _key} = create_api_key(account, "initial key")
+          %{account: account, api_key: plaintext, credit_granted_micro: 0}
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
       end
     end)
   end
-
-  # Developers get a dollar to try the API with. Seat buyers do not — theirs is
-  # a paid trial, so handing them free credit here would give it away.
-  defp free_trial_for(%Account{audience: audience}) do
-    if Audience.developer?(audience), do: Pricing.trial_micro(), else: 0
-  end
-
-  defp grant_trial(account, 0), do: {:ok, account}
-
-  defp grant_trial(%Account{trial_granted_at: nil} = account, micro) do
-    now = DateTime.utc_now()
-    {:ok, account} = Billing.grant(account, micro, Pricing.trial_expires_at(now))
-
-    account
-    |> Account.changeset(%{trial_granted_at: now})
-    |> Repo.update()
-  end
-
-  defp grant_trial(account, _micro), do: {:ok, account}
 
   @spec get_account(integer()) :: Account.t() | nil
   def get_account(id), do: Repo.get(Account, id)

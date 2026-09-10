@@ -21,6 +21,11 @@ defmodule CsuiteFinder.Accounts.Account do
     field :granted_micro, :integer, default: 0
     field :granted_expires_at, :utc_datetime_usec
     field :trial_granted_at, :utc_datetime_usec
+    # Optional. An account with no password signs in with its API key, which is
+    # every account that existed before passwords did.
+    field :password_hash, :string
+    field :failed_logins, :integer, default: 0
+    field :locked_until, :utc_datetime_usec
     field :status, :string, default: "active"
     # Which half of the business this account is in. See CsuiteFinder.Audience:
     # it decides which prices, which purchase path and which nav they see.
@@ -41,7 +46,10 @@ defmodule CsuiteFinder.Accounts.Account do
       :granted_expires_at,
       :trial_granted_at,
       :status,
-      :audience
+      :audience,
+      :password_hash,
+      :failed_logins,
+      :locked_until
     ])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/)

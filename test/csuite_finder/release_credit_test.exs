@@ -27,9 +27,9 @@ defmodule CsuiteFinder.ReleaseCreditTest do
     reloaded = Repo.get!(Account, account.id)
 
     assert reloaded.balance_micro == Pricing.micro(1_000)
-    # The trial it registered with is untouched, and still the expiring kind.
-    assert reloaded.granted_micro == Pricing.trial_micro()
-    assert Billing.available_micro(reloaded) == Pricing.micro(1_000) + Pricing.trial_micro()
+    # Registering grants nothing, so this is the whole balance.
+    assert reloaded.granted_micro == 0
+    assert Billing.available_micro(reloaded) == Pricing.micro(1_000)
   end
 
   test "the credit survives the granted balance lapsing" do

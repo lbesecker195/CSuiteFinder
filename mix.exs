@@ -48,7 +48,11 @@ defmodule CsuiteFinder.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+      # Password hashing. A small C NIF rather than a pure-Elixir KDF: PBKDF2 is
+      # in OTP and would save a dependency, but bcrypt is markedly harder to
+      # attack on a GPU and this is the one place that matters.
+      {:bcrypt_elixir, "~> 3.0"}
     ]
   end
 

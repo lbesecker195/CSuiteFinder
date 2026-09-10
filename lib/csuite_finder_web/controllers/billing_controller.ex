@@ -158,7 +158,7 @@ defmodule CsuiteFinderWeb.BillingController do
            ) do
       json(conn, %{
         paypal_order_id: payment.paypal_order_id,
-        amount_usd: Pricing.seat_trial_usd(),
+        amount_usd: Pricing.trial_usd(),
         credit_usd: Pricing.usd(payment.credit_micro),
         expires_in_months: Pricing.trial_months(),
         approve_url: PayPal.approve_link(response),

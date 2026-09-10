@@ -199,7 +199,9 @@ defmodule CsuiteFinder.GrantedCreditTest do
   end
 
   describe "the free trial" do
-    test "registering grants expiring credit, not a permanent balance" do
+    test "registering grants nothing at all" do
+      # There is no free tier. An account starts empty and stays empty until a
+      # trial is bought, which is the point of removing the free one.
       {:ok, %{account: account}} =
         Accounts.register(%{
           email: "trial#{System.unique_integer([:positive])}@test.com",
@@ -207,20 +209,23 @@ defmodule CsuiteFinder.GrantedCreditTest do
         })
 
       assert account.balance_micro == 0
-      assert account.granted_micro == Pricing.trial_micro()
-      assert account.granted_expires_at
-
-      # One month, give or take the clock ticking between the two calls.
-      expected = Pricing.trial_expires_at()
-      assert abs(DateTime.diff(account.granted_expires_at, expected)) < 5
+      assert account.granted_micro == 0
+      assert account.granted_expires_at == nil
+      assert account.trial_granted_at == nil
     end
 
-    test "the trial is spendable while it lasts and worthless after" do
+    test "a bought trial is spendable while it lasts and worthless after" do
       {:ok, %{account: account}} =
         Accounts.register(%{
           email: "trial#{System.unique_integer([:positive])}@test.com",
           audience: "developer"
         })
+
+      # Empty until paid for.
+      assert {:error, :insufficient_credit, _} = Billing.ensure_funds(account, "email.find")
+
+      {:ok, account} =
+        Billing.grant(account, Pricing.trial_micro(), Pricing.trial_expires_at())
 
       assert Billing.ensure_funds(account, "email.find") == :ok
 

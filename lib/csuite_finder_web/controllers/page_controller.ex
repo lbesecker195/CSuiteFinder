@@ -132,9 +132,8 @@ defmodule CsuiteFinderWeb.PageController do
       # the price of a work email — the same arithmetic the plan is built on,
       # not a number typed into markup.
       sheet_rows: delimit(Plans.seat_lookups().emails),
-      trial_usd: "$" <> format(Pricing.trial_usd()),
       trial_months: Pricing.trial_months(),
-      trial_price: :erlang.float_to_binary(Pricing.seat_trial_usd(), decimals: 2),
+      trial_price: :erlang.float_to_binary(Pricing.trial_usd(), decimals: 2),
       bundles:
         for b <- Pricing.bundles() do
           %{

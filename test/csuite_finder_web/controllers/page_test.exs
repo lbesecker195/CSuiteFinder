@@ -516,7 +516,9 @@ defmodule CsuiteFinderWeb.PageTest do
 
       assert body =~ "A dollar buys a dollar of credit"
 
-      assert body =~ "of free credit"
+      # There is no free tier, and the file must not imply one.
+      refute body =~ "of free credit"
+      assert body =~ "$29.99"
     end
 
     test "documents the discovery route, so an agent knows where to start", %{conn: conn} do
@@ -714,7 +716,7 @@ defmodule CsuiteFinderWeb.PageTest do
 
       assert html =~ "Get started"
       assert html =~ "/llms.txt"
-      assert html =~ "free credit"
+      assert html =~ "trial"
     end
 
     test "offers a path for people without an assistant", %{conn: conn} do
@@ -740,7 +742,9 @@ defmodule CsuiteFinderWeb.PageTest do
       assert body["prices_usd"]["phone.find"] == 0.025
       assert body["prices_usd"]["email.enrich"] == 0
       assert body["minimum_purchase_usd"] == 1_000
-      assert body["free_trial_usd"] == 1.0
+      assert body["trial_usd"] == 29.99
+      assert body["trial_credit_expires"] == true
+      refute Map.has_key?(body, "free_trial_usd")
       # No token vocabulary left anywhere in the published terms.
       refute Jason.encode!(body) =~ "token"
     end

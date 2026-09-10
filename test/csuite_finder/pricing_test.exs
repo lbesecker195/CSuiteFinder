@@ -74,14 +74,14 @@ defmodule CsuiteFinder.PricingTest do
     end
   end
 
-  describe "the free trial" do
-    test "is $1 of real credit" do
-      assert Pricing.trial_usd() == 1.0
-      assert Pricing.trial_micro() == 1_000_000
+  describe "the trial" do
+    test "is bought, not given" do
+      assert Pricing.trial_usd() == 29.99
+      assert Pricing.trial_micro() == 29_990_000
     end
 
-    test "buys 400 email lookups" do
-      assert div(Pricing.trial_micro(), Pricing.charge_for("email.find")) == 400
+    test "buys nearly twelve thousand email lookups" do
+      assert div(Pricing.trial_micro(), Pricing.charge_for("email.find")) == 11_996
     end
   end
 
@@ -91,7 +91,9 @@ defmodule CsuiteFinder.PricingTest do
 
       assert terms.currency == "USD"
       assert terms.prices_usd["phone.find"] == 0.025
-      assert terms.free_trial_usd == 1.0
+      assert terms.trial_usd == 29.99
+      assert terms.trial_credit_expires == true
+      refute Map.has_key?(terms, :free_trial_usd)
       refute Jason.encode!(terms) =~ "token"
     end
 

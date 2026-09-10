@@ -44,9 +44,9 @@
 </div>
 
 <p class="cta-note" style="margin-top:18px">
-  Sales starts with a <a href="/account#pricing">$<%= @trial_price %> trial</a>, good for
-  <%= @trial_months %> month; developers start with <a href="/account">free credit</a>.
-  No call either way.
+  Both start the same way: a <a href="/account#pricing">$<%= @trial_price %> trial</a>, once,
+  good for <%= @trial_months %> month. No free tier, no call, no card details left with anyone
+  but PayPal.
 </p>
 
 <%= CsuiteFinderWeb.Layout.sheet(

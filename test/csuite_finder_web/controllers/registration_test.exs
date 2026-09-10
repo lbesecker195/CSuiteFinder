@@ -6,38 +6,47 @@ defmodule CsuiteFinderWeb.RegistrationTest do
   alias CsuiteFinder.{Repo, TregStub}
 
   describe "POST /csuitefinder/register" do
-    test "issues a key and the free trial to a developer in one call", %{conn: conn} do
-      body =
-        conn
-        |> post(~p"/csuitefinder/register", %{email: "new@company.com", audience: "developer"})
-        |> json_response(201)
+    test "issues a key and nothing else", %{conn: conn} do
+      # There is no free tier on either side. Registering gets you an account
+      # and a key; credit is bought.
+      for audience <- ["developer", "sales"] do
+        body =
+          conn
+          |> post(~p"/csuitefinder/register", %{
+            email: "new#{System.unique_integer([:positive])}@company.com",
+            audience: audience
+          })
+          |> json_response(201)
 
-      assert body["credit_granted_usd"] == 1.0
-      assert body["balance_usd"] == 1.0
-      assert String.starts_with?(body["api_key"], "csf_live_")
-      assert body["api_key_notice"] =~ "shown once"
+        assert body["credit_granted_usd"] == 0
+        assert body["balance_usd"] == 0
+        assert String.starts_with?(body["api_key"], "csf_live_")
+        assert body["api_key_notice"] =~ "shown once"
+      end
     end
 
-    test "gives a seat account a key and nothing else", %{conn: conn} do
-      # There is no free tier on the seat side. Registering gets them an
-      # account; the trial is bought, not granted.
-      body =
-        conn
-        |> post(~p"/csuitefinder/register", %{email: "seat@company.com"})
-        |> json_response(201)
-
-      assert body["audience"] == "sales"
-      assert body["credit_granted_usd"] == 0
-      assert body["balance_usd"] == 0
-      assert String.starts_with?(body["api_key"], "csf_live_")
-    end
-
-    test "the issued key works immediately", %{conn: conn} do
+    test "the issued key is refused until a trial is bought", %{conn: conn} do
       key =
         conn
         |> post(~p"/csuitefinder/register", %{email: "new@company.com", audience: "developer"})
         |> json_response(201)
         |> Map.fetch!("api_key")
+
+      # A key with nothing behind it is a key that cannot spend.
+      build_conn()
+      |> put_req_header("authorization", "Bearer " <> key)
+      |> get(~p"/csuitefinder/email/find?full_name=Jane%20Doe&domain=acme.com")
+      |> json_response(402)
+
+      # What buying the trial does.
+      account = CsuiteFinder.Repo.get_by(CsuiteFinder.Accounts.Account, email: "new@company.com")
+
+      {:ok, _} =
+        CsuiteFinder.Billing.grant(
+          account,
+          CsuiteFinder.Billing.Pricing.trial_micro(),
+          CsuiteFinder.Billing.Pricing.trial_expires_at()
+        )
 
       TregStub.stub(fn "thecompaniesapi.companies.email_pattern", _ ->
         {200, %{"patterns" => [%{"pattern" => "[F].[L]", "usagePercentage" => 95.0}]}, 1_900}
@@ -53,9 +62,9 @@ defmodule CsuiteFinderWeb.RegistrationTest do
     end
 
     test "the trial is enough to actually try the API" do
-      # $1 at $0.0025 an address is 400 real lookups, with every follow-up
-      # endpoint included on top.
-      assert div(Pricing.trial_micro(), Pricing.charge_for("email.find")) == 400
+      # $29.99 at $0.0025 an address is close to twelve thousand real lookups,
+      # with every follow-up endpoint included on top.
+      assert div(Pricing.trial_micro(), Pricing.charge_for("email.find")) > 10_000
     end
 
     test "rejects a duplicate email rather than granting a second trial",

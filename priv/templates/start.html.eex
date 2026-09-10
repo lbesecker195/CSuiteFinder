@@ -1,6 +1,6 @@
 <%= CsuiteFinderWeb.Layout.head(
       title: "Get started — CSuiteFinder",
-      description: "Point your agent at llms.txt and it knows every endpoint, parameter and price. #{@trial_usd} of free credit to start.",
+      description: "Point your agent at llms.txt and it knows every endpoint, parameter and price. A $#{@trial_price} trial to start.",
       nav: :start,
       audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:start)
@@ -43,8 +43,8 @@
     <h3>It sets itself up</h3>
     <p>
       That file is written for machines. Your assistant reads it, registers an account,
-      and gets <strong><%= @trial_usd %> of free credit</strong> — no card, no form, no
-      waiting for anyone to approve you. It knows every endpoint and what each one costs,
+      and asks you to buy the <strong>$<%= @trial_price %> trial</strong> — no form, no
+      call, no waiting for anyone to approve you. It knows every endpoint and what each costs,
       because the file is generated from the live service.
     </p>
     <p>
@@ -122,9 +122,9 @@
 
 <h3 class="sub-label">In your browser</h3>
 <p class="quiet" data-signed="out">
-  <a href="/account"><strong>Open your account</strong></a>, enter your email, and you have a key
-  and <%= @trial_usd %> of credit. The same page shows your balance, your usage and lets you buy
-  more — no headers, no terminal.
+  <a href="/account"><strong>Open your account</strong></a>, enter your email, and you have a
+  key. Buy the $<%= @trial_price %> trial on the same page and you have <%= @trial_months %>
+  month of credit, plus your balance, your usage and a way to top up — no headers, no terminal.
 </p>
 <p class="quiet" data-signed="in" hidden>
   <a href="/account"><strong>Your account page</strong></a> shows your balance, what you have
@@ -155,8 +155,9 @@ curl -H "Authorization: Bearer $CSF_KEY" \
 <h2 class="section-label">What it costs</h2>
 
 <p class="quiet" data-signed="out">
-  Your first <strong><%= @trial_usd %> of credit are free</strong> — real lookups, not a
-  limited preview. After that you pay <strong>$<%= @email_price %> per email address</strong>,
+  A trial is <strong>$<%= @trial_price %>, once</strong>, and buys $<%= @trial_price %> of
+  credit for <%= @trial_months %> month — real lookups, not a limited preview. After that you
+  pay <strong>$<%= @email_price %> per email address</strong>,
   and nothing at all for deliverability checks, identity lookups, company
   data or email formats. A lookup that finds nothing is free.
 </p>
