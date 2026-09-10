@@ -81,37 +81,31 @@
 
 <h2 class="section-label" id="pricing">Pricing</h2>
 
-<!-- Two prices, one visitor. Whichever door they have already been through is
-     the one they see here; a first-time visitor sees the seat price, which is
-     the one that is safe to show anybody. -->
-<div data-aud="sales">
-  <div class="pricebox">
-    <span class="price">$<%= @seat_usd %><span class="per">per person, per month</span></span>
-    <p>
-      Every seat gets <strong>$<%= @seat_usd %> of lookup credit</strong> each month —
-      work emails, deliverability checks, identity lookups, company data. Unused credit
-      does not roll over. Cancel any time.
-    </p>
-    <a class="btn btn-primary" href="/teams">See the seat plan</a>
-  </div>
-</div>
-
-<div data-aud="developer" hidden>
-  <div class="pricebox">
-    <span class="price">Per answer<span class="per">nothing for a lookup that finds nothing</span></span>
-    <p>
-      Buy credit and spend it as you go. Credit you buy never expires, and a dollar
-      buys a dollar of it.
-    </p>
-    <a class="btn btn-primary" href="/developers">See the API and prices</a>
-  </div>
+<!-- One card, not two. The trial is the same either side of the business now,
+     and the doors above have already said which product the visitor is buying
+     into — what this has to do is get them started, and the trial price is the
+     only number that does that. A seat price is the right thing to quote
+     someone who has decided and the wrong thing to put in front of someone who
+     has not, so it waits until the note below. -->
+<div class="pricebox">
+  <span class="price">$<%= @trial_price %><span class="per">once — a month to try it properly</span></span>
+  <p>
+    $<%= @trial_price %> of credit and every lookup either plan gets: work emails,
+    deliverability checks, identity lookups, company data. That is around
+    <%= @trial_emails %> verified work email addresses, and you have
+    <%= @trial_months %> month to spend it. No subscription starts, and nothing
+    renews on its own.
+  </p>
+  <a class="btn btn-primary" href="/account">Start your trial</a>
 </div>
 
 <p class="cta-note" style="margin-top:16px">
-  <span data-aud="sales">Trying it first is $<%= @trial_price %>, once, and the credit lasts
-  <%= @trial_months %> month. Building on this instead?
-  <a href="/developers">The developer plan is here →</a></span>
-  <span data-aud="developer" hidden>Buying for a sales team instead? <a href="/teams">The seat plan is here →</a></span>
+  <span data-aud="sales">After that, a seat is $<%= @seat_usd %> a month per person and
+  carries $<%= @seat_usd %> of credit every month.
+  <a href="/teams">See the seat plan →</a></span>
+  <span data-aud="developer" hidden>After that you buy credit and spend it per answer —
+  a dollar buys a dollar of it, and it never expires.
+  <a href="/developers">See the API and prices →</a></span>
 </p>
 
 <%= CsuiteFinderWeb.Layout.footer() %>

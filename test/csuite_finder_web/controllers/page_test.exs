@@ -72,21 +72,37 @@ defmodule CsuiteFinderWeb.PageTest do
       assert rest == Enum.sort(rest)
     end
 
-    test "and dearest first inside each family", %{conn: conn} do
+    test "the flagship leads its family and the odd one out sinks", %{conn: conn} do
+      # Price order with two deliberate exceptions: email.find is what people
+      # buy, so it goes first whatever it costs, and email.linkedin is six times
+      # dearer for a question most callers do not have, so leading with it would
+      # price the whole family wrong in the reader's head.
       html = conn |> get(~p"/developers") |> html_response(200)
 
       [_, email_block | _] = String.split(html, ~s|scope="colgroup">|)
 
+      endpoints =
+        Regex.scan(~r{<code>(email[\w.]+)</code>}, email_block) |> Enum.map(&List.last/1)
+
+      assert hd(endpoints) == "email.find"
+      assert List.last(endpoints) == "email.linkedin"
+    end
+
+    test "and dearest first in between", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      # The phone family has no exceptions, so it shows the plain rule.
+      [_, _email, phone | _] = String.split(html, ~s|scope="colgroup">|)
+
       prices =
-        Regex.scan(~r{<td class="num">(?:\$([\d.]+)|included)</td>}, email_block)
+        Regex.scan(~r{<td class="num">(?:\$([\d.]+)|included)</td>}, phone)
         |> Enum.map(fn
-          [_, ""] -> 0.0
           [_, value] -> String.to_float(value)
           [_] -> 0.0
         end)
 
-      assert prices == Enum.sort(prices, :desc), "email prices are not descending"
-      assert hd(prices) == Pricing.price_usd("email.linkedin")
+      assert prices == Enum.sort(prices, :desc), "phone prices are not descending"
+      assert hd(prices) == Pricing.price_usd("phone.find")
     end
   end
 

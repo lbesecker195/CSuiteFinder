@@ -142,7 +142,22 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
       html = conn |> get(~p"/") |> html_response(200)
 
       assert html =~ "good for\n  1 month" or html =~ "good for 1 month"
-      assert html =~ "the credit lasts"
+      assert html =~ "you have\n    1 month to spend it" or html =~ "1 month to spend it"
+    end
+
+    test "and the card at the foot sells the trial, not the seat", %{conn: conn} do
+      # A $999 seat is the right price to quote someone who has decided and the
+      # wrong one to put in front of someone who has not.
+      html = conn |> get(~p"/") |> html_response(200)
+      [_, foot] = String.split(html, ~s|id="pricing"|, parts: 2)
+      [card, _] = String.split(foot, "cta-note", parts: 2)
+
+      assert card =~ "$29.99"
+      assert card =~ "Start your trial"
+      refute card =~ "$999"
+
+      # The seat is still named, once the trial has been offered.
+      assert foot =~ "$999 a month per person"
     end
 
     test "the signup card promises no credit to anyone", %{conn: conn} do

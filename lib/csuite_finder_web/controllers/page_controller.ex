@@ -134,6 +134,9 @@ defmodule CsuiteFinderWeb.PageController do
       sheet_rows: delimit(Plans.seat_lookups().emails),
       trial_months: Pricing.trial_months(),
       trial_price: :erlang.float_to_binary(Pricing.trial_usd(), decimals: 2),
+      # What the trial actually buys, in the unit people care about. Derived so
+      # the page cannot advertise a figure the price list disagrees with.
+      trial_emails: delimit(div(Pricing.trial_micro(), Pricing.charge_for("email.find"))),
       bundles:
         for b <- Pricing.bundles() do
           %{
@@ -157,6 +160,17 @@ defmodule CsuiteFinderWeb.PageController do
   # come back here.
   @pinned_families ~w(email phone company)
 
+  # Two deliberate exceptions to price order, both about what a reader should
+  # meet first.
+  #
+  # `email.find` leads its family whatever it costs: it is the product, and the
+  # first number someone sees ought to be the one they will actually pay most
+  # often. `email.linkedin` sinks to the bottom for the mirror reason — it is
+  # six times dearer and answers a question most callers do not have, so leading
+  # with it prices the whole family wrong in the reader's head.
+  @featured ~w(email.find)
+  @demoted ~w(email.linkedin)
+
   defp price_groups do
     Pricing.list_usd()
     |> Enum.group_by(fn {endpoint, _usd} -> family(endpoint) end)
@@ -166,16 +180,24 @@ defmodule CsuiteFinderWeb.PageController do
         family: family,
         rows:
           rows
-          # Descending by price, then alphabetical, so the free ones inside a
-          # family are still in a predictable order rather than whatever the
-          # map happened to hold.
-          |> Enum.sort_by(fn {endpoint, usd} -> {-usd, endpoint} end)
+          # Featured first, demoted last, and descending by price in between —
+          # then alphabetical, so the free ones inside a family keep a
+          # predictable order rather than whatever the map happened to hold.
+          |> Enum.sort_by(fn {endpoint, usd} -> {row_rank(endpoint), -usd, endpoint} end)
           |> Enum.map(fn {endpoint, usd} -> {endpoint, usd, format(usd)} end)
       }
     end)
   end
 
   defp family(endpoint), do: endpoint |> String.split(".") |> hd()
+
+  defp row_rank(endpoint) do
+    cond do
+      endpoint in @featured -> 0
+      endpoint in @demoted -> 2
+      true -> 1
+    end
+  end
 
   defp family_rank(family) do
     case Enum.find_index(@pinned_families, &(&1 == family)) do
