@@ -63,6 +63,10 @@
   .ask .who{font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;
     color:var(--accent);margin-bottom:8px;display:block}
   .ask p{margin:0;font-size:14.5px;font-style:italic;color:var(--text)}
+  /* The demo card carries an instruction as well as a quote, so it gets a
+     second paragraph that is prose rather than something someone said. */
+  .ask.demo{border-color:var(--accent);background:var(--accent-soft)}
+  .ask .plain{font-style:normal;font-size:13.5px;margin-top:9px;color:var(--muted)}
   .timing{display:inline-block;background:var(--accent-soft);color:var(--accent);font-weight:700;
     font-size:12.5px;padding:5px 12px;border-radius:99px;margin-bottom:18px}
   .alt{border-top:1px solid var(--border);margin-top:50px;padding-top:26px}

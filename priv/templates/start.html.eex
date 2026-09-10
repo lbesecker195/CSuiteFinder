@@ -27,12 +27,17 @@
     </p>
     <div class="copyblock" data-signed="out">
       <button class="copybtn" data-copy="prompt1">Copy</button>
-      <pre><code id="prompt1">Read <%= @base_url %>/llms.txt and use the CSuiteFinder API to find work email addresses for me. Register for a free key first, and verify every address before you give it to me.</code></pre>
+      <pre><code id="prompt1">Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `csf_live_...` to be used. Then run /demo</code></pre>
     </div>
+    <p class="quiet" data-signed="out">
+      Swap <code>csf_live_...</code> for your own key — <a href="/account">get one here</a>,
+      it takes a moment. Paste the line with the placeholder still in it and your assistant
+      has nothing to spend.
+    </p>
 
     <div class="copyblock" data-signed="in" hidden>
       <button class="copybtn" data-copy="prompt1-key">Copy</button>
-      <pre><code id="prompt1-key" data-key>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API to find work email addresses for me. My key is CSF_KEY_HERE — send it as the Authorization bearer token, and verify every address before you give it to me.</code></pre>
+      <pre><code id="prompt1-key" data-key>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `CSF_KEY_HERE` to be used. Then run /demo</code></pre>
     </div>
   </div>
 </div>
@@ -40,16 +45,19 @@
 <div class="big-step">
   <span class="n">2</span>
   <div data-signed="out">
-    <h3>It sets itself up</h3>
+    <h3>It reads the file and starts working</h3>
     <p>
-      That file is written for machines. Your assistant reads it, registers an account,
-      and asks you to buy the <strong>$<%= @trial_price %> trial</strong> — no form, no
-      call, no waiting for anyone to approve you. It knows every endpoint and what each costs,
-      because the file is generated from the live service.
+      That file is written for machines. Your assistant reads it and knows every endpoint,
+      every parameter and what each one costs, because the file is generated from the live
+      service. Then it runs the demo off its own bat — no form, no call, no waiting for
+      anyone to approve you.
     </p>
     <p>
-      Ask it to show you the key it created, and keep a copy. We only ever store a hash of
-      it, so it cannot be re-sent.
+      The key goes in the line above. Get one on
+      <a href="/account">your account page</a> and buy the
+      <strong>$<%= @trial_price %> trial</strong> there — that is the credit the demo
+      spends. Keep a copy of the key: we only ever store a hash of it, so it cannot be
+      re-sent to you.
     </p>
   </div>
 
@@ -88,6 +96,16 @@
       <div class="ask">
         <span class="who">Ops</span>
         <p>"Someone emailed me from jhuang@nvidia.com — who are they and what does the company do?"</p>
+      </div>
+      <div class="ask demo">
+        <span class="who">Demo</span>
+        <p>"Run /demo"</p>
+        <p class="plain">
+          Spends up to <strong>$1</strong> of your credit and comes back with as many
+          C-suite emails as that buys — a few hundred, checked for deliverability, in
+          the order they were found. Nothing to set up: <code>llms.txt</code> tells it
+          what to chain. Say a budget or an industry if you want it narrower.
+        </p>
       </div>
     </div>
   </div>

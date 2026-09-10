@@ -573,7 +573,14 @@ defmodule CsuiteFinderWeb.PageTest do
       # The substitution happens in the browser from the visitor's own storage.
       # The server has only a hash and must never render one anyway.
       html = conn |> get(~p"/start") |> html_response(200)
-      refute html =~ "csf_live_"
+
+      # A real key is the prefix followed by 43 characters of url-safe base64.
+      # So the thing to refuse is any secret material after the prefix, not the
+      # prefix itself: the paste-in line shows `csf_live_...` on purpose, so a
+      # reader can recognise the shape of the thing they are meant to swap in.
+      # Refusing the bare prefix would forbid that and catch no secret.
+      refute html =~ ~r/csf_live_[A-Za-z0-9_-]/
+      assert html =~ "csf_live_..."
     end
   end
 
@@ -618,10 +625,16 @@ defmodule CsuiteFinderWeb.PageTest do
 
       commands = Regex.scan(~r/^### (\/[a-z]+)/m, body) |> Enum.map(&List.last/1)
 
-      assert length(commands) == 11, "expected eleven commands, got #{inspect(commands)}"
-      assert "/find" in commands
-      assert "/verify" in commands
-      assert "/demo" in commands
+      assert length(commands) == 10, "expected ten commands, got #{inspect(commands)}"
+
+      # Order is deliberate: the one that shows what this does comes before the
+      # one that explains it.
+      assert ["/demo", "/find" | _] = commands
+
+      # Dropped as a command, because every other command already ends in the
+      # deliverability check. The guidance it carried has to survive that.
+      refute "/verify" in commands
+      assert body =~ "`accept_all` means the server takes everything"
 
       # Without this an agent will try to GET /find and get a 404 it cannot
       # recover from.
