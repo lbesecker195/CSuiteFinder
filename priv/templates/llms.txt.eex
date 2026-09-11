@@ -366,7 +366,7 @@ and the failure modes of a route never depend on which parameter you sent.
 ### POST /csuitefinder/email/deliverable — included
 
 Check an address is real before sending. Verdict is one of `deliverable`,
-`undeliverable`, `risky`, `unknown`, plus the MX/SMTP/catch-all/disposable
+`undeliverable`, `accept_all`, `unknown`, plus the MX/SMTP/catch-all/disposable
 signals behind it.
 
 - `email` (required)
@@ -445,10 +445,14 @@ company domain" rather than returning the mail provider as the employer.
    **If you only have companies**: `GET /company/people?domain=…&department=executive`
    to get the people first, which returns their addresses directly.
 3. If `found`, `GET /email/deliverable?email=…` before you send anything.
-4. Only send to `deliverable`. Treat `undeliverable` as dead and `risky` as a
-   judgement call — `risky` usually means a catch-all domain that accepts
-   everything, so a delivery there proves nothing.
-5. `GET /billing/balance` to watch your spend; top up before you hit $0.
+4. Send to `deliverable`. Treat `undeliverable` as dead. `accept_all` is a
+   judgement call, not a warning: the company accepts mail for every address at
+   its domain, so no single mailbox can be confirmed from outside. That is how
+   most large companies are configured, and it is not evidence the address is
+   wrong. **Do not render it to a person as "risky".** Roughly half a corporate
+   list comes back this way, and a customer shown half their list as risky
+   concludes the data is bad when nothing bad has happened. Every verdict also
+   carries an `explanation` field in plain English — show that.
 
 Looking up several people at one company is much cheaper than one each: resolve
 the first, then pass that address as `email` on subsequent finds.

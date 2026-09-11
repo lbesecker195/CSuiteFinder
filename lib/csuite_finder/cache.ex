@@ -29,7 +29,7 @@ defmodule CsuiteFinder.Cache do
     email_missing: 30 * @day,
     verify_deliverable: 30 * @day,
     verify_undeliverable: 90 * @day,
-    verify_risky: 7 * @day,
+    verify_accept_all: 7 * @day,
     enrichment_provider: 90 * @day,
     enrichment_inferred: 30 * @day,
     company: 60 * @day

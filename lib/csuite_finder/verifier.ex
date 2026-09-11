@@ -4,7 +4,7 @@ defmodule CsuiteFinder.Verifier do
 
   Capped at $0.002, which reaches the three cheapest verifiers treg routes to.
   A verdict is cached with a TTL that depends on the verdict: a dead mailbox
-  stays dead far longer than a "risky" one stays risky.
+  stays dead far longer than a catch-all one stays catch-all.
   """
 
   import Ecto.Query
@@ -99,7 +99,7 @@ defmodule CsuiteFinder.Verifier do
       status: "unknown",
       provider: meta.served_by,
       provider_cost_micro: meta.cost_micro,
-      expires_at: Cache.expires_at(:verify_risky)
+      expires_at: Cache.expires_at(:verify_accept_all)
     })
   end
 
@@ -119,8 +119,14 @@ defmodule CsuiteFinder.Verifier do
     cond do
       signal in ["valid", "deliverable", "ok", "safe"] -> "deliverable"
       signal in ["invalid", "undeliverable", "bad", "not_valid"] -> "undeliverable"
-      signal in ["catch_all", "catch-all", "accept_all", "accept-all"] -> "risky"
-      is_binary(signal) and String.contains?(signal, "risky") -> "risky"
+      signal in ["catch_all", "catch-all", "accept_all", "accept-all"] -> "accept_all"
+      # Some providers call this "risky". We do not pass that word on. A
+      # catch-all domain is most large companies, so about half of corporate
+      # addresses land here — and a verdict that reads as a warning on half the
+      # list tells the customer their emails are dangerous when what actually
+      # happened is that the domain would not answer a question about one
+      # mailbox. The fact is the same; the word was doing harm.
+      is_binary(signal) and String.contains?(signal, "risky") -> "accept_all"
       is_binary(signal) and String.contains?(signal, "unknown") -> "unknown"
       valid == true -> "deliverable"
       valid == false and is_nil(signal) -> "undeliverable"
@@ -128,9 +134,38 @@ defmodule CsuiteFinder.Verifier do
     end
   end
 
+  @doc """
+  The verdict in plain words, for whatever renders it.
+
+  `accept_all` is the one that matters here. It is not a warning about the
+  address — it is the domain declining to answer a question about a single
+  mailbox, which is how most large companies are configured. Saying that
+  plainly is the difference between a customer reading half their list as
+  dangerous and reading it as normal.
+  """
+  @spec explain(String.t() | nil) :: String.t()
+  def explain("deliverable"),
+    do: "Confirmed against the live mailbox. Safe to send."
+
+  def explain("undeliverable"),
+    do: "The mailbox does not exist. Do not send — this one would bounce."
+
+  def explain("accept_all"),
+    do:
+      "This company accepts mail for every address at its domain, so no single " <>
+        "mailbox can be confirmed from outside. Normal for large companies, and " <>
+        "not a sign the address is wrong."
+
+  def explain("unknown"),
+    do:
+      "The mailbox could not be checked just now — the domain did not answer. " <>
+        "Not a failed check, and nothing was charged for it."
+
+  def explain(_), do: "Not checked yet."
+
   defp ttl_class("deliverable"), do: :verify_deliverable
   defp ttl_class("undeliverable"), do: :verify_undeliverable
-  defp ttl_class(_), do: :verify_risky
+  defp ttl_class(_), do: :verify_accept_all
 
   defp mx_found(output, raw) do
     cond do
@@ -161,6 +196,10 @@ defmodule CsuiteFinder.Verifier do
       email: row.email,
       deliverable: row.status == "deliverable",
       status: row.status,
+      # Said in words, because a bare status gets rendered by somebody else's
+      # UI and "accept_all" is one search-and-replace away from "Risky" on a
+      # customer's screen.
+      explanation: explain(row.status),
       sub_status: row.sub_status,
       score: row.score,
       catch_all: row.catch_all,

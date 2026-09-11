@@ -19,8 +19,12 @@ defmodule CsuiteFinderWeb.PublicView do
   @email_find ~w(email full_name domain found confidence verification_status
                  linkedin_url last_verified_at)a
 
-  @deliverable ~w(email deliverable status sub_status score catch_all disposable
-                  role_account free_provider mx_found smtp_check checked_at)a
+  # `explanation` is listed deliberately: the status is a machine token that
+  # somebody else's UI renders, and "accept_all" is one search-and-replace away
+  # from "Risky" on a customer's screen. The sentence travels with it.
+  @deliverable ~w(email deliverable status explanation sub_status score catch_all
+                  disposable role_account free_provider mx_found smtp_check
+                  checked_at)a
 
   # `position_inferred` is listed deliberately: a guessed job title and a
   # provider's stated one look identical in the response otherwise, and the
