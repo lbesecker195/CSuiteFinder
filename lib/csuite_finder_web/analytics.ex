@@ -127,9 +127,17 @@ defmodule CsuiteFinderWeb.Analytics do
 
   So this fires a handful of one-shot events: scroll depth at a quarter, a half,
   three quarters and the end, and elapsed time at 15, 30, 60 and 120 seconds.
-  They exist to give GA4 timestamps to reason about, which is why each fires once
-  and no more — a heartbeat every second would work too and would triple the
-  event volume for no extra truth.
+  They exist to give GA4 timestamps to reason about, which is why each fires
+  once and no more.
+
+  The visit's actual length is counted every second and reported once, as
+  `dwell_time`, when the visitor leaves. Those are deliberately two different
+  things: a one-second tick is what makes the figure accurate to a second, while
+  an event per second would be 120 events from a two-minute read to say
+  something that can be said once at the end. It goes out over `beacon`, because
+  an ordinary request is cancelled when the page goes away — which is exactly
+  when it fires, and the visits worth measuring are the ones that end without a
+  click.
 
   Time is only counted while the tab is actually visible, which is GA4's own
   definition of engagement. A page left open in a background tab overnight is
@@ -172,16 +180,23 @@ defmodule CsuiteFinderWeb.Analytics do
       depth();
 
       // ---- how long they stayed -------------------------------------------
+      //
+      // Counted every second, reported twice. The counter and the events are
+      // deliberately different things: a tick per second is what makes the
+      // final figure accurate to a second, while sending an event per second
+      // would be 120 events from a two-minute read, for a number that can be
+      // stated once at the end.
       var marks = [15, 30, 60, 120];
       var reached = 0;
       var seconds = 0;
+      var reported = -1;
 
       window.setInterval(function () {
         // Only while the tab is in front. GA4 counts engagement the same way,
         // and a tab left open overnight is not two hours of reading.
         if (document.visibilityState !== "visible") return;
 
-        seconds += 5;
+        seconds += 1;
 
         while (reached < marks.length && seconds >= marks[reached]) {
           send("time_on_page", {
@@ -190,7 +205,32 @@ defmodule CsuiteFinderWeb.Analytics do
           });
           reached += 1;
         }
-      }, 5000);
+      }, 1000);
+
+      // The exact figure, sent when they actually leave. `beacon` because a
+      // normal request is cancelled when the page goes away, which is precisely
+      // when this fires — and the whole point is to measure the visits that end
+      // without a click.
+      function report() {
+        if (seconds === reported) return;
+        reported = seconds;
+
+        send("dwell_time", {
+          seconds: seconds,
+          page_path: window.location.pathname,
+          transport_type: "beacon"
+        });
+      }
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") report();
+      });
+
+      // pagehide as well as visibilitychange: a tab switch fires the first, a
+      // navigation away fires both on some browsers and only this on others.
+      // `report` is guarded against sending the same number twice, so the
+      // overlap costs nothing.
+      window.addEventListener("pagehide", report);
     })();
     </script>
     """

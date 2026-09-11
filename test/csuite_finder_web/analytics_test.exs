@@ -139,6 +139,36 @@ defmodule CsuiteFinderWeb.AnalyticsTest do
       assert js =~ "reached += 1"
     end
 
+    test "counts every second, but reports the total once" do
+      # One-second resolution comes from the tick, not from the event rate. An
+      # event per second would be 120 of them from a two-minute read.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ "seconds += 1"
+      assert js =~ "}, 1000);"
+      assert js =~ "dwell_time"
+      refute js =~ "seconds += 5"
+    end
+
+    test "sends the total over beacon, on the way out" do
+      # An ordinary request is cancelled when the page goes away, which is
+      # exactly when this fires — and the visits worth measuring are the ones
+      # that end without a click.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ ~s|transport_type: "beacon"|
+      assert js =~ ~s|addEventListener("pagehide"|
+      assert js =~ ~s|document.visibilityState === "hidden"|
+    end
+
+    test "and does not report the same number twice" do
+      # visibilitychange and pagehide overlap on some browsers and not others,
+      # so both are listened for and the guard is what makes that free.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ "if (seconds === reported) return;"
+    end
+
     test "is silent when analytics are switched off" do
       Application.put_env(:csuite_finder, :ga_measurement_id, nil)
       assert Analytics.tag() == ""
