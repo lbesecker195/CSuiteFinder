@@ -74,10 +74,17 @@ defmodule CsuiteFinderWeb.Analytics do
         if (!el || typeof window.gtag !== "function") return;
 
         var href = el.getAttribute("href") || "";
+
+        // What was being bought, said by the markup rather than guessed from
+        // the URL. The two offers are $999 and $29.99 and they convert at very
+        // different rates, so "somebody clicked a checkout link" is not an
+        // answer worth having. `data-cta` survives a change of processor or of
+        // route; a path does not, and this site has changed both twice.
+        var offer = el.closest("[data-cta]");
         var external = /^https?:/i.test(href) &&
                        href.indexOf(window.location.origin) !== 0;
 
-        window.gtag("event", "cta_click", {
+        var event = {
           element: el.tagName.toLowerCase(),
           link_text: text(el),
           link_id: el.id || "",
@@ -85,7 +92,22 @@ defmodule CsuiteFinderWeb.Analytics do
           link_path: external ? href.split("?")[0] : path(href),
           outbound: external,
           page_path: window.location.pathname
-        });
+        };
+
+        if (offer) {
+          event.cta = offer.getAttribute("data-cta");
+
+          // GA4 treats `value` as money when `currency` is alongside it, which
+          // turns a click count into a pipeline figure without any reporting
+          // work.
+          var usd = parseFloat(offer.getAttribute("data-cta-usd"));
+          if (!isNaN(usd)) {
+            event.value = usd;
+            event.currency = "USD";
+          }
+        }
+
+        window.gtag("event", "cta_click", event);
       }, true);
     })();
     </script>

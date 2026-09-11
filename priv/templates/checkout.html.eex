@@ -65,7 +65,7 @@
 
     <p class="quote" id="quote"></p>
 
-    <button id="go-seat" class="big">Continue to payment →</button>
+    <button id="go-seat" class="big" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Continue to payment →</button>
 
     <ul class="reassure">
       <li>Nothing is charged until you confirm it at the checkout.</li>
@@ -75,7 +75,7 @@
   </div>
 
   <p class="alt-line">
-    Not ready to commit? <a href="/checkout">Try it for $<%= @trial_price %> first →</a>
+    Not ready to commit? <a href="/checkout" data-cta="trial" data-cta-usd="<%= @trial_price %>">Try it for $<%= @trial_price %> first →</a>
   </p>
 <% else %>
   <div class="options">
@@ -91,7 +91,7 @@
         <li><strong>Credit expires after <%= @trial_months %> month</strong></li>
         <li>One per account, and nothing renews</li>
       </ul>
-      <button id="go-trial">Start the trial — $<%= @trial_price %></button>
+      <button id="go-trial" data-cta="trial" data-cta-usd="<%= @trial_price %>">Start the trial — $<%= @trial_price %></button>
     </div>
 
     <div class="card opt best">
@@ -106,7 +106,7 @@
         <li>Cancel any time, mid-month included</li>
         <li>Credit does not roll over — each month starts fresh</li>
       </ul>
-      <button id="go-seat" class="primary">Take a seat — $<%= @seat_usd %>/month</button>
+      <button id="go-seat" class="primary" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Take a seat — $<%= @seat_usd %>/month</button>
     </div>
   </div>
 

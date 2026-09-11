@@ -94,7 +94,7 @@
 </p>
 
 <p style="margin-top:22px">
-  <a class="btn btn-primary" href="/checkout" data-signed="out">Start — $<%= @trial_price %> trial</a>
+  <a class="btn btn-primary" href="/checkout" data-signed="out" data-cta="trial" data-cta-usd="<%= @trial_price %>">Start — $<%= @trial_price %> trial</a>
   <a class="btn btn-ghost" href="/account" data-signed="in" hidden>Open your account</a>
 </p>
 

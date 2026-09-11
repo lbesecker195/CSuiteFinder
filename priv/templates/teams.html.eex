@@ -15,8 +15,8 @@
     <strong><%= @seat_emails %> verified work emails</strong>.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="<%= @seat_link %>">Get a seat — $<%= @seat_usd %>/month</a>
-    <a class="btn btn-ghost" href="/checkout">Try it first — $<%= @trial_price %></a>
+    <a class="btn btn-primary" href="<%= @seat_link %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Get a seat — $<%= @seat_usd %>/month</a>
+    <a class="btn btn-ghost" href="/checkout" data-cta="trial" data-cta-usd="<%= @trial_price %>">Try it first — $<%= @trial_price %></a>
   </div>
   <p class="cta-note">
     No contract, no call, no seat minimum. Cancel any time and the month you have
@@ -101,7 +101,7 @@
       part that slows everyone down.
     </p>
     <p style="margin:18px 0 0">
-      <a class="btn btn-primary" href="<%= @seat_link %>">Get a seat — $<%= @seat_usd %>/month</a>
+      <a class="btn btn-primary" href="<%= @seat_link %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Get a seat — $<%= @seat_usd %>/month</a>
     </p>
   </div>
 </div>
@@ -212,11 +212,11 @@
     <% end %>
   </ul>
   <p style="margin:24px 0 0">
-    <a class="btn btn-primary" href="<%= @seat_link %>">Get a seat — $<%= @seat_usd %>/month</a>
+    <a class="btn btn-primary" href="<%= @seat_link %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Get a seat — $<%= @seat_usd %>/month</a>
   </p>
   <p class="cta-note" style="margin:14px 0 0">
     Rather try it on your own list first?
-    <a href="/checkout">Try it for $<%= @trial_price %> →</a>
+    <a href="/checkout" data-cta="trial" data-cta-usd="<%= @trial_price %>">Try it for $<%= @trial_price %> →</a>
   </p>
 </div>
 
