@@ -18,45 +18,92 @@
   .steps span { color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 
   /* ── the conversation ────────────────────────────────────────────────────
-     Markup rather than a screenshot: it stays selectable, recolours with the
-     theme, and the line in the first bubble is the same string as the paste
-     block further down, so the two cannot drift. */
-  .chat { display: flex; flex-direction: column; gap: 14px; margin-bottom: 14px; }
-  .turn { display: flex; flex-direction: column; max-width: 90%; }
-  .turn.you { align-self: flex-end; align-items: flex-end; }
+     An app window rather than two loose bubbles, so it reads as something that
+     happened. Markup rather than a screenshot: selectable, theme-aware, and the
+     line in the first bubble is the same string as the paste block below. */
+  .chat-app { border: 1px solid var(--border); border-radius: 16px;
+    background: var(--bg); overflow: hidden; margin-bottom: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05); }
+
+  .chat-bar { display: flex; align-items: center; gap: 10px;
+    padding: 11px 15px; border-bottom: 1px solid var(--border);
+    background: var(--surface); }
+  .lights { display: flex; gap: 6px; }
+  .lights i { width: 9px; height: 9px; border-radius: 50%; background: var(--bar);
+    display: block; }
+  .chat-title { font-size: 12px; font-weight: 600; color: var(--muted);
+    letter-spacing: -.01em; }
+
+  .chat { display: flex; flex-direction: column; gap: 18px; padding: 20px 18px; }
+
+  /* Avatar beside the bubble, and the visitor's turn mirrored. Aligned to the
+     top, not the bottom: the assistant's bubble is tall, and an avatar pinned
+     to its foot sits level with nothing and reads as a stray dot. */
+  .turn { display: flex; gap: 10px; align-items: flex-start; max-width: 92%; }
+  .turn.you { align-self: flex-end; flex-direction: row-reverse; }
   .turn.bot { align-self: flex-start; }
-  .who { font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
-    font-weight: 700; color: var(--faint); margin-bottom: 6px; }
-  .bubble { border-radius: 14px; padding: 14px 17px; font-size: 14.5px;
-    line-height: 1.6; border: 1px solid var(--border); background: var(--surface); }
+
+  .avatar { flex: none; width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em;
+    background: var(--bar); color: var(--text); }
+  .avatar.bot { background: var(--accent); color: #fff; font-size: 14px;
+    letter-spacing: 0; }
+
+  .bubble { border-radius: 16px; padding: 13px 16px; font-size: 14.5px;
+    line-height: 1.6; border: 1px solid var(--border); background: var(--surface);
+    min-width: 0; }
   .turn.you .bubble { background: var(--accent-soft); border-color: var(--accent);
-    border-bottom-right-radius: 5px; }
-  .turn.bot .bubble { border-bottom-left-radius: 5px; }
+    border-bottom-right-radius: 4px; }
+  .turn.bot .bubble { border-bottom-left-radius: 4px; }
   .bubble p { margin: 0 0 12px; }
   .bubble p:last-child { margin-bottom: 0; }
   .bubble code { font-size: 0.86em; }
+  .lead { color: var(--muted); font-size: 13.5px; }
 
-  /* One call the assistant made, with what it cost. The price is the point:
-     an agent that spends money should show the meter. */
-  .run { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-    background: var(--code-bg); border-radius: 8px; padding: 9px 12px;
-    margin-bottom: 8px; font-size: 12.5px; }
-  .run code { background: none; padding: 0; font-size: 12.5px; word-break: break-all; }
-  .tick { color: var(--good); font-weight: 700; }
+  /* The calls it made, as a stack of chips. The price sits on each one: an
+     agent that spends money should show the meter. */
+  .runs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; }
+  .run { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 11px; font-size: 12.5px; }
+  .run code { background: none; padding: 0; font-size: 12.5px;
+    font-weight: 600; word-break: break-word; }
+  .tick { color: var(--good); font-weight: 700; font-size: 13px; }
+  .verb { font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+    padding: 2px 6px; border-radius: 4px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--muted); }
+  .verb.get { color: var(--good); border-color: var(--good); }
+  .verb.post { color: var(--accent); border-color: var(--accent); }
+  .args { color: var(--faint); font-size: 11.5px; }
   .cost { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums;
-    white-space: nowrap; }
-  .muted-inline { color: var(--muted); }
-  .settle { font-size: 14px; }
+    white-space: nowrap; font-size: 11.5px; }
 
-  /* The deliverable: a file, drawn like one. */
-  .file { display: flex; align-items: center; gap: 12px; margin-top: 12px;
+  /* The result, counted. Two numbers a buyer actually cares about. */
+  .tally { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 11px; }
+  .pill { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
+  .pill.ok { background: var(--good-soft); color: var(--good); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .tally-note { color: var(--faint); font-size: 11.5px; }
+  .settle { font-size: 13.5px; color: var(--muted); }
+
+  /* The deliverable, drawn as a file. */
+  .file { display: flex; align-items: center; gap: 12px; margin-top: 13px;
     background: var(--good-soft); border: 1px solid var(--good);
-    border-radius: 10px; padding: 12px 14px; }
-  .file-icon { font-size: 20px; color: var(--good); line-height: 1; }
+    border-radius: 11px; padding: 11px 13px; }
+  .file-icon { flex: none; width: 34px; height: 34px; border-radius: 8px;
+    display: grid; place-items: center; background: var(--good); color: #fff;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .04em; }
+  .file-meta { min-width: 0; }
   .file strong { display: block; font-size: 14px; }
-  .file span { color: var(--muted); font-size: 12.5px; }
+  /* Scoped to the meta block, not every span in the card: `.file span` also
+     matched the Ready label, and being one point more specific than
+     `.file-done` it quietly greyed it out. */
+  .file-meta span { color: var(--muted); font-size: 12.5px; }
   .file-done { margin-left: auto; color: var(--good); font-weight: 700;
-    font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+    white-space: nowrap; }
 
   .chat-note { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
 
