@@ -35,27 +35,47 @@
   @media (max-width: 620px) { .does .item { grid-template-columns: 1fr; gap: 4px; } }
 
   /* ── the rolodex ─────────────────────────────────────────────────────────
-     The cards are one <g> repeated around an arc, so every colour here has to
-     come from a token: the whole graphic has to flip with the theme, and a
-     hard-coded white card is invisible on a dark page. */
+     Every colour comes from a token: the graphic has to flip with the theme,
+     and a hard-coded white card is invisible on a dark page. */
   .rolodex-band { display: grid; gap: 26px; grid-template-columns: 1.05fr 1fr;
     align-items: center; margin-bottom: 30px; }
   .rolodex-band > * { min-width: 0; }
-  .rolodex { width: 100%; height: auto; display: block; }
+  .rolodex { width: 100%; height: auto; display: block; overflow: visible; }
 
-  .rolo-card { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
-  .rolo-card.front { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .rolo-face-top { stop-color: var(--surface); }
+  .rolo-face-bottom { stop-color: var(--bg); }
+  .rolo-card { fill: url(#rolo-face); stroke: var(--border); stroke-width: 1.25; }
+  .rolo-g.front .rolo-card { fill: var(--accent-soft); stroke: var(--accent);
+    stroke-width: 2; }
   .rolo-notch { fill: var(--bar); }
+  .rolo-avatar { fill: var(--bar); }
+  .rolo-g.front .rolo-avatar { fill: var(--accent); opacity: .35; }
+  .rolo-rule { stroke: var(--border); stroke-width: 1; }
   .rolo-line { fill: var(--bar); }
   .rolo-line.strong { fill: var(--faint); }
+  .rolo-line.mono { fill: var(--bar); opacity: .85; }
+  .rolo-line.ok { fill: var(--good); opacity: .45; }
   .rolo-tick-bg { fill: var(--good-soft); stroke: var(--good); stroke-width: 1.5; }
-  .rolo-tick { fill: none; stroke: var(--good); stroke-width: 2.2;
+  .rolo-tick { fill: none; stroke: var(--good); stroke-width: 2.3;
     stroke-linecap: round; stroke-linejoin: round; }
 
-  .rolo-rail { fill: none; stroke: var(--faint); stroke-width: 9; stroke-linecap: round; }
+  .rolo-rail { fill: none; stroke: var(--faint); stroke-width: 10;
+    stroke-linecap: round; }
   .rolo-rail.inner { stroke: var(--bar); stroke-width: 4; }
   .rolo-post { fill: var(--faint); }
   .rolo-hub { fill: var(--faint); }
+  .rolo-hub-pin { fill: var(--bg); }
+
+  /* The fan is positioned by the SVG transform attribute, not by CSS: a CSS
+     transform on an SVG <g> is ignored outright by some engines — including the
+     one this was first tested in, where the cards simply never moved. The
+     attribute works everywhere, so the animation writes that instead and this
+     file only handles colour and fade. */
+  /* Both the angle and the fade are written by the script, as attributes. A CSS
+     transition is driven by the same clock as requestAnimationFrame and stops
+     with it, so a card faded out by CSS in a background tab stays invisible —
+     which is a far worse failure than one that simply does not animate. With no
+     script, nothing is written and the cards are drawn open and opaque. */
 
   .rolodex-lead { font-size: clamp(17px, 2.2vw, 21px); line-height: 1.35;
     letter-spacing: -.02em; font-weight: 700; margin: 0 0 12px; }

@@ -34,35 +34,57 @@
 <h2 class="section-label">Build a bigger Rolodex, today</h2>
 
 <div class="rolodex-band">
-  <%!-- Drawn rather than photographed: the cards are generated from one arc, so
-        the fan stays even and the whole thing is a few hundred bytes that
-        recolour themselves in dark mode. --%>
-  <%!-- Framed to the drawing rather than to a round number: at 60 degrees the
-        outer cards and the base swing past a 560x300 box and get clipped. --%>
-  <svg class="rolodex" viewBox="50 38 460 290" role="img"
+  <%!-- Drawn rather than photographed: eleven cards generated from one arc, so
+        the fan stays even, the whole thing recolours itself in dark mode, and
+        it costs a few hundred bytes instead of a hero image.
+
+        Each card carries its final angle as --a. The cards render stacked at
+        zero and open to --a when the graphic scrolls into view; with no script,
+        or with reduced motion asked for, they are simply drawn open. --%>
+  <svg class="rolodex" viewBox="46 30 468 300" role="img"
        aria-label="A rolodex with its cards fanned open, each holding a name and a work email.">
-    <%= for {angle, i} <- Enum.with_index(-60..60//15) do %>
-      <g transform="rotate(<%= angle %> 280 268)">
-        <rect x="212" y="66" width="136" height="176" rx="7"
-              class="rolo-card <%= if i == 4, do: "front" %>"/>
-        <rect x="272" y="60" width="16" height="17" rx="3" class="rolo-notch"/>
-        <rect x="228" y="104" width="<%= 74 + rem(i * 17, 30) %>" height="8" rx="4" class="rolo-line strong"/>
-        <rect x="228" y="124" width="<%= 92 - rem(i * 13, 26) %>" height="6" rx="3" class="rolo-line"/>
-        <rect x="228" y="142" width="<%= 84 - rem(i * 9, 22) %>" height="6" rx="3" class="rolo-line"/>
-        <%= if i == 4 do %>
-          <circle cx="234" cy="176" r="9" class="rolo-tick-bg"/>
-          <path d="M229.5 176.5l3.4 3.4 6-6.6" class="rolo-tick"/>
-          <rect x="250" y="171" width="58" height="7" rx="3.5" class="rolo-line strong"/>
+    <defs>
+      <linearGradient id="rolo-face" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" class="rolo-face-top"/>
+        <stop offset="100%" class="rolo-face-bottom"/>
+      </linearGradient>
+      <filter id="rolo-shadow" x="-30%" y="-20%" width="160%" height="150%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-opacity="0.16"/>
+      </filter>
+    </defs>
+
+    <%= for {angle, i} <- Enum.with_index(-60..60//12) do %>
+      <g class="rolo-g<%= if i == 5, do: " front" %>"
+         transform="rotate(<%= angle %> 280 268)" data-angle="<%= angle %>">
+        <g filter="url(#rolo-shadow)">
+          <rect x="214" y="62" width="132" height="184" rx="8" class="rolo-card"/>
+        </g>
+        <path d="M272 62 h16 v9 a8 8 0 0 1 -16 0 z" class="rolo-notch"/>
+
+        <circle cx="237" cy="97" r="11" class="rolo-avatar"/>
+        <rect x="256" y="90" width="<%= 56 + rem(i * 11, 24) %>" height="8" rx="4" class="rolo-line strong"/>
+        <rect x="256" y="104" width="<%= 42 - rem(i * 7, 14) %>" height="6" rx="3" class="rolo-line"/>
+
+        <line x1="228" y1="126" x2="332" y2="126" class="rolo-rule"/>
+
+        <rect x="228" y="138" width="<%= 74 - rem(i * 13, 26) %>" height="7" rx="3.5" class="rolo-line mono"/>
+        <rect x="228" y="153" width="<%= 92 - rem(i * 9, 30) %>" height="7" rx="3.5" class="rolo-line mono"/>
+
+        <%= if i == 5 do %>
+          <circle cx="235" cy="180" r="9.5" class="rolo-tick-bg"/>
+          <path d="M230.4 180.4l3.4 3.4 6.1-6.7" class="rolo-tick"/>
+          <rect x="251" y="175" width="62" height="8" rx="4" class="rolo-line ok"/>
         <% end %>
       </g>
     <% end %>
 
-    <%!-- The spindle and rails, drawn last so the cards sit behind them. --%>
-    <path d="M92 252 q188 46 376 0" class="rolo-rail"/>
-    <path d="M92 252 q188 46 376 0" class="rolo-rail inner"/>
-    <rect x="86" y="240" width="18" height="40" rx="6" class="rolo-post"/>
-    <rect x="456" y="240" width="18" height="40" rx="6" class="rolo-post"/>
-    <circle cx="280" cy="268" r="10" class="rolo-hub"/>
+    <%!-- Spindle and tray last, so the cards sit behind them. --%>
+    <path d="M96 258 q184 44 368 0" class="rolo-rail"/>
+    <path d="M96 264 q184 44 368 0" class="rolo-rail inner"/>
+    <rect x="88" y="244" width="20" height="46" rx="7" class="rolo-post"/>
+    <rect x="452" y="244" width="20" height="46" rx="7" class="rolo-post"/>
+    <circle cx="280" cy="268" r="11" class="rolo-hub"/>
+    <circle cx="280" cy="268" r="4" class="rolo-hub-pin"/>
   </svg>
 
   <div class="rolodex-copy">
@@ -71,7 +93,7 @@
       run out of addresses.
     </p>
     <p class="quiet">
-      One seat adds up to <strong><%= @seat_emails %> verified work emails</strong>
+      One seat adds up to <strong><%= @seat_emails %> corporate emails</strong>
       a month — every one of them checked against the live mailbox before it
       reaches your sequence. You bring the names; the addresses stop being the
       part that slows everyone down.
@@ -199,5 +221,147 @@
 <%= CsuiteFinderWeb.Layout.footer(:sales) %>
 
 </div>
+
+<script>
+// The rolodex fans open when it scrolls into view, then tilts a few degrees as
+// the page moves past it.
+//
+// The cards are positioned by the SVG `transform` attribute rather than by CSS.
+// A CSS transform on an SVG <g> is ignored by some engines — the cards simply
+// do not move — so the animation writes the attribute, which works everywhere.
+//
+// The markup is drawn open. `armed` is added only here, so a browser that never
+// runs this, or one whose owner has asked for less motion, gets the finished
+// picture instead of a stack that never opens.
+(function () {
+  "use strict";
+
+  var svg = document.querySelector(".rolodex");
+  if (!svg) return;
+
+  var quiet = window.matchMedia &&
+              window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (quiet || !window.requestAnimationFrame) return;
+
+  var cards = Array.prototype.slice.call(svg.querySelectorAll(".rolo-g"));
+  if (!cards.length) return;
+
+  var middle = (cards.length - 1) / 2;
+
+  cards.forEach(function (card, i) {
+    card._angle = parseFloat(card.getAttribute("data-angle")) || 0;
+    // Deal outwards from the middle, so it opens like a hand of cards rather
+    // than sweeping from one end.
+    card._delay = Math.abs(i - middle) * 55;
+    card._t = 0;
+  });
+
+  var spin = 0;
+
+  function place(card) {
+    var deg = card._angle * card._t + spin * card._t;
+    card.setAttribute("transform", "rotate(" + deg.toFixed(2) + " 280 268)");
+    // Faded in by the same value that swings it, rather than by a CSS
+    // transition: a transition is driven by the animation clock and stops with
+    // it, which would leave the cards invisible rather than merely still.
+    card.setAttribute("opacity", (0.2 + 0.8 * card._t).toFixed(3));
+  }
+
+  function draw() { cards.forEach(place); }
+
+  svg.classList.add("armed");
+  draw();
+
+  // Visibility is measured in the same scroll loop that drives the tilt rather
+  // than with IntersectionObserver. One mechanism instead of two, no reference
+  // to keep alive, and it works in any browser that can animate at all — the
+  // observer silently never fired in one of the browsers this was tested in,
+  // which would have left the cards stacked and the section looking broken.
+  var opened = false;
+
+  function visible() {
+    var box = svg.getBoundingClientRect();
+    if (box.height <= 0) return 0;
+    var shown = Math.min(box.bottom, window.innerHeight) - Math.max(box.top, 0);
+    return Math.max(0, shown) / box.height;
+  }
+
+  function ease(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function open() {
+    if (opened) return;
+    opened = true;
+    svg.classList.add("open");
+
+    var start = null;
+    var span = 620;
+
+    function step(now) {
+      if (start === null) start = now;
+      var elapsed = now - start;
+      var running = false;
+
+      cards.forEach(function (card) {
+        var t = (elapsed - card._delay) / span;
+        if (t < 0) { t = 0; }
+        if (t < 1) { running = true; } else { t = 1; }
+        card._t = ease(t);
+      });
+
+      draw();
+      if (running) { window.requestAnimationFrame(step); }
+    }
+
+    window.requestAnimationFrame(step);
+  }
+
+  // A few degrees across the scroll, so it reads as an object on a desk rather
+  // than a picture of one. The rect is read inside the frame callback, never in
+  // the scroll handler, so scrolling cannot force a layout on every event.
+  // A few degrees across the scroll, so it reads as an object on a desk rather
+  // than a picture of one. Everything is measured inside the frame callback,
+  // never in the scroll handler, so scrolling cannot force a layout per event.
+  var pending = false;
+
+  function frame() {
+    pending = false;
+
+    if (!opened && visible() >= 0.2) { open(); }
+
+    var box = svg.getBoundingClientRect();
+    var travel = window.innerHeight + box.height;
+    if (travel > 0) {
+      var progress = 1 - 2 * ((box.top + box.height) / travel);
+      spin = Math.max(-1, Math.min(1, progress)) * 5;
+      if (opened) { draw(); }
+    }
+  }
+
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    window.requestAnimationFrame(frame);
+  }
+
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule, { passive: true });
+  schedule();
+
+  // Arming set the cards to opacity 0, so anything that stops the animation
+  // from finishing leaves an empty space where the graphic should be. Invisible
+  // is a far worse failure than unanimated, and requestAnimationFrame does not
+  // run at all in a background tab — which is exactly where this was first
+  // tested. So: after two and a half seconds, show the finished fan regardless.
+  // Harmless when the animation has already run, since open() only fires once.
+  window.setTimeout(function () {
+    if (opened) return;
+    opened = true;
+    svg.classList.add("open");
+    spin = 0;
+    cards.forEach(function (card) { card._t = 1; });
+    draw();
+  }, 2500);
+})();
+</script>
 </body>
 </html>
