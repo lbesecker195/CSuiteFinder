@@ -87,11 +87,11 @@
 <div class="numbers">
   <div class="num">
     <span class="n"><%= @seat_emails %></span>
-    <span class="k">verified work emails a month</span>
+    <span class="k">corporate emails a month</span>
   </div>
   <div class="num">
     <span class="n">Included</span>
-    <span class="k">mailbox checks, job titles, company data</span>
+    <span class="k">deliverability, enrichment, and more</span>
   </div>
   <div class="num">
     <span class="n">$0</span>
