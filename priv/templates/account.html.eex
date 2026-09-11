@@ -474,7 +474,21 @@
       btn.disabled = false;
       if (!res.ok) {
         var detail = res.body && res.body.details && res.body.details.email;
-        say(detail ? "That email " + detail[0] + "." : "Could not register that email.", "err");
+        // "has already been taken" is the only failure a person can act on, and
+        // the action is signing in rather than picking another address. The old
+        // wording repeated the changeset at them and left them stuck.
+        if (detail && detail[0] && detail[0].indexOf("already") >= 0) {
+          say("That email already has an account — sign in just below.", "err");
+          var box = $("loginemail");
+          if (box) { box.value = email; box.focus(); }
+          return;
+        }
+        // Anything else is ours, not theirs. Say the status rather than a
+        // guess, so a report of it is worth something.
+        say(detail
+          ? "That email " + detail[0] + "."
+          : "Sign-up failed (" + (res.status || "no response") + "). Nothing was charged — " +
+            "try again, or email us and we will sort it out.", "err");
         return;
       }
       key = res.body.api_key; save(key);
