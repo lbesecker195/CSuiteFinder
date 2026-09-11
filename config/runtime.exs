@@ -203,6 +203,24 @@ config :csuite_finder, CsuiteFinder.Inference,
   model: System.get_env("ANTHROPIC_MODEL"),
   base_url: System.get_env("ANTHROPIC_BASE_URL")
 
+# --- Stripe ---------------------------------------------------------------
+# The secret key is the only credential this process holds; Checkout is hosted,
+# so nothing is rendered client-side and no publishable key is needed. The price
+# ids are dashboard objects — a seat's price lives at Stripe so it can be changed
+# without a deploy, while the trial's amount stays in Pricing.
+#
+# Skipped under :test, which sets its own. runtime.exs is evaluated after
+# config/test.exs, so reading unset environment variables here would overwrite
+# the test settings with nil — and the tests that then failed would be the
+# webhook signature ones, which is the last place to lose coverage.
+if config_env() != :test do
+  config :csuite_finder, CsuiteFinder.Billing.Stripe,
+    secret_key: System.get_env("STRIPE_SECRET_KEY"),
+    webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET"),
+    seat_price_id: System.get_env("STRIPE_SEAT_PRICE_ID"),
+    seat_annual_price_id: System.get_env("STRIPE_SEAT_ANNUAL_PRICE_ID")
+end
+
 # --- PayPal ---------------------------------------------------------------
 config :csuite_finder, CsuiteFinder.Billing.PayPal,
   base_url:

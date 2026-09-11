@@ -8,7 +8,7 @@ defmodule CsuiteFinderWeb.BillingController do
   require Logger
 
   alias CsuiteFinder.{Accounts, Audience, Billing}
-  alias CsuiteFinder.Billing.{PayPal, Plans, Pricing, Subscription, Subscriptions}
+  alias CsuiteFinder.Billing.{PayPal, Plans, Pricing, Stripe, Subscription, Subscriptions}
 
   action_fallback CsuiteFinderWeb.FallbackController
 
@@ -132,12 +132,12 @@ defmodule CsuiteFinderWeb.BillingController do
         |> put_status(:bad_request)
         |> json(%{error: "invalid_amount", message: "`amount_usd` must be a positive number."})
 
-      {:error, :paypal_not_configured} ->
+      {:error, reason} when reason in [:paypal_not_configured, :stripe_price_not_configured] ->
         conn
         |> put_status(:service_unavailable)
         |> json(%{
-          error: "paypal_not_configured",
-          message: "Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
+          error: "payments_not_configured",
+          message: "Payments are not switched on in this environment."
         })
 
       other ->
@@ -153,17 +153,13 @@ defmodule CsuiteFinderWeb.BillingController do
   """
   def trial(conn, params) do
     with {:ok, account} <- authed(conn),
-         {:ok, payment, response} <-
-           PayPal.create_trial_order(account,
-             return_url: params["return_url"] || "",
-             cancel_url: params["cancel_url"] || ""
-           ) do
+         {:ok, payment, approve_url} <- start_trial(account, params) do
       json(conn, %{
         provider_ref: payment.provider_ref,
         amount_usd: Pricing.trial_usd(),
         credit_usd: Pricing.usd(payment.credit_micro),
         expires_in_months: Pricing.trial_months(),
-        approve_url: PayPal.approve_link(response),
+        approve_url: approve_url,
         notice:
           "One trial per account. The credit expires after " <>
             "#{Pricing.trial_months()} month, the same way a seat's does."
@@ -177,13 +173,41 @@ defmodule CsuiteFinderWeb.BillingController do
           message: "This account has already had its trial. A seat is the next step."
         })
 
-      {:error, :paypal_not_configured} ->
+      {:error, reason} when reason in [:paypal_not_configured, :stripe_price_not_configured] ->
         conn
         |> put_status(:service_unavailable)
-        |> json(%{error: "paypal_not_configured"})
+        |> json(%{error: "payments_not_configured"})
 
       other ->
         other
+    end
+  end
+
+  # Stripe when it is configured, PayPal otherwise. The two return the same
+  # shape so nothing above this line has to know which took the money.
+  defp start_trial(account, params) do
+    urls = [
+      return_url: params["return_url"] || "",
+      cancel_url: params["cancel_url"] || ""
+    ]
+
+    if Stripe.configured?() do
+      # One trial per account, checked here rather than at Stripe: a second
+      # Checkout Session would be a real payment page for a product we will not
+      # grant twice.
+      if not is_nil(account.trial_granted_at) do
+        {:error, :trial_already_taken}
+      else
+        with {:ok, url, session} <-
+               Stripe.create_payment_session(account, Pricing.trial_usd(), "seat_trial", urls),
+             {:ok, payment} <- Stripe.record_payment(session) do
+          {:ok, payment, url}
+        end
+      end
+    else
+      with {:ok, payment, response} <- PayPal.create_trial_order(account, urls) do
+        {:ok, payment, PayPal.approve_link(response)}
+      end
     end
   end
 
@@ -264,12 +288,12 @@ defmodule CsuiteFinderWeb.BillingController do
           message: "`seats` must be a whole number from 1 to #{Subscriptions.max_seats()}."
         })
 
-      {:error, :paypal_not_configured} ->
+      {:error, reason} when reason in [:paypal_not_configured, :stripe_price_not_configured] ->
         conn
         |> put_status(:service_unavailable)
         |> json(%{
-          error: "paypal_not_configured",
-          message: "Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET."
+          error: "payments_not_configured",
+          message: "Payments are not switched on in this environment."
         })
 
       {:error, {:paypal, _status, _body} = reason} ->
@@ -350,6 +374,85 @@ defmodule CsuiteFinderWeb.BillingController do
   with PayPal before anything is credited, and an unverified event is dropped.
   """
   def webhook(conn, params) do
+    if Stripe.configured?() do
+      stripe_webhook(conn, params)
+    else
+      paypal_webhook(conn, params)
+    end
+  end
+
+  # Verified against the raw bytes, never the parsed map — re-encoding params
+  # reorders keys and the hash stops matching. The body survives the parser via
+  # CsuiteFinderWeb.CacheBodyReader.
+  defp stripe_webhook(conn, params) do
+    signature = conn |> get_req_header("stripe-signature") |> List.first()
+
+    case Stripe.verify_webhook(conn.assigns[:raw_body] || "", signature) do
+      :ok ->
+        handle_stripe(params)
+        json(conn, %{received: true})
+
+      {:error, :not_configured} ->
+        # Accepting unverified events would mean anyone who found this URL could
+        # grant themselves a seat, so an unset secret closes the endpoint.
+        Logger.error("stripe webhook received but STRIPE_WEBHOOK_SECRET is unset")
+
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{error: "verification_unavailable"})
+
+      {:error, reason} ->
+        Logger.warning("stripe webhook rejected: #{inspect(reason)}")
+        conn |> put_status(:unauthorized) |> json(%{error: "invalid_signature"})
+    end
+  end
+
+  # A completed session is the one event that must never be missed: the customer
+  # has paid by the time it arrives.
+  defp handle_stripe(%{"type" => "checkout.session.completed", "data" => %{"object" => session}}) do
+    case session["mode"] do
+      "subscription" ->
+        with id when is_binary(id) <- session["subscription"],
+             {:ok, _} <- Subscriptions.attach_stripe_subscription(session["id"], id, session) do
+          # The first period's credit. Renewals arrive as invoice.paid, and an
+          # annual seat's other eleven months come from the refresher.
+          Subscriptions.record_payment(id, session["id"], nil)
+        end
+
+      _ ->
+        credit_stripe_payment(session)
+    end
+
+    :ok
+  end
+
+  # A renewal. The subscription id is the customer's, the invoice id is what
+  # makes the grant idempotent across Stripe's retries.
+  defp handle_stripe(%{"type" => "invoice.paid", "data" => %{"object" => invoice}}) do
+    case invoice["subscription"] do
+      id when is_binary(id) -> Subscriptions.record_payment(id, invoice["id"], nil)
+      _ -> :ok
+    end
+
+    :ok
+  end
+
+  defp handle_stripe(%{"type" => type, "data" => %{"object" => object}})
+       when type in ["customer.subscription.deleted", "customer.subscription.updated"] do
+    Subscriptions.set_status(object["id"], object["status"] || "cancelled", object)
+    :ok
+  end
+
+  defp handle_stripe(_event), do: :ok
+
+  defp credit_stripe_payment(session) do
+    case Stripe.record_payment(session) do
+      {:ok, payment} -> Stripe.credit_payment(payment)
+      other -> other
+    end
+  end
+
+  defp paypal_webhook(conn, params) do
     headers = Map.new(conn.req_headers)
 
     case PayPal.verify_webhook(headers, params) do

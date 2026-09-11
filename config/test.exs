@@ -52,3 +52,11 @@ config :csuite_finder, :public_base_url, "https://csuitefinder.test"
 
 # No analytics from test: this traffic is ours and would distort the numbers.
 config :csuite_finder, :ga_measurement_id, nil
+
+# Stripe is switched off in tests unless a test stubs it: a suite that can reach
+# a payment processor is a suite that will eventually charge somebody.
+config :csuite_finder, CsuiteFinder.Billing.Stripe,
+  secret_key: nil,
+  webhook_secret: "whsec_test_secret",
+  seat_price_id: "price_test_monthly",
+  seat_annual_price_id: "price_test_annual"

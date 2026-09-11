@@ -53,10 +53,10 @@
 
     <p class="quote" id="quote"></p>
 
-    <button id="go-seat" class="big">Continue to PayPal →</button>
+    <button id="go-seat" class="big">Continue to payment →</button>
 
     <ul class="reassure">
-      <li>Nothing is charged until you approve it at PayPal.</li>
+      <li>Nothing is charged until you confirm it at the checkout.</li>
       <li>Cancel any time; the month you have paid for runs to its end.</li>
       <li>Unused credit does not roll over — each month starts at $<%= @seat_usd %>.</li>
     </ul>
@@ -99,7 +99,7 @@
   </div>
 
   <p class="alt-line">
-    Nothing is charged until you approve it at PayPal.
+    Nothing is charged until you confirm it at the checkout.
   </p>
 <% end %>
 
@@ -201,14 +201,14 @@
 
       post(path, body, acct.key).then(function (res) {
         if (res.ok && res.body.approve_url) {
-          say("Taking you to PayPal…", "info");
+          say("Taking you to the secure checkout…", "info");
           window.location.href = res.body.approve_url;
           return;
         }
         button.disabled = false;
         if (res.body && res.body.error === "trial_already_taken") {
           say("This account has already had its trial. A seat is the next step.", "err");
-        } else if (res.body && res.body.error === "paypal_not_configured") {
+        } else if (res.body && res.body.error === "payments_not_configured") {
           say("Payments are not switched on yet. Please try again shortly.", "err");
         } else {
           say("We could not start that payment. Nothing was charged.", "err");

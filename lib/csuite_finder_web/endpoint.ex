@@ -37,7 +37,10 @@ defmodule CsuiteFinderWeb.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # The raw body is kept for the webhook path only — Stripe signs the bytes it
+  # sent, and re-encoding parsed params does not reproduce them.
   plug Plug.Parsers,
+    body_reader: {CsuiteFinderWeb.CacheBodyReader, :read_body, []},
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()

@@ -245,6 +245,20 @@ defmodule CsuiteFinder.Accounts do
     |> Repo.update()
   end
 
+  @doc """
+  An account by its address, or nil.
+
+  Downcased and trimmed on the way in. The column is citext so the database
+  would match anyway, but a stray space would not, and the addresses reaching
+  this come from a payment processor rather than from our own form.
+  """
+  @spec get_account_by_email(String.t() | nil) :: Account.t() | nil
+  def get_account_by_email(email) when is_binary(email) do
+    Repo.get_by(Account, email: email |> String.trim() |> String.downcase())
+  end
+
+  def get_account_by_email(_), do: nil
+
   @spec get_account(integer()) :: Account.t() | nil
   def get_account(id), do: Repo.get(Account, id)
 

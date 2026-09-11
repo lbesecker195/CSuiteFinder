@@ -17,7 +17,7 @@ defmodule CsuiteFinder.Billing.Subscriptions do
 
   alias CsuiteFinder.Accounts.Account
   alias CsuiteFinder.Billing
-  alias CsuiteFinder.Billing.{PayPal, Plans, Subscription}
+  alias CsuiteFinder.Billing.{PayPal, Plans, Stripe, Subscription}
   alias CsuiteFinder.Repo
 
   @max_seats 500
@@ -52,10 +52,60 @@ defmodule CsuiteFinder.Billing.Subscriptions do
           {:ok, Subscription.t(), String.t()} | {:error, term()}
   def start(%Account{} = account, seats, opts \\ []) do
     with {:ok, seats} <- validate_seats(seats),
-         {:ok, interval} <- validate_interval(Keyword.get(opts, :interval, :month)),
-         {:ok, response} <- PayPal.create_seat_subscription(account, seats, opts),
-         {:ok, subscription} <- store_new(account, seats, interval, response) do
+         {:ok, interval} <- validate_interval(Keyword.get(opts, :interval, :month)) do
+      if Stripe.configured?() do
+        start_stripe(account, seats, interval, opts)
+      else
+        start_paypal(account, seats, interval, opts)
+      end
+    end
+  end
+
+  # Stripe does not create the subscription until the customer has paid, so
+  # there is no subscription id to store yet. The row is keyed on the Checkout
+  # Session instead and re-keyed when the webhook hands us the real one. Storing
+  # it now rather than on the webhook is deliberate: an approval that arrives
+  # for a session we never recorded is indistinguishable from a forged one.
+  defp start_stripe(account, seats, interval, opts) do
+    with {:ok, url, session} <-
+           Stripe.create_seat_session(account, seats, String.to_existing_atom(interval), opts),
+         {:ok, subscription} <-
+           store_new(account, seats, interval, %{"id" => session["id"]}, "stripe") do
+      {:ok, subscription, url}
+    end
+  end
+
+  defp start_paypal(account, seats, interval, opts) do
+    with {:ok, response} <- PayPal.create_seat_subscription(account, seats, opts),
+         {:ok, subscription} <- store_new(account, seats, interval, response, "paypal") do
       {:ok, subscription, PayPal.approve_link(response)}
+    end
+  end
+
+  @doc """
+  A Checkout Session was paid: attach the real subscription id and grant.
+
+  Until this point the row is keyed on the session, which is the only id that
+  existed when the customer was sent to pay.
+  """
+  @spec attach_stripe_subscription(String.t(), String.t(), map()) ::
+          {:ok, Subscription.t()} | {:error, term()}
+  def attach_stripe_subscription(session_id, subscription_id, session \\ %{}) do
+    case get(session_id) do
+      nil ->
+        {:error, :unknown_subscription}
+
+      subscription ->
+        interval = get_in(session, ["metadata", "interval"]) || subscription.interval
+
+        subscription
+        |> Subscription.changeset(%{
+          provider_ref: subscription_id,
+          interval: interval,
+          status: "active",
+          raw: session
+        })
+        |> Repo.update()
     end
   end
 
@@ -70,10 +120,11 @@ defmodule CsuiteFinder.Billing.Subscriptions do
 
   defp validate_seats(_), do: {:error, :invalid_seats}
 
-  defp store_new(account, seats, interval, %{"id" => id} = response) do
+  defp store_new(account, seats, interval, %{"id" => id} = response, provider) do
     %Subscription{}
     |> Subscription.changeset(%{
       account_id: account.id,
+      provider: provider,
       interval: interval,
       provider_ref: id,
       provider_plan_id: response["plan_id"],
@@ -85,8 +136,8 @@ defmodule CsuiteFinder.Billing.Subscriptions do
     |> Repo.insert()
   end
 
-  defp store_new(_account, _seats, _interval, _response),
-    do: {:error, :paypal_no_subscription_id}
+  defp store_new(_account, _seats, _interval, _response, _provider),
+    do: {:error, :no_subscription_id}
 
   @doc "The maximum seats one subscription may carry."
   @spec max_seats() :: pos_integer()

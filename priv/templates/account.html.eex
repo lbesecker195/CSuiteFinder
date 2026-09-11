@@ -136,14 +136,14 @@
     <div class="row">
       <button id="buytrial">Start the trial — $<%= @trial_price %></button>
       <p class="muted" style="margin:0;flex:1;min-width:210px">
-        You'll be sent to PayPal to approve, then straight back here.
+        You'll be sent to a secure checkout, then straight back here.
       </p>
     </div>
   </div>
 
   <h2 id="seats">Seats — $<%= @seat_usd_label %> a month</h2>
   <p class="muted" style="margin-top:-6px">
-    A seat is billed $<%= @seat_usd_label %> a month through PayPal and puts
+    A seat is billed $<%= @seat_usd_label %> a month and puts
     $<%= @seat_usd_label %> of credit in this account every month. Unused credit
     <strong>does not roll over</strong> — each payment starts you at
     $<%= @seat_usd_label %> again. Credit you buy outright is separate and never expires.
@@ -179,7 +179,7 @@
   <h2>Buy credit</h2>
   <p class="muted" style="margin-top:-6px">
     Credit never expires and a dollar buys a dollar of it. Purchases start at
-    $<%= @minimum_usd_label %>. You'll be sent to PayPal to approve, then straight back here.
+    $<%= @minimum_usd_label %>. You'll be sent to a secure checkout, then straight back here.
   </p>
   <div class="bundles" id="bundles">
     <%= for b <- @bundles do %>
@@ -647,14 +647,14 @@
     }}).then(function (res) {
       btn.disabled = false;
       if (res.ok && res.body.approve_url) {
-        say("Redirecting you to PayPal…", "info");
+        say("Redirecting you to the secure checkout…", "info");
         window.location.href = res.body.approve_url;
         return;
       }
       if (res.body && res.body.error === "trial_already_taken") {
         say(res.body.message, "err");
         $("trialcard").hidden = true;
-      } else if (res.body && res.body.error === "paypal_not_configured") {
+      } else if (res.body && res.body.error === "payments_not_configured") {
         say("Payments are not switched on yet. Please try again later.", "err");
       } else {
         say("Could not start that trial. Nothing was charged.", "err");
@@ -679,11 +679,11 @@
     }}).then(function (res) {
       btn.disabled = false;
       if (res.ok && res.body.approve_url) {
-        say("Redirecting you to PayPal…", "info");
+        say("Redirecting you to the secure checkout…", "info");
         window.location.href = res.body.approve_url;
         return;
       }
-      if (res.body && res.body.error === "paypal_not_configured") {
+      if (res.body && res.body.error === "payments_not_configured") {
         say("Subscriptions are not switched on yet. Please try again later.", "err");
       } else if (res.body && res.body.error === "invalid_seats") {
         say(res.body.message, "err");
@@ -719,11 +719,11 @@
       }}).then(function (res) {
         btn.disabled = false;
         if (res.ok && res.body.approve_url) {
-          say("Redirecting you to PayPal…", "info");
+          say("Redirecting you to the secure checkout…", "info");
           window.location.href = res.body.approve_url;
           return;
         }
-        if (res.body && res.body.error === "paypal_not_configured") {
+        if (res.body && res.body.error === "payments_not_configured") {
           say("Payments are not switched on yet. Please try again later.", "err");
         } else if (res.body && res.body.error === "below_minimum_purchase") {
           say("Purchases start at $" + commas(res.body.minimum_usd) + ".", "err");
@@ -734,7 +734,7 @@
     });
   });
 
-  // ---- returning from PayPal ---------------------------------------------
+  // ---- returning from the checkout ---------------------------------------------
   // PayPal sends the order id back as ?token=… (its name, not ours) on the
   // return URL. Capture it, then clean the query so a refresh cannot re-post.
   function handleReturn() {
