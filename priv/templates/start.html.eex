@@ -1,6 +1,6 @@
 <%= CsuiteFinderWeb.Layout.head(
       title: "Get started — CSuiteFinder",
-      description: "Point your agent at llms.txt and it knows every endpoint, parameter and price. A $#{@trial_price} trial to start.",
+      description: "Paste one line into your assistant. It reads llms.txt, runs the demo, and hands back a CSV of verified work emails.",
       nav: :start,
       audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:start)
@@ -8,200 +8,134 @@
 
 <header>
   <span class="timing">About a minute</span>
-  <h1>Get started</h1>
+  <h1>Paste one line. Get a CSV back.</h1>
   <p class="lede">
-    You do not have to read our documentation. If you use an AI assistant, one line
-    tells it everything it needs — including the prices — and it takes over from there.
+    You do not have to read our documentation, and neither do you have to write
+    any code. If you use an AI assistant, one line tells it everything — every
+    endpoint, every parameter, every price — and it takes over from there.
   </p>
 </header>
 
-<h2 class="section-label">The one-paste setup</h2>
+<ol class="steps">
+  <li><strong>Paste the line</strong><span>Claude, ChatGPT, Cursor, Copilot — anything that reads a page and makes a request.</span></li>
+  <li><strong>It reads <code>llms.txt</code></strong><span>Generated from the live service, so what it reads is what you are charged.</span></li>
+  <li><strong>Ask for what you want</strong><span>In plain English. It knows which calls to chain.</span></li>
+</ol>
 
-<div class="big-step">
-  <span class="n">1</span>
-  <div>
-    <h3>Give your assistant this line</h3>
-    <p>
-      Works with Claude, ChatGPT, Cursor, Copilot — anything that can read a web page
-      and make a request.
-    </p>
-    <div class="copyblock" data-signed="out">
-      <button class="copybtn" data-copy="prompt1">Copy</button>
-      <pre><code id="prompt1">Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `csf_live_...` to be used. Then run /demo</code></pre>
+<%!-- The whole page is this conversation. Rendered as markup rather than a
+      screenshot so it stays readable, recolours in dark mode, and cannot go
+      stale against the line above it — the paste block and the first bubble are
+      the same string. --%>
+<h2 class="section-label">What that looks like</h2>
+
+<div class="chat" role="img" aria-label="A conversation with an assistant: the visitor pastes the setup line, the assistant reads llms.txt, runs the demo and returns a CSV of verified work emails.">
+  <div class="turn you">
+    <span class="who">You</span>
+    <div class="bubble" data-signed="out">
+      Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my
+      token <code>csf_live_...</code> to be used. Then run /demo
     </div>
-    <p class="quiet" data-signed="out">
-      Swap <code>csf_live_...</code> for your own key — <a href="/account">get one here</a>,
-      it takes a moment. Paste the line with the placeholder still in it and your assistant
-      has nothing to spend.
-    </p>
-
-    <div class="copyblock" data-signed="in" hidden>
-      <button class="copybtn" data-copy="prompt1-key">Copy</button>
-      <pre><code id="prompt1-key" data-key>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `CSF_KEY_HERE` to be used. Then run /demo</code></pre>
+    <div class="bubble" data-signed="in" hidden>
+      Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my
+      token <code data-key>CSF_KEY_HERE</code> to be used. Then run /demo
     </div>
   </div>
-</div>
 
-<div class="big-step">
-  <span class="n">2</span>
-  <div data-signed="out">
-    <h3>It reads the file and starts working</h3>
-    <p>
-      That file is written for machines. Your assistant reads it and knows every endpoint,
-      every parameter and what each one costs, because the file is generated from the live
-      service. Then it runs the demo off its own bat — no form, no call, no waiting for
-      anyone to approve you.
-    </p>
-    <p>
-      The key goes in the line above. Get one on
-      <a href="/account">your account page</a> and buy the
-      <strong>$<%= @trial_price %> trial</strong> there — that is the credit the demo
-      spends. Keep a copy of the key: we only ever store a hash of it, so it cannot be
-      re-sent to you.
-    </p>
-  </div>
+  <div class="turn bot">
+    <span class="who">Assistant</span>
+    <div class="bubble">
+      <p>Reading <code>llms.txt</code> — 18 endpoints, prices included. Token stored.</p>
 
-  <div data-signed="in" hidden>
-    <h3>It reads the file and starts working</h3>
-    <p>
-      That file is written for machines. Your assistant reads it and knows every endpoint,
-      every parameter and what each one costs, because the file is generated from the live
-      service. It has no account to create — the line above carries
-      <strong>your key</strong>, and the lookups come out of the credit you already have.
-    </p>
-    <p class="quiet">
-      Your balance and usage are on <a href="/account">your account page</a>. Treat that
-      key like a password: anything holding it can spend your credit.
-    </p>
-  </div>
-</div>
+      <div class="run">
+        <span class="tick">✓</span>
+        <code>GET /email/company/people?domain=stripe.com&amp;department=executive&amp;limit=20</code>
+        <span class="cost">$0.05</span>
+      </div>
+      <div class="run">
+        <span class="tick">✓</span>
+        <code>POST /email/deliverable</code> <span class="muted-inline">× 20</span>
+        <span class="cost">included</span>
+      </div>
 
-<div class="big-step">
-  <span class="n">3</span>
-  <div>
-    <h3>Ask for what you actually want</h3>
-    <p>
-      Now talk to it normally. It already knows how to chain the calls — find the address,
-      check it is deliverable, tell you who it belongs to.
-    </p>
-    <div class="asks">
-      <div class="ask">
-        <span class="who">Sales</span>
-        <p>"Here are 40 names and their companies. Get me verified work emails for the ones that check out and save it to prospects.csv"</p>
-      </div>
-      <div class="ask">
-        <span class="who">Founders</span>
-        <p>"Find the email for Sarah Chen at sequoiacap.com, confirm it's real, and tell me her title before I write to her."</p>
-      </div>
-      <div class="ask">
-        <span class="who">Ops</span>
-        <p>"Someone emailed me from jhuang@nvidia.com — who are they and what does the company do?"</p>
-      </div>
-      <div class="ask demo">
-        <span class="who">Demo</span>
-        <p>"Run /demo stripe.com"</p>
-        <p class="plain">
-          Twenty C-suite rows from any company you name, each one checked against
-          the live mailbox, in the order they came back. About <strong>$0.05</strong>
-          of your credit. Name no company and it uses Stripe. Nothing to set up:
-          <code>llms.txt</code> tells it what to chain.
-        </p>
+      <p class="settle">
+        20 rows, 18 deliverable, 2 undeliverable — caught before you sent to them.
+        Spent <strong>$0.05</strong>.
+      </p>
+
+      <div class="file">
+        <span class="file-icon" aria-hidden="true">▦</span>
+        <div>
+          <strong>Prospects.csv</strong>
+          <span>20 rows · name, title, email, deliverable</span>
+        </div>
+        <span class="file-done">ready</span>
       </div>
     </div>
   </div>
 </div>
 
-<div class="note">
-  <strong>Tell your assistant one thing up front:</strong> this finds the address of someone
-  you can already name. It is not a prospect database and will not build your list. Bring the
-  names — from LinkedIn, a conference programme, a company's about page — and it does the rest.
-</div>
-
-<h2 class="section-label">Make it permanent</h2>
-
-<p class="quiet">
-  If your assistant remembers project instructions, put this line in them — in Claude's
-  <code>CLAUDE.md</code>, an <code>AGENTS.md</code>, Cursor rules, or a custom GPT's
-  instructions — and it will keep the API to hand without being told again:
+<p class="chat-note">
+  Real shape, real prices. The sheet below is real output — same columns, run on
+  <%= @sheet_date %>.
 </p>
+
+<%= CsuiteFinderWeb.Layout.sheet(
+      rows: @sheet,
+      rows_label: @sheet_rows,
+      date: @sheet_date,
+      visitor: @visitor
+    ) %>
+
+<h2 class="section-label">The line</h2>
 
 <div class="copyblock" data-signed="out">
-  <button class="copybtn" data-copy="prompt2">Copy</button>
-  <pre><code id="prompt2">For work email lookups, use the CSuiteFinder API documented at <%= @base_url %>/llms.txt. The key is in the CSF_API_KEY environment variable.</code></pre>
+  <button class="copybtn" data-copy="prompt1">Copy</button>
+  <pre><code id="prompt1">Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `csf_live_...` to be used. Then run /demo</code></pre>
 </div>
+<p class="quiet" data-signed="out">
+  Swap <code>csf_live_...</code> for your own key — <a href="/account">get one here</a>.
+  Paste it with the placeholder still in and your assistant has nothing to spend.
+</p>
 
 <div class="copyblock" data-signed="in" hidden>
-  <button class="copybtn" data-copy="prompt2-key">Copy</button>
-  <pre><code id="prompt2-key" data-key>For work email lookups, use the CSuiteFinder API documented at <%= @base_url %>/llms.txt. Use the key CSF_KEY_HERE as the Authorization bearer token.</code></pre>
+  <button class="copybtn" data-copy="prompt1-key">Copy</button>
+  <pre><code id="prompt1-key" data-key>Read <%= @base_url %>/llms.txt and use the CSuiteFinder API and store my token `CSF_KEY_HERE` to be used. Then run /demo</code></pre>
 </div>
 
-<div class="alt">
-<h2 class="section-label">No assistant? Two other ways</h2>
-
-<h3 class="sub-label">In your browser</h3>
-<p class="quiet" data-signed="out">
-  <a href="/account"><strong>Open your account</strong></a>, enter your email, and you have a
-  key. Buy the $<%= @trial_price %> trial on the same page and you have <%= @trial_months %>
-  month of credit, plus your balance, your usage and a way to top up — no headers, no terminal.
-</p>
-<p class="quiet" data-signed="in" hidden>
-  <a href="/account"><strong>Your account page</strong></a> shows your balance, what you have
-  used it on, and lets you top up or mint a spare key — no headers, no terminal.
-</p>
-
-<h3 class="sub-label">From the command line</h3>
-<div class="copyblock">
-  <button class="copybtn" data-copy="prompt3" data-signed="out">Copy</button>
-  <button class="copybtn" data-copy="prompt3-key" data-signed="in" hidden>Copy</button>
-  <pre data-signed="out"><code id="prompt3">KEY=$(curl -s -X POST <%= @base_url %>/csuitefinder/register \
-  -H 'content-type: application/json' \
-  -d '{"email":"you@company.com"}' | grep -o '"api_key":"[^"]*' | cut -d'"' -f4)
-
-curl -H "Authorization: Bearer $KEY" \
-  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"</code></pre>
-  <pre data-signed="in" hidden><code id="prompt3-key" data-key>export CSF_KEY=CSF_KEY_HERE
-
-curl -H "Authorization: Bearer $CSF_KEY" \
-  "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"</code></pre>
-</div>
 <p class="quiet">
-  The full reference is on the <a href="/developers">developer page</a>, and
-  <a href="/llms.txt"><code>llms.txt</code></a> is readable by people too — it is just Markdown.
+  To keep it around, put the same line in your assistant's project instructions —
+  <code>CLAUDE.md</code>, <code>AGENTS.md</code>, Cursor rules — and it stays
+  available without being told again.
 </p>
+
+<p class="quiet">
+  No assistant, or would rather call it yourself? Everything here is a plain JSON
+  API over HTTPS — <a href="/developers">the reference and a curl example are on
+  the developer page</a>, and <a href="/account">your account page</a> issues the
+  key, shows your balance and takes payment in a browser.
+</p>
+
+<div class="note">
+  <strong>Worth saying up front:</strong> this finds the address of someone you can
+  already name. It is not a prospect database and will not build your list. Bring
+  the names; it does the rest.
 </div>
 
-<h2 class="section-label">What it costs</h2>
+<h2 class="section-label" id="pricing">What it costs</h2>
 
-<p class="quiet" data-signed="out">
-  A trial is <strong>$<%= @trial_price %>, once</strong>, and buys $<%= @trial_price %> of
-  credit for <%= @trial_months %> month — real lookups, not a limited preview. After that you
-  pay <strong>$<%= @email_price %> per email address</strong>,
-  and nothing at all for deliverability checks, identity lookups, company
-  data or email formats. A lookup that finds nothing is free.
-</p>
-
-<p class="quiet" data-signed="in" hidden>
-  You pay <strong>$<%= @email_price %> per email address</strong> out of the credit you
-  already have, and nothing at all for deliverability checks, identity lookups, company
-  data or email formats. A lookup that finds nothing is free.
+<p class="quiet">
+  A trial is <strong>$<%= @trial_price %>, once</strong>, and buys
+  $<%= @trial_price %> of credit for <%= @trial_months %> month — real lookups,
+  not a limited preview. After that you pay
+  <strong>$<%= @email_price %> per work email</strong>, and nothing for
+  deliverability checks, identity lookups, company data or email formats. A
+  lookup that finds nothing is free; credit you buy never expires.
 </p>
 
 <p style="margin-top:22px">
-  <a class="btn btn-primary" href="/account" data-signed="out">Create your account</a>
+  <a class="btn btn-primary" href="/checkout" data-signed="out">Start — $<%= @trial_price %> trial</a>
   <a class="btn btn-primary" href="/account" data-signed="in" hidden>Open your account</a>
   <a class="btn btn-ghost" href="/llms.txt">Read llms.txt</a>
-</p>
-
-<!-- ── pricing ─────────────────────────────────────────────────────────────
-     Every page carries its own, because the nav's Pricing link is a bare
-     #pricing fragment that scrolls down the page the visitor is already on. -->
-<h2 class="section-label" id="pricing">Pricing</h2>
-
-<p class="quiet">
-  <strong>$<%= @email_price %></strong> per work email found. Deliverability checks,
-  enrichment, company data and email formats are included with any balance, and a
-  lookup that finds nothing is free. Credit you buy never expires; purchases start at
-  $<%= @min_bundle %>. <a href="/developers#pricing">The full price list is here →</a>
 </p>
 
 <%= CsuiteFinderWeb.Layout.footer(:developer) %>
@@ -209,10 +143,9 @@ curl -H "Authorization: Bearer $CSF_KEY" \
 </div>
 
 <script>
-// Someone who already has a key does not need to be told to register for a
-// trial — they need the same instructions with their own credentials in them.
-// The page is rendered signed-out and narrowed here, so a first visit and a
-// browser with scripting off both get a page that still makes sense.
+// Someone who already has a key is shown their own, in the bubble and in the
+// paste block. The page renders signed-out and is narrowed here, so a first
+// visit and a browser with scripting off both get something that makes sense.
 (function () {
   "use strict";
 
@@ -224,8 +157,6 @@ curl -H "Authorization: Bearer $CSF_KEY" \
     el.hidden = el.getAttribute("data-signed") !== state;
   });
 
-  // Put the real key into the snippets, so what they copy works as pasted
-  // rather than needing a placeholder swapped out by hand.
   if (key) {
     document.querySelectorAll("[data-key]").forEach(function (el) {
       el.textContent = el.textContent.replace("CSF_KEY_HERE", key);

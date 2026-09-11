@@ -837,7 +837,12 @@ defmodule CsuiteFinderWeb.PageTest do
     test "offers a path for people without an assistant", %{conn: conn} do
       html = conn |> get(~p"/start") |> html_response(200)
 
-      assert html =~ "In your browser"
+      # The page is built around pasting a line into an assistant. Someone who
+      # has none still needs a way in, so it has to point at both the reference
+      # and the browser path — this is the assertion that stops the page
+      # becoming AI-only by degrees.
+      assert html =~ ~s|href="/developers"|
+      assert html =~ ~s|href="/account"|
       assert html =~ ~s|href="/account"|
       assert html =~ "curl"
     end
