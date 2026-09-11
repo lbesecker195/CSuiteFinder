@@ -156,16 +156,10 @@ defmodule CsuiteFinder.Billing do
       })
       |> Repo.insert!()
 
-    # Agent-side analytics. Here because this runs once per billable request and
-    # already holds the shape of one — and only the shape. `CsuiteFinder.Ssa`
-    # filters against its own allowlist, so what is passed here cannot widen
-    # what leaves the machine.
-    CsuiteFinder.Ssa.ping("lookup",
-      endpoint: endpoint,
-      found: found?,
-      cached: Map.get(params, :cached, false),
-      units: units
-    )
+    # Agent-side analytics. Recorded rather than sent: the throttle batches these
+    # into one ping every ten seconds, which is what their documentation asks
+    # for and what a four-hundred-row sweep makes necessary.
+    CsuiteFinder.Ssa.Throttle.record(endpoint, found?, Map.get(params, :cached, false), units)
 
     {:ok, event}
   end

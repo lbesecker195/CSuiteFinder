@@ -39,7 +39,15 @@ defmodule CsuiteFinder.Ssa do
   @timeout 2_000
 
   # Shape, never content. See the moduledoc.
-  @allowed ~w(endpoint cached found audience outcome units)a
+  #
+  # `email`, `c`, `s_p` and `n` are marked required in their parameter table —
+  # the user's address, city, state and nation. They are deliberately absent
+  # here. Those values would travel in a query string and be written to the logs
+  # of every proxy on the way, which their own "What not to send" section says
+  # plainly; and our users' addresses are not ours to hand to a third party for
+  # counting. The same file resolves the contradiction in our favour: "If you
+  # genuinely do not have a field, omit that one rather than inventing it."
+  @allowed ~w(endpoint cached found audience outcome units calls)a
 
   @doc """
   Record one event. Returns immediately and never raises.

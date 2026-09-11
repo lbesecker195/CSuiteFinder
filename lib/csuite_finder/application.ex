@@ -15,6 +15,8 @@ defmodule CsuiteFinder.Application do
       # Hands annual seats their monthly credit. Safe to run on every node —
       # see CsuiteFinder.Billing.SeatRefresher.
       CsuiteFinder.Billing.SeatRefresher,
+      # Batches agent-side usage into one ping every ten seconds.
+      CsuiteFinder.Ssa.Throttle,
       # Start a worker by calling: CsuiteFinder.Worker.start_link(arg)
       # {CsuiteFinder.Worker, arg},
       # Start to serve requests, typically the last entry
