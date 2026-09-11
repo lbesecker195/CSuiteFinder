@@ -1,0 +1,259 @@
+<%= CsuiteFinderWeb.Layout.head(
+      title: "Checkout — CSuiteFinder",
+      robots: "noindex",
+      nav: :none,
+      audience: :sales,
+      css: CsuiteFinderWeb.Layout.page_css(:checkout),
+      wrap_class: "wrap-narrow"
+    ) %>
+
+<header>
+  <%= if @plan == :seat do %>
+    <h1>One seat, $<%= @seat_usd %> a month.</h1>
+    <p class="lede">
+      $<%= @seat_usd %> of lookup credit every month — about
+      <%= @seat_emails %> verified work emails. Cancel whenever you like.
+    </p>
+  <% else %>
+    <h1>Pick the one that fits.</h1>
+    <p class="lede">
+      Both buy the same lookups on the same terms. The only difference is how
+      much credit you get and whether it renews.
+    </p>
+  <% end %>
+</header>
+
+<div id="message" class="msg"></div>
+
+<%!-- The email is the whole account. No password here on purpose: it is asked
+    for after the payment lands, when the person has a reason to keep the
+    account and we have a reason to believe they will. --%>
+<div class="card email-card">
+  <label for="email">Your work email</label>
+  <input type="email" id="email" placeholder="you@company.com" autocomplete="email"
+         value="<%= @prefill_email %>">
+  <p class="hint">
+    This is your account. No password needed yet — you set one after payment, so
+    there is nothing to invent before you have decided anything.
+  </p>
+</div>
+
+<%= if @plan == :seat do %>
+  <div class="card pay-card">
+    <div class="pay-head">
+      <div>
+        <span class="amount">$<%= @seat_usd %></span>
+        <span class="per">per person, per month</span>
+      </div>
+      <div class="seats-field">
+        <label for="seats">Seats</label>
+        <input type="text" id="seats" value="1" inputmode="numeric">
+      </div>
+    </div>
+
+    <p class="quote" id="quote"></p>
+
+    <button id="go-seat" class="big">Continue to PayPal →</button>
+
+    <ul class="reassure">
+      <li>Nothing is charged until you approve it at PayPal.</li>
+      <li>Cancel any time; the month you have paid for runs to its end.</li>
+      <li>Unused credit does not roll over — each month starts at $<%= @seat_usd %>.</li>
+    </ul>
+  </div>
+
+  <p class="alt-line">
+    Not ready to commit? <a href="/checkout">Try it for $<%= @trial_price %> first →</a>
+  </p>
+<% else %>
+  <div class="options">
+    <div class="card opt">
+      <span class="tag">Try it</span>
+      <div><span class="amount">$<%= @trial_price %></span><span class="per">once</span></div>
+      <p class="opt-line">
+        $<%= @trial_price %> of credit — about <%= @trial_emails %> verified work
+        emails — to run your own list through.
+      </p>
+      <ul>
+        <li>Every lookup a seat gets, on the same terms</li>
+        <li><strong>Credit expires after <%= @trial_months %> month</strong></li>
+        <li>One per account, and nothing renews</li>
+      </ul>
+      <button id="go-trial">Start the trial — $<%= @trial_price %></button>
+    </div>
+
+    <div class="card opt best">
+      <span class="tag">Most teams pick this</span>
+      <div><span class="amount">$<%= @seat_usd %></span><span class="per">per person / month</span></div>
+      <p class="opt-line">
+        $<%= @seat_usd %> of credit every month — about <%= @seat_emails %>
+        verified work emails, renewed each month.
+      </p>
+      <ul>
+        <li>Everything in the trial, <strong><%= @seat_emails %> emails a month</strong></li>
+        <li>Cancel any time, mid-month included</li>
+        <li>Credit does not roll over — each month starts fresh</li>
+      </ul>
+      <button id="go-seat" class="primary">Take a seat — $<%= @seat_usd %>/month</button>
+    </div>
+  </div>
+
+  <p class="alt-line">
+    Nothing is charged until you approve it at PayPal.
+  </p>
+<% end %>
+
+<p class="signin-line">
+  Already have an account? <a href="/account">Sign in →</a>
+</p>
+
+<%= CsuiteFinderWeb.Layout.footer(:sales) %>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var API = "/csuitefinder";
+  var SEAT_USD = <%= String.replace(@seat_usd, ",", "") %>;
+
+  function $(id) { return document.getElementById(id); }
+
+  function say(text, kind) {
+    var box = $("message");
+    box.textContent = text || "";
+    box.className = "msg" + (kind ? " " + kind : "");
+  }
+
+  function storedKey() {
+    try { return localStorage.getItem("csf_api_key"); } catch (e) { return null; }
+  }
+
+  function storeKey(k) {
+    try { localStorage.setItem("csf_api_key", k); } catch (e) {}
+  }
+
+  function post(path, body, key) {
+    var headers = { "content-type": "application/json" };
+    if (key) headers["authorization"] = "Bearer " + key;
+    return fetch(API + path, { method: "POST", headers: headers, body: JSON.stringify(body) })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; })
+          .then(function (b) { return { ok: r.ok, body: b }; });
+      });
+  }
+
+  // An account is an email and nothing else. If this browser already holds a
+  // key we reuse it rather than trying to register the same address twice.
+  function account(email) {
+    var key = storedKey();
+    if (key) return Promise.resolve({ ok: true, key: key });
+
+    return post("/register", { email: email, audience: "sales" }).then(function (res) {
+      if (res.ok && res.body.api_key) {
+        storeKey(res.body.api_key);
+        return { ok: true, key: res.body.api_key };
+      }
+      var taken = res.body && res.body.details && res.body.details.email;
+      return { ok: false, taken: !!taken };
+    });
+  }
+
+  function email() {
+    var value = $("email").value.trim();
+    if (!value || value.indexOf("@") < 0) {
+      say("Enter your work email so we know where the account goes.", "err");
+      $("email").focus();
+      return null;
+    }
+    return value;
+  }
+
+  // Back to the account page, which captures the payment and then asks for a
+  // password — the first moment asking for one is worth anybody's time.
+  function back(what) {
+    var origin = window.location.origin;
+    return {
+      return_url: origin + "/account?bought=" + what,
+      cancel_url: origin + "/checkout?cancelled=1"
+    };
+  }
+
+  function buy(button, path, extra, what) {
+    var value = email();
+    if (!value) return;
+
+    button.disabled = true;
+    say("Setting up your payment…", "info");
+
+    account(value).then(function (acct) {
+      if (!acct.ok) {
+        button.disabled = false;
+        say(acct.taken
+          ? "That email already has an account — sign in and buy from there."
+          : "We could not start an account for that address.", "err");
+        return;
+      }
+
+      var body = back(what);
+      for (var k in extra) { if (extra.hasOwnProperty(k)) body[k] = extra[k]; }
+
+      post(path, body, acct.key).then(function (res) {
+        if (res.ok && res.body.approve_url) {
+          say("Taking you to PayPal…", "info");
+          window.location.href = res.body.approve_url;
+          return;
+        }
+        button.disabled = false;
+        if (res.body && res.body.error === "trial_already_taken") {
+          say("This account has already had its trial. A seat is the next step.", "err");
+        } else if (res.body && res.body.error === "paypal_not_configured") {
+          say("Payments are not switched on yet. Please try again shortly.", "err");
+        } else {
+          say("We could not start that payment. Nothing was charged.", "err");
+        }
+      });
+    });
+  }
+
+  var seats = $("seats");
+  var quote = $("quote");
+
+  function seatCount() {
+    var n = parseInt(seats ? seats.value : "1", 10);
+    return n > 0 ? n : 1;
+  }
+
+  function requote() {
+    if (!quote) return;
+    var n = seatCount();
+    quote.textContent = n === 1
+      ? "$" + SEAT_USD.toLocaleString() + " a month, billed monthly."
+      : n + " seats — $" + (n * SEAT_USD).toLocaleString() + " a month, billed monthly.";
+  }
+
+  if (seats) { seats.addEventListener("input", requote); requote(); }
+
+  var seatBtn = $("go-seat");
+  if (seatBtn) {
+    seatBtn.addEventListener("click", function () {
+      buy(this, "/billing/subscribe", { seats: seatCount() }, "seat");
+    });
+  }
+
+  var trialBtn = $("go-trial");
+  if (trialBtn) {
+    trialBtn.addEventListener("click", function () {
+      buy(this, "/billing/trial", {}, "trial");
+    });
+  }
+
+  if (new URLSearchParams(window.location.search).get("cancelled")) {
+    window.history.replaceState({}, "", window.location.pathname);
+    say("Nothing was charged. Pick up where you left off whenever you like.", "info");
+  }
+})();
+</script>
+</body>
+</html>

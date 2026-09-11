@@ -1,26 +1,26 @@
 <%= CsuiteFinderWeb.Layout.head(
-      title: "For sales teams — CSuiteFinder",
-      description: "$#{@seat_usd} per person per month, and every month that seat gets $#{@seat_usd} of lookup credit. Verified work email addresses for the people you need to reach.",
+      title: "Work emails for your whole pipeline — CSuiteFinder",
+      description: "$#{@seat_usd} a month per seat, and every month that seat carries $#{@seat_usd} of lookup credit — around #{@seat_emails} verified work email addresses. Try it for $#{@trial_price}.",
       nav: :teams,
       audience: :sales,
       css: CsuiteFinderWeb.Layout.page_css(:teams)
     ) %>
 <header>
-  <h1>Reach the decision-maker</br>Not the contact form.</h1>
+  <h1>Your reps know who to call.<br>They just don't have the email.</h1>
   <p class="lede">
-    Give a name and a company, get a work email address that is checked before you send.
-    No API key, no terminal, and no meter running while you work.
+    Give a name and a company, get a work email that has been checked against the
+    live mailbox before you send. One seat is
+    <strong>$<%= @seat_usd %> a month</strong> and carries
+    $<%= @seat_usd %> of lookup credit every month — about
+    <strong><%= @seat_emails %> verified work emails</strong>.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="/account#pricing">Reserve a Seat, now! — $<%= @seat_usd %>/month</a>
-    <a class="btn btn-ghost" href="/account#pricing">Try it for $<%= @trial_price %> — <%= @trial_months %> month</a>
+    <a class="btn btn-primary" href="/checkout?plan=seat">Get a seat — $<%= @seat_usd %>/month</a>
+    <a class="btn btn-ghost" href="/checkout">Try it first — $<%= @trial_price %></a>
   </div>
   <p class="cta-note">
-    Not ready for a seat? <strong>$<%= @trial_price %> buys a trial</strong> —
-    $<%= @trial_price %> of credit and every lookup a seat gets.
-    <strong>The credit expires after <%= @trial_months %> month</strong>, the same way a
-    seat's does, because it is a trial of the seat rather than a bundle of credit.
-    Run your own list through it before deciding anything.
+    No contract, no call, no seat minimum. Cancel any time and the month you have
+    paid for runs to its end.
   </p>
 </header>
 
@@ -31,17 +31,151 @@
       visitor: @visitor
     ) %>
 
+<h2 class="section-label">Build a bigger Rolodex, today</h2>
+
+<div class="rolodex-band">
+  <%!-- Drawn rather than photographed: the cards are generated from one arc, so
+        the fan stays even and the whole thing is a few hundred bytes that
+        recolour themselves in dark mode. --%>
+  <%!-- Framed to the drawing rather than to a round number: at 60 degrees the
+        outer cards and the base swing past a 560x300 box and get clipped. --%>
+  <svg class="rolodex" viewBox="50 38 460 290" role="img"
+       aria-label="A rolodex with its cards fanned open, each holding a name and a work email.">
+    <%= for {angle, i} <- Enum.with_index(-60..60//15) do %>
+      <g transform="rotate(<%= angle %> 280 268)">
+        <rect x="212" y="66" width="136" height="176" rx="7"
+              class="rolo-card <%= if i == 4, do: "front" %>"/>
+        <rect x="272" y="60" width="16" height="17" rx="3" class="rolo-notch"/>
+        <rect x="228" y="104" width="<%= 74 + rem(i * 17, 30) %>" height="8" rx="4" class="rolo-line strong"/>
+        <rect x="228" y="124" width="<%= 92 - rem(i * 13, 26) %>" height="6" rx="3" class="rolo-line"/>
+        <rect x="228" y="142" width="<%= 84 - rem(i * 9, 22) %>" height="6" rx="3" class="rolo-line"/>
+        <%= if i == 4 do %>
+          <circle cx="234" cy="176" r="9" class="rolo-tick-bg"/>
+          <path d="M229.5 176.5l3.4 3.4 6-6.6" class="rolo-tick"/>
+          <rect x="250" y="171" width="58" height="7" rx="3.5" class="rolo-line strong"/>
+        <% end %>
+      </g>
+    <% end %>
+
+    <%!-- The spindle and rails, drawn last so the cards sit behind them. --%>
+    <path d="M92 252 q188 46 376 0" class="rolo-rail"/>
+    <path d="M92 252 q188 46 376 0" class="rolo-rail inner"/>
+    <rect x="86" y="240" width="18" height="40" rx="6" class="rolo-post"/>
+    <rect x="456" y="240" width="18" height="40" rx="6" class="rolo-post"/>
+    <circle cx="280" cy="268" r="10" class="rolo-hub"/>
+  </svg>
+
+  <div class="rolodex-copy">
+    <p class="rolodex-lead">
+      A rep's contact list is the whole job, and it stops growing the moment they
+      run out of addresses.
+    </p>
+    <p class="quiet">
+      One seat adds up to <strong><%= @seat_emails %> verified work emails</strong>
+      a month — every one of them checked against the live mailbox before it
+      reaches your sequence. You bring the names; the addresses stop being the
+      part that slows everyone down.
+    </p>
+    <p style="margin:18px 0 0">
+      <a class="btn btn-primary" href="/checkout?plan=seat">Get a seat — $<%= @seat_usd %>/month</a>
+    </p>
+  </div>
+</div>
+
+<h2 class="section-label">What a seat actually buys</h2>
+
+<div class="numbers">
+  <div class="num">
+    <span class="n"><%= @seat_emails %></span>
+    <span class="k">verified work emails a month</span>
+  </div>
+  <div class="num">
+    <span class="n">Included</span>
+    <span class="k">mailbox checks, job titles, company data</span>
+  </div>
+  <div class="num">
+    <span class="n">$0</span>
+    <span class="k">for a lookup that finds nothing</span>
+  </div>
+</div>
+
+<p class="quiet">
+  That is the whole pitch, and it is arithmetic rather than a claim:
+  $<%= @seat_usd %> of lookup credit a month, and a seat spends it on work emails.
+  Deliverability checks, company data, job titles and email formats are included
+  — they draw nothing from the credit. You are charged for answers, so a name we
+  cannot resolve costs you nothing.
+</p>
+
+<h2 class="section-label">The objections, answered plainly</h2>
+
+<div class="faq">
+  <div class="q">
+    <strong>Will these bounce?</strong>
+    <span>
+      Every address can be checked against the live mailbox before you send, and
+      that check is included. Two of the rows in the sheet above came back
+      undeliverable — that is the point of showing them. A bounce you catch here
+      costs nothing; one you catch after sending costs your sending domain.
+    </span>
+  </div>
+  <div class="q">
+    <strong>What if my reps won't learn another tool?</strong>
+    <span>
+      There is nothing to learn. They ask their assistant — ChatGPT, Claude,
+      whatever they already use — in plain English, and it does the lookups.
+      <a href="/start">One line of setup</a>, once.
+    </span>
+  </div>
+  <div class="q">
+    <strong>What happens to unused credit?</strong>
+    <span>
+      It does not roll over. Each month starts at $<%= @seat_usd %> again, which
+      is why a seat is priced as a month of capacity rather than a balance.
+      Credit you buy outright is separate and never expires.
+    </span>
+  </div>
+  <div class="q">
+    <strong>What if it doesn't work for my list?</strong>
+    <span>
+      Spend $<%= @trial_price %> and find out on your own names before you commit
+      to anything. Same lookups, same terms — it is a trial of the seat rather
+      than a different product.
+      <strong>The credit expires after <%= @trial_months %> month</strong>, the
+      same way a seat's does.
+    </span>
+  </div>
+  <div class="q">
+    <strong>Am I locked in?</strong>
+    <span>
+      No contract and no minimum. Cancel from your account page any time and the
+      month you have already paid for runs to its end.
+    </span>
+  </div>
+  <div class="q">
+    <strong>Who is this for?</strong>
+    <span>
+      Teams that already know who they want to reach — founders selling into
+      named accounts, reps working a territory list, recruiters chasing named
+      candidates. It resolves people you can name. It is not a prospect database
+      and will not build the list for you.
+    </span>
+  </div>
+</div>
+
 <!-- ── pricing ─────────────────────────────────────────────────────────────
      At the foot of the page on purpose: the nav's Pricing link is a bare
      #pricing fragment, so it scrolls down this page rather than sending a
      salesperson to the developer plan. -->
 
-<div class="plan" id="pricing">
+<h2 class="section-label" id="pricing">Pricing</h2>
+
+<div class="plan">
   <div>
     <span class="price">$<%= @seat_usd %></span><span class="per">per person, per month</span>
   </div>
   <p class="gets">
-    Every seat gets nearly <strong>400,000 corporate emails</strong> each month.
+    Every seat gets nearly <strong><%= @seat_emails %> corporate emails</strong> each month.
   </p>
   <ul>
     <%= for item <- @seat_includes do %>
@@ -54,7 +188,11 @@
     <% end %>
   </ul>
   <p style="margin:24px 0 0">
-    <a class="btn btn-primary" href="/account#pricing">Reserve a Seat, now!</a>
+    <a class="btn btn-primary" href="/checkout?plan=seat">Get a seat — $<%= @seat_usd %>/month</a>
+  </p>
+  <p class="cta-note" style="margin:14px 0 0">
+    Rather try it on your own list first?
+    <a href="/checkout">Try it for $<%= @trial_price %> →</a>
   </p>
 </div>
 

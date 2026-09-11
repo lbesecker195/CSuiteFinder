@@ -36,6 +36,11 @@ defmodule CsuiteFinderWeb.BillingController do
           granted_expires_at: balances.granted_expires_at,
           # Once, per account, whether it was granted or bought.
           trial_taken: not is_nil(account.trial_granted_at),
+          # Whether a password exists, never anything about it. Checkout creates
+          # accounts without one — asking before someone has decided to buy is
+          # a field that costs signups and protects nothing — so the account
+          # page has to know when to ask for one afterwards.
+          has_password: not is_nil(account.password_hash),
           status: account.status,
           # A per-answer price list is the developer's offer and the
           # salesperson's distraction — $0.0025 read next to $999 makes the seat

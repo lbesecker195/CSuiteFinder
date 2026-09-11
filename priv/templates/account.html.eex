@@ -30,13 +30,12 @@
         <input type="email" id="email" placeholder="you@company.com" autocomplete="email"
                value="<%= @prefill_email %>">
       </div>
-      <div>
-        <label for="newpassword">Password</label>
-        <input type="password" id="newpassword" placeholder="at least <%= @min_password %> characters"
-               autocomplete="new-password">
-      </div>
       <button id="register">Create account</button>
     </div>
+    <p class="muted" style="margin:12px 0 0">
+      No password needed to start — you set one after your first payment, when
+      there is an account worth getting back into.
+    </p>
   </div>
 
   <div class="card">
@@ -85,6 +84,28 @@
 <section id="signedin" hidden>
   <h1>Your account</h1>
   <p class="lede" id="whoami"></p>
+
+  <!-- Shown only to an account that has paid and has no password yet — the
+       checkout deliberately does not ask for one, so this is where it gets
+       asked. Placed at the top because until it is done, the only way back into
+       this account is a key living in one browser's storage. -->
+  <div class="card secure-card" id="securecard" hidden>
+    <h3 class="card-title" id="securetitle">Set a password before you go</h3>
+    <p class="muted" id="securewhy" style="margin-top:0">
+      Your account lives in this browser right now. A password is how you get
+      back in from anywhere else — and there is no reset email, so this is worth
+      the ten seconds.
+    </p>
+    <div class="row">
+      <div>
+        <label for="firstpassword">Password</label>
+        <input type="password" id="firstpassword"
+               placeholder="at least <%= @min_password %> characters"
+               autocomplete="new-password">
+      </div>
+      <button id="savefirstpassword">Save password</button>
+    </div>
+  </div>
 
   <div class="card">
     <label>Balance</label>
@@ -230,6 +251,10 @@
 (function () {
   "use strict";
   var API = "/csuitefinder";
+
+  // Set by the checkout's return_url. Read once, before handleReturn() cleans
+  // the query string off the address bar.
+  var justBought = new URLSearchParams(window.location.search).get("bought");
   var STORE = "csf_api_key";
   var key = null;
 
@@ -292,6 +317,7 @@
     $("balanceusd").textContent = "of credit";
     renderSplit(b);
     renderTrial(b);
+    renderSecure(b);
     var perEmail = (b.prices_usd && b.prices_usd["email.find"]) || 0.0025;
     $("findsleft").textContent = usd > 0
       ? commas(Math.floor(usd / perEmail)) + " more work email addresses. " +
@@ -337,6 +363,31 @@
       ? "$" + commas(n * SEAT_USD) + " a month, and $" + commas(n * SEAT_USD) +
         " of credit added each month."
       : "Enter how many people need a seat.";
+  }
+
+  // Asked for only once there is an account worth keeping: someone who has paid
+  // has a reason to come back, and until they have, a password field is a
+  // question that costs signups and protects nothing.
+  function renderSecure(b) {
+    var card = $("securecard");
+    if (!card) return;
+
+    // `justBought` matters on its own. A seat is charged by PayPal's webhook
+    // rather than at the moment of approval, so someone arriving straight back
+    // from a $999 subscription still reads as a zero balance here — and that is
+    // exactly the person who most needs a way back into the account.
+    var paid = justBought || b.trial_taken === true || (b.balance_usd || 0) > 0 ||
+               (b.purchased_usd || 0) > 0 || (b.granted_usd || 0) > 0;
+
+    card.hidden = b.has_password === true || !paid;
+
+    if (!card.hidden && justBought) {
+      $("securetitle").textContent = "One last thing — set a password";
+      $("securewhy").textContent =
+        "Payment received. Your account currently lives in this browser only, and " +
+        "there is no reset email, so set a password now and you can sign in from " +
+        "anywhere.";
+    }
   }
 
   function renderTrial(b) {
@@ -415,14 +466,9 @@
     if (!email) { say("Enter your email first.", "err"); return; }
     var btn = this; btn.disabled = true; say("Creating your account…", "info");
 
-    var newPassword = $("newpassword") ? $("newpassword").value : "";
-    if (!newPassword) {
-      say("Choose a password — it is how you sign back in.", "err");
-      btn.disabled = false;
-      return;
-    }
-
-    var payload = { email: email, audience: audience, password: newPassword };
+    // No password is asked for here. One is asked for after a payment lands,
+    // which is the first moment it is worth anybody's time — see renderSecure.
+    var payload = { email: email, audience: audience };
 
     api("/register", { method: "POST", body: payload }).then(function (res) {
       btn.disabled = false;
@@ -472,6 +518,25 @@
       save(key);
       say("");
       refresh();
+    });
+  });
+
+  $("savefirstpassword").addEventListener("click", function () {
+    var value = $("firstpassword").value;
+    if (!value) { say("Choose a password first.", "err"); return; }
+
+    var btn = this;
+    btn.disabled = true;
+
+    api("/password", { method: "POST", body: { password: value } }).then(function (res) {
+      btn.disabled = false;
+      $("firstpassword").value = "";
+      if (res.ok) {
+        $("securecard").hidden = true;
+        say("Password saved. You can sign in with your email from any browser now.", "ok");
+        return;
+      }
+      say((res.body && res.body.message) || "Could not save that password.", "err");
     });
   });
 

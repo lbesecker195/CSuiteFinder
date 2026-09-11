@@ -152,6 +152,7 @@ defmodule CsuiteFinderWeb.Router do
     get "/teams", PageController, :teams
     get "/developers", PageController, :developers
     get "/start", PageController, :start
+    get "/checkout", PageController, :checkout
     get "/llms.txt", PageController, :llms
   end
 end

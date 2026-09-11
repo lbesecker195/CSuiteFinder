@@ -33,3 +33,55 @@
   .does .item strong { font-size: 15.5px; }
   .does .item span { color: var(--muted); font-size: 14.5px; }
   @media (max-width: 620px) { .does .item { grid-template-columns: 1fr; gap: 4px; } }
+
+  /* ── the rolodex ─────────────────────────────────────────────────────────
+     The cards are one <g> repeated around an arc, so every colour here has to
+     come from a token: the whole graphic has to flip with the theme, and a
+     hard-coded white card is invisible on a dark page. */
+  .rolodex-band { display: grid; gap: 26px; grid-template-columns: 1.05fr 1fr;
+    align-items: center; margin-bottom: 30px; }
+  .rolodex-band > * { min-width: 0; }
+  .rolodex { width: 100%; height: auto; display: block; }
+
+  .rolo-card { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+  .rolo-card.front { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .rolo-notch { fill: var(--bar); }
+  .rolo-line { fill: var(--bar); }
+  .rolo-line.strong { fill: var(--faint); }
+  .rolo-tick-bg { fill: var(--good-soft); stroke: var(--good); stroke-width: 1.5; }
+  .rolo-tick { fill: none; stroke: var(--good); stroke-width: 2.2;
+    stroke-linecap: round; stroke-linejoin: round; }
+
+  .rolo-rail { fill: none; stroke: var(--faint); stroke-width: 9; stroke-linecap: round; }
+  .rolo-rail.inner { stroke: var(--bar); stroke-width: 4; }
+  .rolo-post { fill: var(--faint); }
+  .rolo-hub { fill: var(--faint); }
+
+  .rolodex-lead { font-size: clamp(17px, 2.2vw, 21px); line-height: 1.35;
+    letter-spacing: -.02em; font-weight: 700; margin: 0 0 12px; }
+
+  @media (max-width: 760px) {
+    .rolodex-band { grid-template-columns: 1fr; }
+  }
+
+  /* ── the numbers strip ───────────────────────────────────────────────── */
+  .numbers { display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 20px; }
+  .num { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px; }
+  .num .n { display: block; font-size: 30px; font-weight: 700; letter-spacing: -.03em;
+    line-height: 1.05; margin-bottom: 6px; }
+  .num .k { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+
+  /* ── objections ──────────────────────────────────────────────────────── */
+  .faq { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  .faq > * { min-width: 0; }
+  .q { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 17px 19px; }
+  .q strong { display: block; margin-bottom: 7px; font-size: 15px;
+    letter-spacing: -.01em; }
+  .q span { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+
+  @media (max-width: 700px) {
+    .faq { grid-template-columns: 1fr; }
+  }

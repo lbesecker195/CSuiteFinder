@@ -33,8 +33,63 @@ defmodule CsuiteFinderWeb.Analytics do
 
           gtag('config', '#{id}');
         </script>
+        #{click_tracking()}
         """
     end
+  end
+
+  @doc """
+  Report every link and button click as a `cta_click` event.
+
+  One delegated listener rather than a handler per element, so a button added
+  later is tracked without anybody remembering to wire it up — which is the
+  failure mode that makes click data untrustworthy: the numbers look complete
+  and are quietly missing whichever control was added last.
+
+  **No query strings are ever sent.** A campaign link arrives as
+  `?email=someone@company.com`, and both the page's own URL and a relative href
+  can carry it. Paths only, here and for the page location, so an address the
+  visitor never typed cannot end up in an analytics property.
+  """
+  @spec click_tracking() :: String.t()
+  def click_tracking do
+    """
+    <script>
+    (function () {
+      "use strict";
+
+      // Strip the query and fragment. Absolute or relative, same rule.
+      function path(url) {
+        if (!url) return "";
+        try { return new URL(url, window.location.origin).pathname; }
+        catch (e) { return ""; }
+      }
+
+      function text(el) {
+        return (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      }
+
+      document.addEventListener("click", function (event) {
+        var el = event.target.closest && event.target.closest("a, button");
+        if (!el || typeof window.gtag !== "function") return;
+
+        var href = el.getAttribute("href") || "";
+        var external = /^https?:/i.test(href) &&
+                       href.indexOf(window.location.origin) !== 0;
+
+        window.gtag("event", "cta_click", {
+          element: el.tagName.toLowerCase(),
+          link_text: text(el),
+          link_id: el.id || "",
+          link_classes: (el.className || "").toString().slice(0, 60),
+          link_path: external ? href.split("?")[0] : path(href),
+          outbound: external,
+          page_path: window.location.pathname
+        });
+      }, true);
+    })();
+    </script>
+    """
   end
 
   @doc "The configured measurement id, or nil when analytics are off."

@@ -39,6 +39,10 @@ defmodule CsuiteFinderWeb.PageController do
 
   EEx.function_from_file(:defp, :render_llms, @llms_template, [:assigns])
 
+  @checkout_template Path.join(:code.priv_dir(:csuite_finder), "templates/checkout.html.eex")
+  @external_resource @checkout_template
+  EEx.function_from_file(:defp, :render_checkout, @checkout_template, [:assigns])
+
   @doc "GET /"
   def index(conn, params) do
     conn
@@ -61,6 +65,40 @@ defmodule CsuiteFinderWeb.PageController do
           seat_caveats: seat.caveats,
           seat_emails: delimit(seat.lookups.emails),
           comparison: Plans.comparison(),
+          contact_email: contact_email()
+        })
+      )
+    )
+  end
+
+  @doc """
+  GET /checkout — the one page between wanting this and paying for it.
+
+  Two modes, because the two CTAs on the site mean different things. Someone who
+  clicked a seat price has already chosen, so `?plan=seat` confirms that one
+  thing and sends them to PayPal. Someone who clicked the trial has not, so
+  `?plan=trial` puts both prices side by side and lets them pick — which is also
+  the only place a trial buyer is ever shown the seat.
+
+  Anything else, including no plan at all, gets the chooser. The seat is the
+  narrower promise, so it is never the default.
+  """
+  def checkout(conn, params) do
+    seat = Plans.seat()
+
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_resp(
+      200,
+      render_checkout(
+        Map.merge(assigns(conn, params), %{
+          plan: if(params["plan"] == "seat", do: :seat, else: :choose),
+          # A campaign link carries the address, so the one field on this page
+          # is already filled by the time they get here. Shape-checked and
+          # escaped on the way in — this template escapes nothing of its own.
+          prefill_email: CsuiteFinderWeb.Prefill.email(params["email"]) || "",
+          seat_usd: delimit(seat.usd_per_month),
+          seat_emails: delimit(seat.lookups.emails),
           contact_email: contact_email()
         })
       )
