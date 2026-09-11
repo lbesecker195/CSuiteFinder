@@ -105,6 +105,21 @@
     font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
     white-space: nowrap; }
 
+  /* The composer. Decorative — the whole window is role="img" — but a chat
+     without somewhere to type does not read as a chat, which is the entire job
+     of this block. Drawn with the same parts a real one has: a rounded field
+     carrying placeholder text, and a send button in the accent. */
+  .composer { display: flex; align-items: center; gap: 9px;
+    padding: 12px 14px; border-top: 1px solid var(--border);
+    background: var(--surface); }
+  .composer-field { flex: 1; min-width: 0; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 99px; padding: 9px 15px;
+    font-size: 13.5px; color: var(--faint); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .composer-send { flex: none; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 700; line-height: 1; }
+
   .chat-note { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
 
   .copyblock { position: relative; margin-bottom: 10px; }
@@ -114,8 +129,6 @@
     padding: 3px 10px; }
   .copyblock pre { white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 84px; }
 
-  .note { background: var(--accent-soft); border: 1px solid var(--accent);
-    border-radius: 12px; padding: 16px 18px; font-size: 14px; margin: 26px 0; }
 
   @media (max-width: 620px) {
     .turn { max-width: 100%; }

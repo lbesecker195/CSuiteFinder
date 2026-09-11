@@ -97,11 +97,16 @@
       </div>
     </div>
   </div>
+
+  <div class="composer">
+    <span class="composer-field">Ask for the next twenty…</span>
+    <span class="composer-send" aria-hidden="true">↑</span>
+  </div>
 </div>
 
 <p class="chat-note">
-  Real shape, real prices. The sheet below is real output — same columns, run on
-  <%= @sheet_date %>.
+  The sheet below is a real sample <code>.csv</code> your assistant can generate
+  once it has that line — same columns, run on <%= @sheet_date %>.
 </p>
 
 <%= CsuiteFinderWeb.Layout.sheet(
@@ -140,12 +145,6 @@
   key, shows your balance and takes payment in a browser.
 </p>
 
-<div class="note">
-  <strong>Worth saying up front:</strong> this finds the address of someone you can
-  already name. It is not a prospect database and will not build your list. Bring
-  the names; it does the rest.
-</div>
-
 <h2 class="section-label" id="pricing">What it costs</h2>
 
 <p class="quiet" data-aud="sales">
@@ -169,8 +168,7 @@
 
 <p style="margin-top:22px">
   <a class="btn btn-primary" href="/checkout" data-signed="out">Start — $<%= @trial_price %> trial</a>
-  <a class="btn btn-primary" href="/account" data-signed="in" hidden>Open your account</a>
-  <a class="btn btn-ghost" href="/llms.txt">Read llms.txt</a>
+  <a class="btn btn-ghost" href="/account" data-signed="in" hidden>Open your account</a>
 </p>
 
 <%= CsuiteFinderWeb.Layout.footer(:developer) %>
