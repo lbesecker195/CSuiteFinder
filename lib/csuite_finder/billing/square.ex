@@ -74,7 +74,22 @@ defmodule CsuiteFinder.Billing.Square do
           payment_note: reference(account, kind)
         }
 
-        post("/v2/online-checkout/payment-links", prune(body))
+        case post("/v2/online-checkout/payment-links", prune(body)) do
+          {:error, :square_rejected_email} ->
+            # Square validates the address and refuses some that look fine to
+            # us — example.com among them. A prefill is a convenience, so
+            # losing it is not worth losing the sale: drop it and go again, and
+            # the buyer types their own address on Square's page.
+            Logger.info("square: prefill address refused, retrying without it")
+
+            body
+            |> Map.delete(:pre_populated_data)
+            |> prune()
+            |> then(&post("/v2/online-checkout/payment-links", &1))
+
+          other ->
+            other
+        end
     end
   end
 
@@ -108,6 +123,9 @@ defmodule CsuiteFinder.Billing.Square do
       {:ok, %{status: status, body: %{"payment_link" => %{"url" => url} = link}}}
       when status in 200..299 ->
         {:ok, url, link}
+
+      {:ok, %{body: %{"errors" => [%{"code" => "INVALID_EMAIL_ADDRESS"} | _]}}} ->
+        {:error, :square_rejected_email}
 
       {:ok, %{body: %{"errors" => [%{"detail" => detail} | _]}}} ->
         Logger.warning("square refused: #{detail}")
@@ -357,7 +375,7 @@ defmodule CsuiteFinder.Billing.Square do
   @spec base_url() :: String.t()
   def base_url do
     config()[:base_url] ||
-      if mode() == "live",
+      if mode() == "production",
         do: "https://connect.squareup.com",
         else: "https://connect.squareupsandbox.com"
   end
@@ -370,18 +388,24 @@ defmodule CsuiteFinder.Billing.Square do
   @spec webhooks_configured?() :: boolean()
   def webhooks_configured?, do: is_binary(signature_key()) and signature_key() != ""
 
-  @doc ~s("live" or "sandbox", read from the token itself.)
+  @doc """
+  "production" or "sandbox", set explicitly.
+
+  Not inferred from the token, which was the first attempt and was wrong:
+  Square's sandbox tokens begin `EAAA` exactly as production ones do — the
+  sandbox token for this account does — so guessing pointed a sandbox token at
+  the live API.
+
+  **Sandbox is the default.** A missing setting should fail towards the
+  environment where nothing real happens; the opposite default risks charging a
+  real card because a variable was forgotten.
+  """
   @spec mode() :: String.t()
   def mode do
-    case access_token() do
-      "EAAA" <> _ ->
-        "live"
-
-      token when is_binary(token) ->
-        if String.contains?(token, "sandbox"), do: "sandbox", else: "live"
-
-      _ ->
-        "sandbox"
+    case config()[:env] do
+      "production" -> "production"
+      :production -> "production"
+      _ -> "sandbox"
     end
   end
 end

@@ -229,6 +229,9 @@ if config_env() != :test do
   # Square exactly — it is part of the signed material, so a trailing slash
   # rejects every event and looks identical to a forgery.
   config :csuite_finder, CsuiteFinder.Billing.Square,
+    # "sandbox" unless this says otherwise. A forgotten variable should land in
+    # the environment where nothing real happens.
+    env: System.get_env("SQUARE_ENV") || "sandbox",
     access_token: System.get_env("SQUARE_ACCESS_TOKEN"),
     signature_key: System.get_env("SQUARE_SIGNATURE_KEY"),
     location_id: System.get_env("SQUARE_LOCATION_ID"),
