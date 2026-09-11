@@ -131,4 +131,38 @@ defmodule CsuiteFinderWeb.AudienceViewTest do
       assert body["audience"] == "sales"
     end
   end
+
+  describe "what a seat holder is never quoted" do
+    test "no per-answer price in the llms.txt commands", %{conn: conn} do
+      # A seat holder has a month of credit and no meter. A running total beside
+      # every command reads as money about to be charged, and puts them off a
+      # thing they have already paid for.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+      [_, commands] = String.split(body, "## Commands", parts: 2)
+      [commands, _] = String.split(commands, "## Endpoints", parts: 2)
+
+      refute commands =~ "$"
+      assert commands =~ "Included in your seat"
+    end
+
+    test "but a developer is, because they are spending a balance", %{conn: conn} do
+      body = conn |> get(~p"/llms.txt?audience=developer") |> response(200)
+      [_, commands] = String.split(body, "## Commands", parts: 2)
+      [commands, _] = String.split(commands, "## Endpoints", parts: 2)
+
+      assert commands =~ "per person returned"
+      assert commands =~ "$"
+      refute commands =~ "Included in your seat"
+    end
+
+    test "and /start ships the sales wording visible, developer wording hidden",
+         %{conn: conn} do
+      # /start is reachable from the sales footer, so it cannot fix itself to
+      # the developer audience. Without script the safe half is what shows.
+      html = conn |> get(~p"/start") |> html_response(200)
+
+      assert html =~ ~s|data-aud="developer" hidden|
+      refute html =~ ~s|data-aud="sales" hidden|
+    end
+  end
 end

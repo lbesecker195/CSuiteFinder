@@ -9,6 +9,7 @@ defmodule CsuiteFinderWeb.PageController do
 
   use CsuiteFinderWeb, :controller
 
+  alias CsuiteFinder.Audience
   alias CsuiteFinder.Billing.{Plans, Pricing, Stripe}
   alias CsuiteFinderWeb.SampleSheet
 
@@ -165,9 +166,19 @@ defmodule CsuiteFinderWeb.PageController do
 
   @doc "GET /start"
   def start(conn, params) do
+    seat = Plans.seat()
+
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(200, render_start(assigns(conn, params)))
+    |> send_resp(
+      200,
+      render_start(
+        Map.merge(assigns(conn, params), %{
+          seat_usd: delimit(seat.usd_per_month),
+          seat_emails: delimit(seat.lookups.emails)
+        })
+      )
+    )
   end
 
   @doc """
@@ -227,6 +238,12 @@ defmodule CsuiteFinderWeb.PageController do
             phones: delimit(b.phones)
           }
         end,
+      # Whether to quote per-answer prices. A seat holder has a month of credit
+      # and no meter to watch, so a running total next to every command reads as
+      # money about to be charged — it puts them off a thing they have already
+      # paid for. A developer is spending a balance per call and needs it.
+      show_costs: Audience.cast(params["audience"]) == "developer",
+      audience: Audience.cast(params["audience"]),
       price_groups: price_groups(),
       # Static Stripe Payment Links. The seat CTA is an ordinary href to
       # Stripe's own domain rather than a route of ours, so it does not depend

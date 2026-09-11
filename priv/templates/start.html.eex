@@ -2,7 +2,6 @@
       title: "Get started — CSuiteFinder",
       description: "Paste one line into your assistant. It reads llms.txt, runs the demo, and hands back a CSV of verified work emails.",
       nav: :start,
-      audience: :developer,
       css: CsuiteFinderWeb.Layout.page_css(:start)
     ) %>
 
@@ -49,7 +48,8 @@
       <div class="run">
         <span class="tick">✓</span>
         <code>GET /email/company/people?domain=stripe.com&amp;department=executive&amp;limit=20</code>
-        <span class="cost">$0.05</span>
+        <span class="cost" data-aud="sales">included</span>
+        <span class="cost" data-aud="developer" hidden>$0.05</span>
       </div>
       <div class="run">
         <span class="tick">✓</span>
@@ -57,7 +57,11 @@
         <span class="cost">included</span>
       </div>
 
-      <p class="settle">
+      <p class="settle" data-aud="sales">
+        20 rows, 18 deliverable, 2 undeliverable — caught before you sent to them.
+        Out of this month's credit.
+      </p>
+      <p class="settle" data-aud="developer" hidden>
         20 rows, 18 deliverable, 2 undeliverable — caught before you sent to them.
         Spent <strong>$0.05</strong>.
       </p>
@@ -123,7 +127,17 @@
 
 <h2 class="section-label" id="pricing">What it costs</h2>
 
-<p class="quiet">
+<p class="quiet" data-aud="sales">
+  A trial is <strong>$<%= @trial_price %>, once</strong>, and buys
+  $<%= @trial_price %> of credit for <%= @trial_months %> month — real lookups,
+  not a limited preview. After that a seat is
+  <strong>$<%= @seat_usd %> a month</strong> and carries $<%= @seat_usd %> of
+  lookup credit every month, which is about <%= @seat_emails %> work emails.
+  Deliverability checks, identity lookups and company data are included, and a
+  lookup that finds nothing uses nothing.
+</p>
+
+<p class="quiet" data-aud="developer" hidden>
   A trial is <strong>$<%= @trial_price %>, once</strong>, and buys
   $<%= @trial_price %> of credit for <%= @trial_months %> month — real lookups,
   not a limited preview. After that you pay

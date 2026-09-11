@@ -108,11 +108,10 @@ domain given, use `stripe.com`.
 
 Works on any account. A key is a key: whether it was opened as a sales seat or
 as a developer account changes what the website shows and nothing about what the
-API will do. It spends the account's own credit, so buy the
-$<%= @trial_price %> trial first if there is none.
+API will do. <%= if @show_costs, do: "It spends the account's own credit, so buy the $#{@trial_price} trial first if there is none.", else: "It spends your seat's monthly credit, which is already paid for." %>
 
 1. `/email/company/people?domain=…&department=executive&limit=20` — one call.
-   $<%= @email_price %> a person, so twenty rows is about $0.05.
+<%= if @show_costs, do: "   $#{@email_price} a person, so twenty rows is about $0.05.", else: "   Twenty rows out of the seat's monthly credit." %>
 2. `/email/deliverable` on every email. It is included, so checking all twenty
    costs nothing.
 3. Hand back everything, in the order it arrived.
@@ -130,41 +129,39 @@ treats it as one is a list that bounces.*
 twenty executives, and a short list is the honest one — say how many came back
 rather than widening the search to fill it out.*
 
-*Twenty is the cap, not a target to spend up to. Check `/billing/balance` first;
-one run is about $0.05, so an account that cannot cover that needs credit before
-it needs a demo.*
+<%= if @show_costs, do: "*Twenty is the cap, not a target to spend up to. Check `/billing/balance` first; one run is about $0.05, so an account that cannot cover that needs credit before it needs a demo.*", else: "*Twenty is the cap, not a target. A seat covers a run of this many times over.*" %>
 
 ### /find <name> at <company>
 The core job. One person, one email.
 `/email/find?full_name=…&domain=…` → `/email/deliverable`.
-$<%= @email_price %> when it resolves, nothing when it does not.
+<%= if @show_costs, do: "$#{@email_price} when it resolves, nothing when it does not.", else: "Included in your seat. A lookup that finds nothing uses none of it." %>
 *Second person at the same company is free — the format is already bought.*
 
 ### /room <domain>
 Everyone at a company, with titles and emails. Add "executives" for the
 C-suite: `/email/company/people?domain=…&department=executive`.
-$<%= @email_price %> per person returned; `limit` is the price dial.
+<%= if @show_costs, do: "$#{@email_price} per person returned; `limit` is the price dial.", else: "`limit` is the dial — ask for what you will actually use." %>
 *Ask once per company. The rows are cached per person, so a narrower question
 later is usually free — but a second sweep of the same domain is not.*
 
 ### /list <who you sell to>
 An account list from a description: "fintechs in Germany, 50-200 people, running
 Snowflake". `/company/search?industry=…&technology=…&size=…&country=…`.
-$<%= @email_price %> per company returned.
+<%= if @show_costs, do: "$#{@email_price} per company returned.", else: "Included in your seat." %>
 *Every row carries a domain, which is the input to everything else here.*
 
 ### /reach <who you sell to>
-The whole funnel in one ask, and the most expensive thing on this list:
+<%= if @show_costs, do: "The whole funnel in one ask, and the most expensive thing on this list:", else: "The whole funnel in one ask, and the biggest single job here:" %>
 `/company/search` → `/email/company/people?department=executive` per domain →
 `/email/deliverable` per email → hand back a CSV.
-Roughly $<%= @email_price %> per company plus $<%= @email_price %> per person.
+<%= if @show_costs, do: "Roughly $#{@email_price} per company plus $#{@email_price} per person.", else: "The most credit of anything here, so set `limit` on both steps." %>
 *Agree a budget first. Say what it will cost before you spend it, and use
 `limit` on both steps to hold to that.*
 
 ### /titles <role> [at <company> | in <country>]
 People by job title across companies, rather than at one you already know:
 `/people/search?title=…&country=…`.
-$<%= @email_price %> per person returned.
+<%= if @show_costs, do: "$#{@email_price} per person returned.", else: "Included in your seat." %>
 *Rows come back `verified: false` — they are directory listings. Resolve each
 properly with `/email/find`, or at minimum verify, before anyone writes to them.*
 
