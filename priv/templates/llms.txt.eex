@@ -101,6 +101,25 @@ And none of them edits what the caller gave you. Where a command produces a
 file, write a new one and leave the input exactly as it was — a row you delete
 is a row nobody can get back, and a verdict you deleted it on can be wrong.
 
+**Run companies in parallel, people within a company one at a time.** If you can
+issue several calls at once, do — these are independent HTTP requests and a
+sweep of forty domains done serially is forty round-trips of waiting for no
+reason. Keep it to a handful at a time; the providers behind this have rate
+limits, and a burst that trips one is slower than not bursting.
+
+The exception is the one that costs money. **Never fire several
+`/email/find` calls at the same domain at once.** The first lookup at a company
+buys that company's address format; every colleague after it is built from the
+cached format and costs nothing. Run twenty together and all twenty miss the
+cache in the same instant, so you buy the same format twenty times and pay
+twenty times for one answer. One person at that company first, then the rest —
+in parallel is fine once the format is in.
+
+Free to parallelise without thinking about it: `/email/deliverable`,
+`/email/enrich`, `/phone/*` and `/company/info`. They are included, they cache
+per item rather than per company, and none of them teaches the next one
+anything.
+
 **Report every ten.** Any of these can run for minutes across dozens of calls.
 Each time ten more addresses have come back **found and `deliverable`**, say so
 before carrying on: how many are confirmed, how many have been rejected, and
@@ -172,7 +191,9 @@ Snowflake". `/company/search?industry=…&technology=…&size=…&country=…`.
 <%= if @show_costs, do: "Roughly $#{@email_price} per company plus $#{@email_price} per person.", else: "The most credit of anything here, so set `limit` on both steps." %>
 *Agree a budget first. Say what it will cost before you spend it, and use
 `limit` on both steps to hold to that. This is the longest-running command here,
-so the every-ten report matters most on it.*
+so the every-ten report matters most on it — and it is the one that gains most
+from running companies side by side, a few at a time, while keeping the people
+inside each company sequential.*
 
 ### /titles <role> [at <company> | in <country>]
 People by job title across companies, rather than at one you already know:

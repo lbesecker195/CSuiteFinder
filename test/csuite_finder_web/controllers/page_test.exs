@@ -1099,4 +1099,26 @@ defmodule CsuiteFinderWeb.PageTest do
       assert body =~ "Found 10 deliverable"
     end
   end
+
+  describe "parallelism" do
+    test "llms.txt tells agents to run companies side by side", %{conn: conn} do
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      assert body =~ "Run companies in parallel"
+      assert body =~ "/email/deliverable"
+    end
+
+    test "and never to fan out finds within one company", %{conn: conn} do
+      # PatternStore.get_or_fetch/2 is cache-or-buy with no in-flight
+      # deduplication, so N concurrent finds at one domain all miss together and
+      # buy the same address format N times. Serially the first one buys it and
+      # the rest are free. This is the instruction that stands between an eager
+      # agent and a bill twenty times bigger than it needed to be.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      assert body =~ "Never fire several"
+      assert body =~ "at the same domain at once"
+      assert body =~ "buy the same format twenty times"
+    end
+  end
 end
