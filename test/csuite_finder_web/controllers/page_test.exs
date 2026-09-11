@@ -851,8 +851,9 @@ defmodule CsuiteFinderWeb.PageTest do
     # a section that quietly slides below the endpoint tables is no longer the
     # second thing the page says, and nothing else would catch that.
 
-    test "leads every page, ahead of any other section", %{conn: conn} do
-      for path <- ["/", "/teams", "/developers"] do
+    test "leads the home and developer pages, ahead of any other section",
+         %{conn: conn} do
+      for path <- ["/", "/developers"] do
         html = conn |> get(path) |> html_response(200)
 
         assert html =~ "Nothing to integrate. Your AI already knows how.",
@@ -876,21 +877,24 @@ defmodule CsuiteFinderWeb.PageTest do
                :binary.match(html, "Nothing to integrate")
     end
 
-    test "says the same thing everywhere, and varies only the examples", %{conn: conn} do
-      sales = conn |> get(~p"/teams") |> html_response(200)
+    test "stays off the seats page, so nothing crowds the sample sheet",
+         %{conn: conn} do
+      # Deliberate, not an oversight. /teams sells by showing the sheet, and the
+      # pitch sat between the headline and it. The seat plan reaches the same
+      # story through llms.txt in the footer.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      refute html =~ "Nothing to integrate"
+      assert html =~ "sheet-tab"
+    end
+
+    test "keeps the developer wording, which is the audience that sees it",
+         %{conn: conn} do
       dev = conn |> get(~p"/developers") |> html_response(200)
 
-      # The claim is shared.
-      for page <- [sales, dev] do
-        assert page =~ "it knows the whole service"
-        assert page =~ "csf_live_..."
-        assert page =~ "Then run /demo"
-      end
-
-      # A salesperson is told there is no terminal; an engineer, no SDK.
-      assert sales =~ "You never see an API"
-      refute sales =~ "No SDK, in any language"
-
+      assert dev =~ "it knows the whole service"
+      assert dev =~ "csf_live_..."
+      assert dev =~ "Then run /demo"
       assert dev =~ "No SDK, in any language"
       refute dev =~ "You never see an API"
     end

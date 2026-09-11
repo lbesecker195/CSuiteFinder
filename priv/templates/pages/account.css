@@ -16,7 +16,11 @@
   .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
         padding:22px;margin-bottom:14px}
   label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
-  input[type=email],input[type=text]{
+  /* Every text-entry field, described by what it is not rather than by listing
+     types. The password boxes were unstyled — no padding, no border, browser
+     default font — for exactly as long as this rule named email and text one by
+     one, and the next type added would have gone the same way. */
+  input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]){
     width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:8px;
     background:var(--bg);color:var(--text);font:inherit;font-size:15px}
   input:focus{outline:2px solid var(--accent);outline-offset:1px}

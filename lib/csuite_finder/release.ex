@@ -53,11 +53,11 @@ defmodule CsuiteFinder.Release do
 
         IO.puts("""
         #{email}
-          before   $#{CsuiteFinder.Billing.Pricing.usd(before)}
-          credited $#{usd}
-          after    $#{CsuiteFinder.Billing.Pricing.usd(CsuiteFinder.Billing.available_micro(updated))} \
-        (purchased $#{CsuiteFinder.Billing.Pricing.usd(updated.balance_micro)}, \
-        granted $#{CsuiteFinder.Billing.Pricing.usd(CsuiteFinder.Billing.live_grant_micro(updated))})
+          before   $#{money(before)}
+          credited $#{money_usd(usd)}
+          after    $#{money(CsuiteFinder.Billing.available_micro(updated))} \
+        (purchased $#{money(updated.balance_micro)}, \
+        granted $#{money(CsuiteFinder.Billing.live_grant_micro(updated))})
         """)
 
         {:ok, updated}
@@ -104,6 +104,28 @@ defmodule CsuiteFinder.Release do
             :error
         end
     end
+  end
+
+  # Interpolating the float directly printed a $1,000 credit as "$1.0e3", which
+  # is the single line an operator reads to confirm they credited the right
+  # amount. Fixed decimals, and a thousands separator so four figures are
+  # readable at a glance.
+  defp money(micro), do: money_usd(CsuiteFinder.Billing.Pricing.usd(micro))
+
+  defp money_usd(usd) when is_number(usd) do
+    # `usd / 1` because this is called with both an integer (the amount asked
+    # for) and a float (a balance read back), and float_to_binary takes only one
+    # of those.
+    [whole, cents] =
+      usd |> Kernel./(1) |> :erlang.float_to_binary(decimals: 2) |> String.split(".")
+
+    delimited =
+      whole
+      |> String.reverse()
+      |> String.replace(~r/(\d{3})(?=\d)/, "\\1,")
+      |> String.reverse()
+
+    delimited <> "." <> cents
   end
 
   defp start_app do
