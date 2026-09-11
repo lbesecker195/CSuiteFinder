@@ -207,9 +207,19 @@ config :csuite_finder, CsuiteFinder.Inference,
 # GA4 measures browsers. This measures the agents calling the API, which is the
 # half of the product a browser never sees. Unset means no pings are sent at
 # all, which is what every environment but production should be.
-config :csuite_finder, CsuiteFinder.Ssa,
-  uid: System.get_env("SSA_UID"),
-  project: System.get_env("SSA_PROJECT") || "CSuiteFinder"
+# The account id is a default rather than a required variable, the same way the
+# GA measurement id is: it is not a secret — it travels in every ping URL — and
+# an integration that only works once somebody remembers to set an environment
+# variable is an integration that reports nothing.
+# Skipped under :test, which sets its own — runtime.exs is evaluated after
+# config/test.exs, so a default here would override it and the suite would ping
+# a third party on every settle. Exactly the trap the Stripe block above fell
+# into.
+if config_env() != :test do
+  config :csuite_finder, CsuiteFinder.Ssa,
+    uid: System.get_env("SSA_UID") || "acct_kxfa2pr98h",
+    project: System.get_env("SSA_PROJECT") || "CSuiteFinder"
+end
 
 # --- Stripe ---------------------------------------------------------------
 # The secret key is the only credential this process holds; Checkout is hosted,
