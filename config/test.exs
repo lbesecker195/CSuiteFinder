@@ -60,3 +60,11 @@ config :csuite_finder, CsuiteFinder.Billing.Stripe,
   webhook_secret: "whsec_test_secret",
   seat_price_id: "price_test_monthly",
   seat_annual_price_id: "price_test_annual"
+
+# Square is switched off in tests unless one stubs it; the signature key is set
+# so the webhook verification tests have something to verify against.
+config :csuite_finder, CsuiteFinder.Billing.Square,
+  access_token: nil,
+  signature_key: "square_test_signature_key",
+  location_id: "L_TEST",
+  notification_url: "https://csuitefinder.test/csuitefinder/billing/webhook"

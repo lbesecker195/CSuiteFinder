@@ -223,6 +223,22 @@ if config_env() != :test do
       System.get_env("STRIPE_SEAT_ANNUAL_PAYMENT_LINK") ||
         Application.compile_env(:csuite_finder, [:payment_links, :seat_annual])
 
+  # Square. The location is required rather than inferred: an account can have
+  # several, and an order created against the wrong one lands in the wrong
+  # ledger. SQUARE_NOTIFICATION_URL must match the webhook URL configured in
+  # Square exactly — it is part of the signed material, so a trailing slash
+  # rejects every event and looks identical to a forgery.
+  config :csuite_finder, CsuiteFinder.Billing.Square,
+    access_token: System.get_env("SQUARE_ACCESS_TOKEN"),
+    signature_key: System.get_env("SQUARE_SIGNATURE_KEY"),
+    location_id: System.get_env("SQUARE_LOCATION_ID"),
+    notification_url:
+      System.get_env("SQUARE_NOTIFICATION_URL") ||
+        (System.get_env("PUBLIC_BASE_URL") || "https://csuitefinder.com") <>
+          "/csuitefinder/billing/webhook",
+    seat_link: System.get_env("SQUARE_SEAT_LINK"),
+    seat_annual_link: System.get_env("SQUARE_SEAT_ANNUAL_LINK")
+
   config :csuite_finder, CsuiteFinder.Billing.Stripe,
     secret_key: System.get_env("STRIPE_SECRET_KEY"),
     webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET"),
