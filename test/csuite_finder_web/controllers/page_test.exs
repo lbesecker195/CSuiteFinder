@@ -918,4 +918,30 @@ defmodule CsuiteFinderWeb.PageTest do
       refute html =~ "evil.example.com"
     end
   end
+
+  describe "the sheet scrolls" do
+    test "the reader's own row is pinned, not just present", %{conn: conn} do
+      # The row exists to be found. A sheet that scrolls it out of sight is
+      # worse than one that does not scroll, so the sticky offsets are part of
+      # the behaviour rather than decoration.
+      html = conn |> get(~p"/teams?email=jane.doe@acme.com") |> html_response(200)
+
+      assert html =~ ~r/<tr class="[^"]*\byou-row\b/
+      assert html =~ "tr.you-row > td { position: sticky"
+      assert html =~ "tr.colheads > td { position: sticky"
+      assert html =~ "tr.titles > td { position: sticky"
+    end
+
+    test "and the grid survives being pinned", %{conn: conn} do
+      # border-collapse: collapse merges each pair of adjacent borders into one
+      # line owned by neither cell, and a sticky cell then scrolls away from its
+      # own grid lines. This is the rule that keeps the header boxed.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      # Scoped to the sheet. Every other table on the site still collapses, and
+      # should — none of them pin anything.
+      assert html =~ ".sheet table { border-collapse: separate"
+      refute html =~ ".sheet table { border-collapse: collapse"
+    end
+  end
 end

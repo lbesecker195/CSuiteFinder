@@ -222,13 +222,43 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--s-text);
   }
 
-  .sheet-scroll { overflow-x: auto; }
-  .sheet table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13px; }
+  /* Scrolls in both directions. The height is in rows rather than pixels so the
+     cut lands between rows and the sheet reads as continuing rather than as
+     clipped. */
+  .sheet-scroll { overflow: auto; max-height: 21.5em; }
+
+  /* border-collapse: separate, not collapse. Collapse merges each pair of
+     adjacent borders into one line owned by neither cell, and a sticky cell
+     then scrolls away from its own grid lines. Separate keeps every border on
+     its own cell, so the header and the reader's row carry their box with them.
+     The grid is rebuilt from right+bottom on every cell, plus left+top on the
+     first column and first row. */
+  .sheet table { border-collapse: separate; border-spacing: 0; width: 100%;
+    min-width: 720px; font-size: 13px; }
   .sheet th, .sheet td {
-    border: 1px solid var(--s-line); padding: 5px 9px; text-align: left;
+    border-right: 1px solid var(--s-line); border-bottom: 1px solid var(--s-line);
+    padding: 5px 9px; text-align: left;
     white-space: nowrap; font-weight: 400; text-transform: none; letter-spacing: 0;
     color: var(--s-text); font-size: 13px;
   }
+  .sheet tr > td:first-child { border-left: 1px solid var(--s-line); }
+  .sheet tr:first-child > td { border-top: 1px solid var(--s-line); }
+
+  /* The two header rows and the reader's own row stay put while the rest
+     scrolls under them. Each is offset by the height of everything pinned
+     above it; the heights are fixed here so those offsets cannot drift. */
+  .sheet tr.colheads > td { position: sticky; top: 0; z-index: 4;
+    line-height: 16px; padding-top: 4px; padding-bottom: 4px; }
+  .sheet tr.titles > td { position: sticky; top: 26px; z-index: 4;
+    line-height: 20px; padding-top: 4px; padding-bottom: 4px; }
+  .sheet tr.you-row > td { position: sticky; top: 55px; z-index: 3; }
+
+  /* The row-number strip is pinned sideways too, so a name stays attached to
+     its row when the sheet is scrolled right. */
+  .sheet td.row-head, .sheet td.corner { position: sticky; left: 0; z-index: 2; }
+  .sheet tr.colheads > td.corner { z-index: 5; }
+  .sheet tr.titles > td.row-head { z-index: 5; }
+  .sheet tr.you-row > td.row-head { z-index: 4; }
   /* The grey strip down the left and along the top: row numbers and A B C D. */
   .sheet .col-head, .sheet .row-head {
     background: var(--s-head); color: var(--s-headtext);
@@ -245,10 +275,10 @@
   .sheet td.active { outline: 2px solid var(--s-accent); outline-offset: -2px; position: relative; }
 
   /* Hovering a data row outlines it, the way clicking a row number would.
-     Drawn with an inset box-shadow rather than borders or an outline: the table
-     is border-collapse: collapse, where two adjacent cells share one border and
-     the winner of a colour conflict is not something to rely on. A shadow takes
-     no part in that, paints over the shared line, and shifts no layout. */
+     Drawn with an inset box-shadow rather than borders: a shadow paints over the
+     grid line instead of competing with it, needs no rule about which of two
+     neighbouring borders wins, and shifts no layout. It also survives the cell
+     being sticky, which a border on the row would not. */
   .sheet tbody tr.sheet-row td {
     box-shadow: inset 0 0 0 0 transparent;
     transition: box-shadow .12s ease-out;

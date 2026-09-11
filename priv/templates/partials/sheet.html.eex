@@ -15,7 +15,7 @@
     <div class="sheet-scroll">
       <table>
         <tbody>
-          <tr>
+          <tr class="colheads">
             <td class="corner"></td>
             <td class="col-head">A</td>
             <td class="col-head">B</td>
