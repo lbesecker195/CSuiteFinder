@@ -72,4 +72,37 @@ defmodule CsuiteFinder.SquareWebhookTest do
       assert Square.account_id_from(%{"id" => "pay_1"}) == {:error, :no_account}
     end
   end
+
+  describe "which events actually do something" do
+    # Ticking the wrong boxes in Square's dashboard is a silent failure: the
+    # endpoint answers 200 and nothing is ever credited. These name the events
+    # the handler acts on, so the list in the dashboard has something to match.
+
+    test "a completed payment is the event that credits" do
+      assert handles?("payment.updated")
+      assert handles?("payment.created")
+    end
+
+    test "an invoice payment is how a seat renews" do
+      assert handles?("invoice.payment_made")
+    end
+
+    test "a subscription change only mirrors status" do
+      assert handles?("subscription.updated")
+    end
+
+    test "subscription.created alone would credit nothing" do
+      # It describes a plan starting, not money moving. On its own the account
+      # would have a subscription and no credit — which is the exact shape of
+      # the question this answers.
+      refute handles?("subscription.created")
+    end
+  end
+
+  # Reads the controller rather than asserting on a list kept in the test, so a
+  # handler removed from the code fails here.
+  defp handles?(event) do
+    File.read!("lib/csuite_finder_web/controllers/billing_controller.ex")
+    |> String.contains?(~s("#{event}"))
+  end
 end

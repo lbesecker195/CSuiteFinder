@@ -8,7 +8,7 @@ defmodule CsuiteFinderWeb.BillingController do
   require Logger
 
   alias CsuiteFinder.{Accounts, Audience, Billing}
-  alias CsuiteFinder.Billing.{PayPal, Plans, Pricing, Stripe, Subscription, Subscriptions}
+  alias CsuiteFinder.Billing.{PayPal, Plans, Pricing, Square, Stripe, Subscription, Subscriptions}
 
   action_fallback CsuiteFinderWeb.FallbackController
 
@@ -389,12 +389,85 @@ defmodule CsuiteFinderWeb.BillingController do
   with PayPal before anything is credited, and an unverified event is dropped.
   """
   def webhook(conn, params) do
-    if Stripe.configured?() do
-      stripe_webhook(conn, params)
-    else
-      paypal_webhook(conn, params)
+    cond do
+      Square.configured?() -> square_webhook(conn, params)
+      Stripe.configured?() -> stripe_webhook(conn, params)
+      true -> paypal_webhook(conn, params)
     end
   end
+
+  # Square signs `notification_url <> body`, so the URL comes from configuration
+  # rather than from the request: a request arriving through a proxy can report
+  # a different host, and rebuilding the URL from it would fail the signature on
+  # perfectly genuine events.
+  defp square_webhook(conn, params) do
+    signature = conn |> get_req_header("x-square-hmacsha256-signature") |> List.first()
+
+    case Square.verify_webhook(
+           conn.assigns[:raw_body] || "",
+           signature,
+           Square.notification_url()
+         ) do
+      :ok ->
+        handle_square(params)
+        json(conn, %{received: true})
+
+      {:error, :not_configured} ->
+        Logger.error("square webhook received but SQUARE_SIGNATURE_KEY is unset")
+
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{error: "verification_unavailable"})
+
+      {:error, reason} ->
+        Logger.warning("square webhook rejected: #{inspect(reason)}")
+        conn |> put_status(:unauthorized) |> json(%{error: "invalid_signature"})
+    end
+  end
+
+  # The money event. `payment.updated` is the one that matters — a payment is
+  # created before it is COMPLETED, so crediting on creation would hand out
+  # credit for a card that has not been charged.
+  defp handle_square(%{"type" => type, "data" => %{"object" => %{"payment" => payment}}})
+       when type in ["payment.created", "payment.updated"] do
+    if payment["status"] == "COMPLETED" do
+      case Square.record_payment(payment) do
+        {:ok, recorded} -> Square.credit_payment(recorded)
+        other -> other
+      end
+    end
+
+    :ok
+  end
+
+  # A seat renewal. Square bills a subscription by issuing an invoice, so this
+  # is where a month's credit comes from after the first one.
+  defp handle_square(%{
+         "type" => "invoice.payment_made",
+         "data" => %{"object" => %{"invoice" => invoice}}
+       }) do
+    case invoice["subscription_id"] do
+      id when is_binary(id) -> Subscriptions.record_payment(id, invoice["id"], nil)
+      _ -> :ok
+    end
+
+    :ok
+  end
+
+  defp handle_square(%{
+         "type" => "subscription.updated",
+         "data" => %{"object" => %{"subscription" => subscription}}
+       }) do
+    Subscriptions.set_status(
+      subscription["id"],
+      String.downcase(subscription["status"] || "active"),
+      subscription
+    )
+
+    :ok
+  end
+
+  defp handle_square(_event), do: :ok
 
   # Verified against the raw bytes, never the parsed map — re-encoding params
   # reorders keys and the hash stops matching. The body survives the parser via
