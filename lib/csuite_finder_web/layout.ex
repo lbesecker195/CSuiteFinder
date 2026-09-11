@@ -179,8 +179,7 @@ defmodule CsuiteFinderWeb.Layout do
       {"/teams", "For sales teams"},
       {"/developers", "For developers"},
       {"/start", "Get started"},
-      {"/account", "Your account"},
-      {"/csuitefinder/health", "status"}
+      {"/account", "Your account"}
     ])
   end
 
@@ -192,8 +191,7 @@ defmodule CsuiteFinderWeb.Layout do
       # pointed at llms.txt, and that walkthrough is /start. It belongs in
       # front of a seat holder, not only a developer.
       {"/start", "Get started"},
-      {"/account", "Your account"},
-      {"/csuitefinder/health", "status"}
+      {"/account", "Your account"}
     ])
   end
 
@@ -204,8 +202,7 @@ defmodule CsuiteFinderWeb.Layout do
       {"/developers#pricing", "Pricing"},
       {"/llms.txt", "llms.txt"},
       {"/csuitefinder/pricing", "pricing as JSON"},
-      {"/account", "Your account"},
-      {"/csuitefinder/health", "status"}
+      {"/account", "Your account"}
     ])
   end
 
