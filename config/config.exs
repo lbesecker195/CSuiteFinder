@@ -7,13 +7,13 @@
 # General application configuration
 import Config
 
-# Stripe Payment Links for the seat. These are static, shareable URLs — not
-# secrets — so they live here with the live links as the default and can be
-# pointed elsewhere per environment. A Payment Link is served by Stripe, so the
-# button on a marketing page keeps working even when this application does not.
+# A static checkout URL for the seat, when one exists. Unset by default: with
+# three processors having come and gone, a hardcoded link is a URL that outlives
+# the account it belongs to. Unset means the CTA points at /checkout/seat, which
+# builds a link against whichever gateway is actually configured.
 config :csuite_finder, :payment_links,
-  seat: "https://buy.stripe.com/eVqeVdbwNaim5q26AP6sw05",
-  seat_annual: "https://buy.stripe.com/7sY4gzeIZ8aecSuf7l6sw06"
+  seat: nil,
+  seat_annual: nil
 
 config :csuite_finder,
   ecto_repos: [CsuiteFinder.Repo],

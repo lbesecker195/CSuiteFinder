@@ -17,7 +17,7 @@ defmodule CsuiteFinder.Billing.Subscriptions do
 
   alias CsuiteFinder.Accounts.Account
   alias CsuiteFinder.Billing
-  alias CsuiteFinder.Billing.{PayPal, Plans, Stripe, Subscription}
+  alias CsuiteFinder.Billing.{PayPal, Plans, Square, Stripe, Subscription}
   alias CsuiteFinder.Repo
 
   @max_seats 500
@@ -53,10 +53,10 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   def start(%Account{} = account, seats, opts \\ []) do
     with {:ok, seats} <- validate_seats(seats),
          {:ok, interval} <- validate_interval(Keyword.get(opts, :interval, :month)) do
-      if Stripe.configured?() do
-        start_stripe(account, seats, interval, opts)
-      else
-        start_paypal(account, seats, interval, opts)
+      cond do
+        Square.configured?() -> start_square(account, seats, interval, opts)
+        Stripe.configured?() -> start_stripe(account, seats, interval, opts)
+        true -> start_paypal(account, seats, interval, opts)
       end
     end
   end
@@ -71,6 +71,23 @@ defmodule CsuiteFinder.Billing.Subscriptions do
            Stripe.create_seat_session(account, seats, String.to_existing_atom(interval), opts),
          {:ok, subscription} <-
            store_new(account, seats, interval, %{"id" => session["id"]}, "stripe") do
+      {:ok, subscription, url}
+    end
+  end
+
+  # Square, like Stripe, has no subscription to key on until the customer has
+  # paid — the row is keyed on the checkout order and re-keyed by the webhook.
+  defp start_square(account, seats, interval, opts) do
+    with {:ok, url, link} <-
+           Square.create_seat_session(account, seats, String.to_existing_atom(interval), opts),
+         {:ok, subscription} <-
+           store_new(
+             account,
+             seats,
+             interval,
+             %{"id" => link["order_id"] || link["id"]},
+             "square"
+           ) do
       {:ok, subscription, url}
     end
   end

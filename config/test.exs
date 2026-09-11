@@ -67,4 +67,6 @@ config :csuite_finder, CsuiteFinder.Billing.Square,
   access_token: nil,
   signature_key: "square_test_signature_key",
   location_id: "L_TEST",
-  notification_url: "https://csuitefinder.test/csuitefinder/billing/webhook"
+  notification_url: "https://csuitefinder.test/csuitefinder/billing/webhook",
+  seat_plan_id: "VAR_MONTHLY_TEST",
+  seat_annual_plan_id: "VAR_ANNUAL_TEST"

@@ -9,13 +9,14 @@ defmodule CsuiteFinderWeb.SeatCheckoutTest do
   use CsuiteFinderWeb.ConnCase, async: true
 
   describe "the seat CTA" do
-    test "goes straight to Stripe, on Stripe's own domain", %{conn: conn} do
-      # A static Payment Link rather than a route of ours. The button on a
-      # marketing page then does not depend on this application being reachable
-      # at the moment somebody clicks it — which is most of the point.
+    test "points at the seat checkout, whichever gateway is live", %{conn: conn} do
+      # No processor's domain is hardcoded here any more. Three have come and
+      # gone in this codebase, and a baked-in URL outlives the account it
+      # belongs to — /checkout/seat builds a link against whatever is actually
+      # configured. Set :payment_links to a static URL to override it.
       html = conn |> get(~p"/teams") |> html_response(200)
 
-      assert html =~ ~s|href="https://buy.stripe.com/|
+      assert html =~ ~s|href="/checkout/seat"|
       refute html =~ ~s|href="/checkout?plan=seat"|
     end
 
@@ -23,20 +24,14 @@ defmodule CsuiteFinderWeb.SeatCheckoutTest do
          %{conn: conn} do
       html = conn |> get(~p"/teams") |> html_response(200)
 
-      links =
-        Regex.scan(~r|href="(https://buy\.stripe\.com/[^"]+)"|, html, capture: :all_but_first)
+      count =
+        ~r|href="/checkout/seat"|
+        |> Regex.scan(html)
+        |> length()
 
-      assert length(links) >= 3,
-             "only #{length(links)} seat CTAs reach Stripe; the hero, the rolodex " <>
-               "and the pricing card should each have one"
-    end
-
-    test "and the trial CTA still goes to the chooser", %{conn: conn} do
-      # Someone who clicked a $29.99 trial has not decided yet, so they get the
-      # page with both prices on it. Only the seat skips straight to paying.
-      html = conn |> get(~p"/teams") |> html_response(200)
-
-      assert html =~ ~s|href="/checkout"|
+      assert count >= 3,
+             "only #{count} seat CTAs; the hero, the rolodex and the pricing " <>
+               "card should each have one"
     end
   end
 

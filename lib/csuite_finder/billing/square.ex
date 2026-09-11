@@ -28,7 +28,7 @@ defmodule CsuiteFinder.Billing.Square do
 
   alias CsuiteFinder.Accounts
   alias CsuiteFinder.Accounts.Account
-  alias CsuiteFinder.Billing.{Payment, Pricing}
+  alias CsuiteFinder.Billing.{Payment, Plans, Pricing}
   alias CsuiteFinder.Repo
 
   # Pinned. Square dates its API and changes behaviour between versions, so a
@@ -74,7 +74,7 @@ defmodule CsuiteFinder.Billing.Square do
           payment_note: reference(account, kind)
         }
 
-        case post("/v2/online-checkout/payment-links", prune(body)) do
+        case create_link(prune(body)) do
           {:error, :square_rejected_email} ->
             # Square validates the address and refuses some that look fine to
             # us — example.com among them. A prefill is a convenience, so
@@ -85,7 +85,7 @@ defmodule CsuiteFinder.Billing.Square do
             body
             |> Map.delete(:pre_populated_data)
             |> prune()
-            |> then(&post("/v2/online-checkout/payment-links", &1))
+            |> then(&create_link/1)
 
           other ->
             other
@@ -94,29 +94,69 @@ defmodule CsuiteFinder.Billing.Square do
   end
 
   @doc """
-  The link a seat button points at.
+  A hosted checkout that starts a seat subscription.
 
-  **Square cannot start a card-on-file subscription from a hosted link.** Its
-  Subscriptions API needs a customer and a stored card before a plan can be
-  attached, which a one-page checkout does not produce — so unlike Stripe, "click
-  the price, get billed monthly" is not one step here.
+  Square *can* do this from a payment link — `checkout_options.subscription_plan_id`
+  against a catalogue plan variation — which is worth stating because the
+  Subscriptions API cannot: that one needs a customer and a stored card before a
+  plan can attach, and a one-page checkout produces neither. The link is the
+  route that works.
 
-  Until that flow exists, this returns the configured link and nothing clever:
-  set `SQUARE_SEAT_LINK` to a subscription plan's own checkout URL created in
-  the Square dashboard. Returning an error rather than inventing a one-off
-  charge is deliberate — taking $999 once from somebody who believes they are
-  subscribing is the worst failure available here.
+  The variation carries the price and the cadence, so monthly and annual are two
+  ids rather than two code paths, and changing what a seat costs is a catalogue
+  edit rather than a deploy.
+
+  `seats` is the line quantity. It multiplies the credit granted, which is what
+  a seat means here — there are no per-person logins to hand out.
   """
-  @spec seat_link(:month | :year) :: {:ok, String.t()} | {:error, :square_seat_link_missing}
-  def seat_link(interval \\ :month) do
-    case config()[seat_key(interval)] do
-      url when is_binary(url) and url != "" -> {:ok, url}
-      _ -> {:error, :square_seat_link_missing}
+  @spec create_seat_session(Account.t() | nil, pos_integer(), :month | :year, keyword()) ::
+          {:ok, String.t(), map()} | {:error, term()}
+  def create_seat_session(account, seats \\ 1, interval \\ :month, opts \\ []) do
+    cond do
+      not configured?() ->
+        {:error, :square_not_configured}
+
+      is_nil(location_id()) ->
+        {:error, :square_location_not_configured}
+
+      is_nil(plan_variation_id(interval)) ->
+        {:error, :square_seat_plan_missing}
+
+      true ->
+        body = %{
+          idempotency_key: idempotency_key(),
+          checkout_options: %{
+            subscription_plan_id: plan_variation_id(interval),
+            redirect_url: Keyword.get(opts, :return_url)
+          },
+          pre_populated_data: %{buyer_email: buyer_email(account, opts)},
+          order: %{
+            location_id: location_id(),
+            reference_id: reference(account, "seat"),
+            line_items: [
+              %{
+                name: "CSuiteFinder Seat",
+                quantity: to_string(seats),
+                base_price_money: %{amount: seat_amount(interval), currency: "USD"},
+                note: reference(account, "seat")
+              }
+            ]
+          }
+        }
+
+        create_link(prune(body))
     end
   end
 
-  defp seat_key(:year), do: :seat_annual_link
-  defp seat_key(_), do: :seat_link
+  defp seat_amount(:year), do: Plans.seat_annual_usd() * 100
+  defp seat_amount(_), do: Plans.seat_usd() * 100
+
+  @doc "The catalogue plan variation a seat subscribes to, per interval."
+  @spec plan_variation_id(:month | :year) :: String.t() | nil
+  def plan_variation_id(:year), do: config()[:seat_annual_plan_id]
+  def plan_variation_id(_), do: config()[:seat_plan_id]
+
+  defp create_link(body), do: post("/v2/online-checkout/payment-links", body)
 
   defp post(path, body) do
     case request(path, body) do

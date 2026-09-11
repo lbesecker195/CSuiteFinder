@@ -10,7 +10,7 @@ defmodule CsuiteFinderWeb.PageController do
   use CsuiteFinderWeb, :controller
 
   alias CsuiteFinder.Audience
-  alias CsuiteFinder.Billing.{Plans, Pricing, Stripe}
+  alias CsuiteFinder.Billing.{Plans, Pricing, Square, Stripe}
   alias CsuiteFinderWeb.SampleSheet
 
   require EEx
@@ -131,7 +131,12 @@ defmodule CsuiteFinderWeb.PageController do
       cancel_url: base <> "/teams#pricing"
     ]
 
-    case Stripe.create_seat_session(nil, seats(params["seats"]), interval, opts) do
+    creator =
+      if Square.configured?(),
+        do: &Square.create_seat_session/4,
+        else: &Stripe.create_seat_session/4
+
+    case creator.(nil, seats(params["seats"]), interval, opts) do
       {:ok, url, _session} ->
         redirect(conn, external: url)
 
@@ -254,7 +259,7 @@ defmodule CsuiteFinderWeb.PageController do
   end
 
   defp payment_link(which) do
-    Application.get_env(:csuite_finder, :payment_links, [])[which] || "/checkout?plan=seat"
+    Application.get_env(:csuite_finder, :payment_links, [])[which] || "/checkout/seat"
   end
 
   # The families a reader already thinks in, dearest first inside each, because

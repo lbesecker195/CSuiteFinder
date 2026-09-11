@@ -239,8 +239,11 @@ if config_env() != :test do
       System.get_env("SQUARE_NOTIFICATION_URL") ||
         (System.get_env("PUBLIC_BASE_URL") || "https://csuitefinder.com") <>
           "/csuitefinder/billing/webhook",
-    seat_link: System.get_env("SQUARE_SEAT_LINK"),
-    seat_annual_link: System.get_env("SQUARE_SEAT_ANNUAL_LINK")
+    # Catalogue plan *variation* ids, not plan ids: the variation is what
+    # carries the price and the cadence, so monthly and annual are two ids
+    # rather than two code paths.
+    seat_plan_id: System.get_env("SQUARE_SEAT_PLAN_ID"),
+    seat_annual_plan_id: System.get_env("SQUARE_SEAT_ANNUAL_PLAN_ID")
 
   config :csuite_finder, CsuiteFinder.Billing.Stripe,
     secret_key: System.get_env("STRIPE_SECRET_KEY"),
