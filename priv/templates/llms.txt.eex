@@ -101,6 +101,20 @@ And none of them edits what the caller gave you. Where a command produces a
 file, write a new one and leave the input exactly as it was — a row you delete
 is a row nobody can get back, and a verdict you deleted it on can be wrong.
 
+**Report every ten.** Any of these can run for minutes across dozens of calls.
+Each time ten more addresses have come back **found and `deliverable`**, say so
+before carrying on: how many are confirmed, how many have been rejected, and
+which company you are on. Count only the confirmed ones — a tally that includes
+the undeliverable ones tells the reader they have more than they can send to.
+
+    Found 10 deliverable (2 rejected) — through Stripe, Plaid, Adyen.
+    Found 20 deliverable (5 rejected) — through Ramp.
+
+That is not decoration. A run that prints nothing for four minutes is
+indistinguishable from one that has hung, and the person watching it cannot tell
+whether to wait or to stop paying for it. The last line of a run is a total, not
+another increment.
+
 ### /demo [domain]
 Twenty C-suite rows from one company, checked. What to run when someone wants to
 see what this does rather than read about it. `/demo stripe.com` — with no
@@ -114,7 +128,8 @@ API will do. <%= if @show_costs, do: "It spends the account's own credit, so buy
 <%= if @show_costs, do: "   $#{@email_price} a person, so twenty rows is about $0.05.", else: "   Twenty rows out of the seat's monthly credit." %>
 2. `/email/deliverable` on every email. It is included, so checking all twenty
    costs nothing.
-3. Hand back everything, in the order it arrived.
+3. Report at ten deliverable, then again at twenty.
+4. Hand back everything, in the order it arrived.
 
 **Do not filter and do not de-duplicate.** Someone appearing under two
 departments is two rows, and that is fine — it is what was returned.
@@ -156,7 +171,8 @@ Snowflake". `/company/search?industry=…&technology=…&size=…&country=…`.
 `/email/deliverable` per email → hand back a CSV.
 <%= if @show_costs, do: "Roughly $#{@email_price} per company plus $#{@email_price} per person.", else: "The most credit of anything here, so set `limit` on both steps." %>
 *Agree a budget first. Say what it will cost before you spend it, and use
-`limit` on both steps to hold to that.*
+`limit` on both steps to hold to that. This is the longest-running command here,
+so the every-ten report matters most on it.*
 
 ### /titles <role> [at <company> | in <country>]
 People by job title across companies, rather than at one you already know:

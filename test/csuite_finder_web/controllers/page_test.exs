@@ -1076,4 +1076,27 @@ defmodule CsuiteFinderWeb.PageTest do
       assert html =~ "@keyframes dot-dim"
     end
   end
+
+  describe "progress while a command runs" do
+    test "llms.txt asks for a report every ten deliverable", %{conn: conn} do
+      # A run that prints nothing for four minutes is indistinguishable from one
+      # that has hung, and the person watching it cannot tell whether to wait or
+      # to stop paying for it.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+      [_, commands] = String.split(body, "## Commands", parts: 2)
+
+      assert commands =~ "Report every ten"
+      assert commands =~ "found and `deliverable`"
+    end
+
+    test "and counts only the confirmed ones", %{conn: conn} do
+      # A tally that includes the undeliverable ones tells the reader they have
+      # more addresses than they can actually send to, which is the number that
+      # matters to them.
+      body = conn |> get(~p"/llms.txt") |> response(200)
+
+      assert body =~ "Count only the confirmed ones"
+      assert body =~ "Found 10 deliverable"
+    end
+  end
 end
