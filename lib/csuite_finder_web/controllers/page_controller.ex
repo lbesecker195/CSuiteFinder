@@ -64,7 +64,6 @@ defmodule CsuiteFinderWeb.PageController do
           seat_includes: seat.includes,
           seat_caveats: seat.caveats,
           seat_emails: delimit(seat.lookups.emails),
-          comparison: Plans.comparison(),
           contact_email: contact_email()
         })
       )
@@ -111,7 +110,7 @@ defmodule CsuiteFinderWeb.PageController do
     |> put_resp_content_type("text/html")
     |> send_resp(
       200,
-      render_developers(Map.put(assigns(conn, params), :comparison, Plans.comparison()))
+      render_developers(assigns(conn, params))
     )
   end
 

@@ -957,4 +957,60 @@ defmodule CsuiteFinderWeb.PageTest do
       refute html =~ ".sheet table { border-collapse: collapse"
     end
   end
+
+  describe "the endpoints table" do
+    test "runs in the same order as the per-endpoint cost list", %{conn: conn} do
+      # Two lists of the same endpoints on one page. If they disagree, a reader
+      # comparing them is doing the reconciling, so the order is asserted rather
+      # than left to whoever adds the next row.
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      # The price list: one <code>family.endpoint</code> per row.
+      [_, prices_on] = String.split(html, "Per-endpoint cost", parts: 2)
+
+      priced =
+        Regex.scan(~r|<td><code>([a-z.]+)</code></td>|, prices_on, capture: :all_but_first)
+        |> Enum.map(&List.first/1)
+
+      # The endpoints table: one <code>/csuitefinder/path</code> per row, which
+      # is the same key with slashes.
+      [_, table_on] = String.split(html, ~s|<div class="table-scroll endpoints">|, parts: 2)
+      [table_on, _] = String.split(table_on, "</table>", parts: 2)
+
+      documented =
+        Regex.scan(~r|<code>/csuitefinder/([a-z/]+)</code>|, table_on, capture: :all_but_first)
+        |> Enum.map(fn [path] -> String.replace(path, "/", ".") end)
+
+      assert documented != []
+      assert priced != []
+
+      # Every documented endpoint keeps its position from the price list. The
+      # price list is the longer of the two — it carries an endpoint the table
+      # has no row for — so the table is checked against that order rather than
+      # for equality.
+      assert documented == Enum.filter(priced, &(&1 in documented)),
+             "table order #{inspect(documented)} does not follow price order #{inspect(priced)}"
+    end
+
+    test "leads with email.find and ends the email family with linkedin", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+      [_, table_on] = String.split(html, ~s|<div class="table-scroll endpoints">|, parts: 2)
+
+      rows =
+        Regex.scan(~r|<code>/csuitefinder/([a-z/]+)</code>|, table_on, capture: :all_but_first)
+        |> Enum.map(fn [path] -> String.replace(path, "/", ".") end)
+
+      assert hd(rows) == "email.find"
+
+      email_rows = Enum.filter(rows, &String.starts_with?(&1, "email."))
+      assert List.last(email_rows) == "email.linkedin"
+    end
+
+    test "does not name a verdict we retired", %{conn: conn} do
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      assert html =~ "accept_all or unknown"
+      refute html =~ "risky or unknown"
+    end
+  end
 end

@@ -66,24 +66,9 @@
   <thead><tr><th>Method</th><th>Path</th><th>Parameters</th><th>What it does</th></tr></thead>
   <tbody>
     <tr>
-      <td>POST</td><td><code>/csuitefinder/people/search</code></td>
-      <td><code>title</code>, <code>company_domain</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
-      <td>Who holds a job, across companies — not just at one you already know. Addresses come back unverified; check them before sending. $<%= @email_price %> per person.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/email/linkedin</code></td>
-      <td><code>linkedin_url</code></td>
-      <td>A work email from a LinkedIn profile URL. $<%= @linkedin_price %> — dearer than <code>/email/find</code>, because a profile carries no domain to reuse.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/company/search</code></td>
-      <td><code>industry</code>, <code>technology</code>, <code>size</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
-      <td>Companies matching a description — an account list for lead generation. Every row is a domain the rest of the API takes as input. $<%= @email_price %> per company.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/company/people</code></td>
-      <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
-      <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. $<%= @phone_price %> per person.</td>
+      <td>POST</td><td><code>/csuitefinder/email/find</code></td>
+      <td><code>full_name</code>, <code>domain</code>, <code>email</code><span class="label"> (optional)</span></td>
+      <td>A name and a company become that person's work email. The optional <code>email</code> is a colleague's address at the same company.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/email/company/people</code></td>
@@ -91,34 +76,8 @@
       <td>The same sweep, email addresses only. $<%= @email_price %> per person.</td>
     </tr>
     <tr>
-      <td>POST</td><td><code>/csuitefinder/phone/find</code></td>
-      <td><code>full_name</code> + <code>domain</code>, or <code>email</code></td>
-      <td>A direct phone number, with line type. $<%= @phone_price %>.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/phone/valid</code></td><td><code>phone</code></td>
-      <td>Is the number real? Line type, carrier, region and every format.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/phone/name</code></td><td><code>phone</code></td>
-      <td>Whose number is this — from numbers we have already found for you.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/phone/enrich</code></td><td><code>phone</code></td>
-      <td>The person behind a number: name, title, employer, address.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/phone/company</code></td><td><code>phone</code></td>
-      <td>Which company a number belongs to.</td>
-    </tr>
-    <tr>
-      <td>POST</td><td><code>/csuitefinder/email/find</code></td>
-      <td><code>full_name</code>, <code>domain</code>, <code>email</code><span class="label"> (optional)</span></td>
-      <td>A name and a company become that person's work email. The optional <code>email</code> is a colleague's address at the same company.</td>
-    </tr>
-    <tr>
       <td>POST</td><td><code>/csuitefinder/email/deliverable</code></td><td><code>email</code></td>
-      <td>Is this mailbox real? Returns deliverable, undeliverable, risky or unknown, with the MX and SMTP signals behind it.</td>
+      <td>Is this mailbox real? Returns deliverable, undeliverable, accept_all or unknown, with the MX and SMTP signals behind it.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/email/enrich</code></td><td><code>email</code></td>
@@ -133,12 +92,53 @@
       <td>How a company formats its addresses, with every alternative and how common each is.</td>
     </tr>
     <tr>
+      <td>POST</td><td><code>/csuitefinder/email/linkedin</code></td>
+      <td><code>linkedin_url</code></td>
+      <td>A work email from a LinkedIn profile URL. $<%= @linkedin_price %> — dearer than <code>/email/find</code>, because a profile carries no domain to reuse.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/find</code></td>
+      <td><code>full_name</code> + <code>domain</code>, or <code>email</code></td>
+      <td>A direct phone number, with line type. $<%= @phone_price %>.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/company</code></td><td><code>phone</code></td>
+      <td>Which company a number belongs to.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/enrich</code></td><td><code>phone</code></td>
+      <td>The person behind a number: name, title, employer, address.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/name</code></td><td><code>phone</code></td>
+      <td>Whose number is this — from numbers we have already found for you.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/phone/valid</code></td><td><code>phone</code></td>
+      <td>Is the number real? Line type, carrier, region and every format.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/people</code></td>
+      <td><code>domain</code>, <code>department</code>, <code>limit</code></td>
+      <td>Who works at a company, with phone numbers. <code>department=executive</code> for the C-suite. $<%= @phone_price %> per person.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/company/search</code></td>
+      <td><code>industry</code>, <code>technology</code>, <code>size</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
+      <td>Companies matching a description — an account list for lead generation. Every row is a domain the rest of the API takes as input. $<%= @email_price %> per company.</td>
+    </tr>
+    <tr>
       <td>POST</td><td><code>/csuitefinder/company/find</code></td><td><code>email</code> or <code>domain</code></td>
       <td>Which company an address belongs to — name, domain, website, LinkedIn.</td>
     </tr>
     <tr>
       <td>POST</td><td><code>/csuitefinder/company/info</code></td><td><code>email</code> or <code>domain</code></td>
       <td>The full company profile: industry, headcount, founding year, location.</td>
+    </tr>
+    <tr>
+      <td>POST</td><td><code>/csuitefinder/people/search</code></td>
+      <td><code>title</code>, <code>company_domain</code>, <code>country</code>, <code>q</code>, <code>limit</code></td>
+      <td>Who holds a job, across companies — not just at one you already know. Addresses come back unverified; check them before sending. $<%= @email_price %> per person.</td>
     </tr>
   </tbody>
 </table>
@@ -215,32 +215,6 @@
     <% end %>
   </tbody>
   <% end %>
-</table>
-</div>
-
-<h3 class="sub-label">Seat plan, for comparison</h3>
-
-<p class="quiet">
-  If the people using this are working in a browser rather than writing code,
-  a <a href="/teams">seat</a> is $<%= @seat_usd %> a month per person and grants
-  $<%= @seat_usd %> of the same credit each month. Same prices per lookup; the
-  seat's credit expires at the end of the month, bought credit does not.
-</p>
-
-<div class="table-scroll compare">
-<table>
-  <thead>
-    <tr><th></th><th class="seat">A seat — $<%= @seat_usd %>/month</th><th>Credit — bought up front</th></tr>
-  </thead>
-  <tbody>
-    <%= for row <- @comparison do %>
-    <tr>
-      <td><strong><%= row.question %></strong></td>
-      <td class="seat"><%= row.seat %></td>
-      <td><%= row.credit %></td>
-    </tr>
-    <% end %>
-  </tbody>
 </table>
 </div>
 
