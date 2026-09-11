@@ -214,6 +214,15 @@ config :csuite_finder, CsuiteFinder.Inference,
 # the test settings with nil — and the tests that then failed would be the
 # webhook signature ones, which is the last place to lose coverage.
 if config_env() != :test do
+  # Overridable per environment; the defaults in config.exs are the live links.
+  config :csuite_finder, :payment_links,
+    seat:
+      System.get_env("STRIPE_SEAT_PAYMENT_LINK") ||
+        Application.compile_env(:csuite_finder, [:payment_links, :seat]),
+    seat_annual:
+      System.get_env("STRIPE_SEAT_ANNUAL_PAYMENT_LINK") ||
+        Application.compile_env(:csuite_finder, [:payment_links, :seat_annual])
+
   config :csuite_finder, CsuiteFinder.Billing.Stripe,
     secret_key: System.get_env("STRIPE_SECRET_KEY"),
     webhook_secret: System.get_env("STRIPE_WEBHOOK_SECRET"),

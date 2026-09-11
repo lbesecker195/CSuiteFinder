@@ -227,8 +227,17 @@ defmodule CsuiteFinderWeb.PageController do
             phones: delimit(b.phones)
           }
         end,
-      price_groups: price_groups()
+      price_groups: price_groups(),
+      # Static Stripe Payment Links. The seat CTA is an ordinary href to
+      # Stripe's own domain rather than a route of ours, so it does not depend
+      # on this application being reachable at the moment someone clicks it.
+      seat_link: payment_link(:seat),
+      seat_annual_link: payment_link(:seat_annual)
     }
+  end
+
+  defp payment_link(which) do
+    Application.get_env(:csuite_finder, :payment_links, [])[which] || "/checkout?plan=seat"
   end
 
   # The families a reader already thinks in, dearest first inside each, because

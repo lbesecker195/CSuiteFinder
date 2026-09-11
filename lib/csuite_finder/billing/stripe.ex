@@ -160,6 +160,46 @@ defmodule CsuiteFinder.Billing.Stripe do
     end
   end
 
+  @doc """
+  What was actually billed: how many seats, and how often.
+
+  Read from the subscription's own line item rather than from metadata we
+  attached. A Payment Link lets the buyer change the quantity on Stripe's page,
+  and its metadata is set when the link is made, not when it is used — so
+  metadata can say one seat while the customer bought five. The line item is
+  what the card was charged for, and it is what the credit has to match.
+
+  Falls back to one monthly seat, which under-grants rather than over-grants if
+  Stripe cannot be reached: too little credit is a support message, too much is
+  money given away.
+  """
+  @spec subscription_terms(String.t()) :: {:month | :year, pos_integer()}
+  def subscription_terms(subscription_id) do
+    with {:ok, subscription} <- get_subscription(subscription_id),
+         [item | _] <- get_in(subscription, ["items", "data"]) do
+      interval =
+        case get_in(item, ["price", "recurring", "interval"]) do
+          "year" -> :year
+          _ -> :month
+        end
+
+      seats =
+        case item["quantity"] do
+          n when is_integer(n) and n > 0 -> n
+          _ -> 1
+        end
+
+      {interval, seats}
+    else
+      other ->
+        Logger.warning(
+          "stripe: could not read subscription #{subscription_id}: #{inspect(other)}"
+        )
+
+        {:month, 1}
+    end
+  end
+
   @doc "Read a subscription back from Stripe."
   @spec get_subscription(String.t()) :: {:ok, map()} | {:error, term()}
   def get_subscription(id) do

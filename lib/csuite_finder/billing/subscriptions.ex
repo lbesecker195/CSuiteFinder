@@ -94,8 +94,11 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   @spec open_from_session(integer(), String.t(), map()) ::
           {:ok, Subscription.t()} | {:error, term()}
   def open_from_session(account_id, subscription_id, session) do
-    seats = int_or(get_in(session, ["metadata", "seats"]), 1)
-    interval = get_in(session, ["metadata", "interval"]) || "month"
+    # Asked of Stripe rather than read from the session. A Payment Link lets the
+    # buyer change the quantity on Stripe's page, so the only trustworthy answer
+    # to "how many seats" is the line item the card was charged for.
+    {interval_atom, seats} = Stripe.subscription_terms(subscription_id)
+    interval = to_string(interval_atom)
 
     %Subscription{}
     |> Subscription.changeset(%{
@@ -109,13 +112,6 @@ defmodule CsuiteFinder.Billing.Subscriptions do
       raw: session
     })
     |> Repo.insert()
-  end
-
-  defp int_or(value, fallback) do
-    case Integer.parse(to_string(value)) do
-      {n, _} when n > 0 -> n
-      _ -> fallback
-    end
   end
 
   @doc """

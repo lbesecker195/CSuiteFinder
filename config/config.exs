@@ -7,6 +7,14 @@
 # General application configuration
 import Config
 
+# Stripe Payment Links for the seat. These are static, shareable URLs — not
+# secrets — so they live here with the live links as the default and can be
+# pointed elsewhere per environment. A Payment Link is served by Stripe, so the
+# button on a marketing page keeps working even when this application does not.
+config :csuite_finder, :payment_links,
+  seat: "https://buy.stripe.com/eVqeVdbwNaim5q26AP6sw05",
+  seat_annual: "https://buy.stripe.com/7sY4gzeIZ8aecSuf7l6sw06"
+
 config :csuite_finder,
   ecto_repos: [CsuiteFinder.Repo],
   generators: [timestamp_type: :utc_datetime]
