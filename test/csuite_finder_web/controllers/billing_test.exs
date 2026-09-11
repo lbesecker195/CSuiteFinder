@@ -172,4 +172,31 @@ defmodule CsuiteFinderWeb.BillingTest do
       assert body["prices_usd"]["company.info"] == 0
     end
   end
+
+  describe "the capture contract" do
+    # Renaming paypal_order_id to provider_ref broke this and the whole suite
+    # stayed green: the controller matched the new name, the account page kept
+    # posting the old one, and nothing tied the two together. A payment would
+    # have been approved at the processor and never credited.
+
+    test "the account page posts the parameter the controller matches",
+         %{conn: conn} do
+      html = conn |> get(~p"/account") |> html_response(200)
+
+      assert html =~ "provider_ref: order",
+             "the account page is posting a capture parameter the controller does not match"
+    end
+
+    test "and a capture without it is refused by name", %{conn: conn} do
+      {_account, key} = Fixtures.account_with_key(usd: 5.0)
+
+      body =
+        conn
+        |> put_req_header("authorization", "Bearer " <> key)
+        |> post(~p"/csuitefinder/billing/capture", %{})
+        |> json_response(400)
+
+      assert body["error"] =~ "provider_ref"
+    end
+  end
 end

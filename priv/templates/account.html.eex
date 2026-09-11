@@ -763,7 +763,7 @@
     if (!order) return false;
 
     say("Confirming your payment…", "info");
-    api("/billing/capture", { method: "POST", body: { paypal_order_id: order } })
+    api("/billing/capture", { method: "POST", body: { provider_ref: order } })
       .then(function (res) {
         clean();
         if (res.ok && res.body.status === "credited") {

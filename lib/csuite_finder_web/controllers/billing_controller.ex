@@ -109,7 +109,7 @@ defmodule CsuiteFinderWeb.BillingController do
            ) do
       json(conn, %{
         payment_id: payment.id,
-        paypal_order_id: payment.paypal_order_id,
+        provider_ref: payment.provider_ref,
         amount_usd: amount,
         credit_usd: Pricing.usd(payment.credit_micro),
         status: payment.status,
@@ -159,7 +159,7 @@ defmodule CsuiteFinderWeb.BillingController do
              cancel_url: params["cancel_url"] || ""
            ) do
       json(conn, %{
-        paypal_order_id: payment.paypal_order_id,
+        provider_ref: payment.provider_ref,
         amount_usd: Pricing.trial_usd(),
         credit_usd: Pricing.usd(payment.credit_micro),
         expires_in_months: Pricing.trial_months(),
@@ -188,11 +188,11 @@ defmodule CsuiteFinderWeb.BillingController do
   end
 
   @doc "POST /csuitefinder/billing/capture"
-  def capture(conn, %{"paypal_order_id" => order_id}) do
+  def capture(conn, %{"provider_ref" => order_id}) do
     case PayPal.capture_order(order_id) do
       {:ok, payment} ->
         json(conn, %{
-          paypal_order_id: payment.paypal_order_id,
+          provider_ref: payment.provider_ref,
           status: payment.status,
           kind: payment.kind,
           credited_usd: Pricing.usd(payment.credit_micro),
@@ -223,7 +223,7 @@ defmodule CsuiteFinderWeb.BillingController do
   end
 
   def capture(conn, _params),
-    do: conn |> put_status(:bad_request) |> json(%{error: "missing paypal_order_id"})
+    do: conn |> put_status(:bad_request) |> json(%{error: "missing provider_ref"})
 
   # ------------------------------------------------------ seat subscriptions
 
@@ -323,7 +323,7 @@ defmodule CsuiteFinderWeb.BillingController do
 
   defp subscription_view(%Subscription{} = s) do
     %{
-      id: s.paypal_subscription_id,
+      id: s.provider_ref,
       status: s.status,
       seats: s.seats,
       credit_usd_per_month: Pricing.usd(s.grant_micro_per_period),

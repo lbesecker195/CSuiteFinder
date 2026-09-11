@@ -16,8 +16,9 @@ defmodule CsuiteFinder.Billing.Subscription do
   @statuses ~w(pending approval_pending approved active suspended cancelled expired)
 
   schema "subscriptions" do
-    field :paypal_subscription_id, :string
-    field :paypal_plan_id, :string
+    field :provider, :string, default: "paypal"
+    field :provider_ref, :string
+    field :provider_plan_id, :string
     field :seats, :integer, default: 1
     field :status, :string, default: "pending"
     field :grant_micro_per_period, :integer, default: 0
@@ -33,9 +34,10 @@ defmodule CsuiteFinder.Billing.Subscription do
   def changeset(struct, attrs) do
     struct
     |> cast(attrs, [
+      :provider,
       :account_id,
-      :paypal_subscription_id,
-      :paypal_plan_id,
+      :provider_ref,
+      :provider_plan_id,
       :seats,
       :status,
       :grant_micro_per_period,
@@ -43,10 +45,10 @@ defmodule CsuiteFinder.Billing.Subscription do
       :last_payment_id,
       :raw
     ])
-    |> validate_required([:account_id, :paypal_subscription_id])
+    |> validate_required([:provider, :account_id, :provider_ref])
     |> validate_number(:seats, greater_than: 0, less_than_or_equal_to: 500)
     |> validate_inclusion(:status, @statuses)
-    |> unique_constraint(:paypal_subscription_id)
+    |> unique_constraint([:provider, :provider_ref])
   end
 
   @doc "Statuses that mean the subscription is paying and should be granting."

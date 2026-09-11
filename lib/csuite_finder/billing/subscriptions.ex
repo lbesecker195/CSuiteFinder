@@ -61,8 +61,8 @@ defmodule CsuiteFinder.Billing.Subscriptions do
     %Subscription{}
     |> Subscription.changeset(%{
       account_id: account.id,
-      paypal_subscription_id: id,
-      paypal_plan_id: response["plan_id"],
+      provider_ref: id,
+      provider_plan_id: response["plan_id"],
       seats: seats,
       status: status_of(response["status"] || "pending"),
       grant_micro_per_period: Plans.seat_grant_micro() * seats,
@@ -86,8 +86,8 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   """
   @spec record_payment(String.t(), String.t() | nil, DateTime.t() | nil) ::
           {:ok, Subscription.t()} | {:error, :unknown_subscription | :already_granted}
-  def record_payment(paypal_subscription_id, payment_id, period_end \\ nil) do
-    case get(paypal_subscription_id) do
+  def record_payment(provider_ref, payment_id, period_end \\ nil) do
+    case get(provider_ref) do
       nil ->
         {:error, :unknown_subscription}
 
@@ -125,8 +125,8 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   """
   @spec set_status(String.t(), String.t(), map()) ::
           {:ok, Subscription.t()} | {:error, :unknown_subscription}
-  def set_status(paypal_subscription_id, status, raw \\ %{}) do
-    case get(paypal_subscription_id) do
+  def set_status(provider_ref, status, raw \\ %{}) do
+    case get(provider_ref) do
       nil ->
         {:error, :unknown_subscription}
 
@@ -153,7 +153,7 @@ defmodule CsuiteFinder.Billing.Subscriptions do
         {:error, :not_active}
 
       subscription ->
-        with :ok <- PayPal.cancel_subscription(subscription.paypal_subscription_id, reason) do
+        with :ok <- PayPal.cancel_subscription(subscription.provider_ref, reason) do
           subscription
           |> Subscription.changeset(%{status: "cancelled"})
           |> Repo.update()
@@ -164,7 +164,7 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   @doc "Ask PayPal for a subscription's current state and store what it says."
   @spec refresh(Subscription.t()) :: {:ok, Subscription.t()} | {:error, term()}
   def refresh(%Subscription{} = subscription) do
-    with {:ok, remote} <- PayPal.get_subscription(subscription.paypal_subscription_id) do
+    with {:ok, remote} <- PayPal.get_subscription(subscription.provider_ref) do
       subscription
       |> Subscription.changeset(%{
         status: status_of(remote["status"]),
@@ -186,7 +186,7 @@ defmodule CsuiteFinder.Billing.Subscriptions do
 
   def next_billing(_), do: nil
 
-  defp get(id), do: Repo.get_by(Subscription, paypal_subscription_id: id)
+  defp get(id), do: Repo.get_by(Subscription, provider_ref: id)
 
   # PayPal shouts its statuses; the column stores them lower-case. Anything we
   # do not recognise is recorded as pending rather than crashing a webhook.

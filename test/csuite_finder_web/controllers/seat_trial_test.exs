@@ -67,7 +67,7 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
         %Payment{}
         |> Payment.changeset(%{
           account_id: account.id,
-          paypal_order_id: "ORDER-#{System.unique_integer([:positive])}",
+          provider_ref: "ORDER-#{System.unique_integer([:positive])}",
           amount_micro: Pricing.trial_micro(),
           credit_micro: Pricing.trial_micro(),
           kind: "seat_trial"

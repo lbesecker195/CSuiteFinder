@@ -224,7 +224,7 @@ defmodule CsuiteFinderWeb.NoLeakTest do
       # None of that is the customer's business.
       body =
         conn
-        |> post(~p"/csuitefinder/billing/capture", %{paypal_order_id: "UNKNOWN"})
+        |> post(~p"/csuitefinder/billing/capture", %{provider_ref: "UNKNOWN"})
         |> json_response(404)
 
       refute Map.has_key?(body, "detail")

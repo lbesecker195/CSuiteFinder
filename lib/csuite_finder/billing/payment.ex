@@ -5,8 +5,9 @@ defmodule CsuiteFinder.Billing.Payment do
   @timestamps_opts [type: :utc_datetime_usec]
 
   schema "payments" do
-    field :paypal_order_id, :string
-    field :paypal_capture_id, :string
+    field :provider, :string, default: "paypal"
+    field :provider_ref, :string
+    field :provider_txn_id, :string
     field :amount_micro, :integer
     field :credit_micro, :integer, default: 0
     field :currency, :string, default: "USD"
@@ -24,9 +25,10 @@ defmodule CsuiteFinder.Billing.Payment do
   def changeset(struct, attrs) do
     struct
     |> cast(attrs, [
+      :provider,
       :account_id,
-      :paypal_order_id,
-      :paypal_capture_id,
+      :provider_ref,
+      :provider_txn_id,
       :amount_micro,
       :credit_micro,
       :currency,
@@ -35,9 +37,9 @@ defmodule CsuiteFinder.Billing.Payment do
       :credited_at,
       :raw
     ])
-    |> validate_required([:account_id, :paypal_order_id, :amount_micro])
+    |> validate_required([:provider, :account_id, :provider_ref, :amount_micro])
     |> validate_inclusion(:status, ~w(created approved captured credited failed))
     |> validate_inclusion(:kind, ~w(topup seat_trial))
-    |> unique_constraint(:paypal_order_id)
+    |> unique_constraint([:provider, :provider_ref])
   end
 end

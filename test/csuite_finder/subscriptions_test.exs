@@ -28,7 +28,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
         Map.merge(
           %{
             account_id: account.id,
-            paypal_subscription_id: "I-#{System.unique_integer([:positive])}",
+            provider_ref: "I-#{System.unique_integer([:positive])}",
             seats: seats,
             status: "pending",
             grant_micro_per_period: Plans.seat_grant_micro() * seats
@@ -48,7 +48,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       account = account()
       subscription = subscription(account)
 
-      {:ok, updated} = Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      {:ok, updated} = Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
 
       assert updated.status == "active"
       assert updated.last_payment_id == "SALE-1"
@@ -62,7 +62,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       account = account()
       subscription = subscription(account)
 
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
       account = reload(account)
 
       assert account.granted_expires_at
@@ -75,7 +75,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       account = account()
       subscription = subscription(account, %{seats: 4})
 
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
 
       assert reload(account).granted_micro == Plans.seat_grant_micro() * 4
     end
@@ -85,7 +85,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       subscription = subscription(account)
       period_end = DateTime.add(DateTime.utc_now(), 20 * 86_400)
 
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1", period_end)
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-1", period_end)
 
       assert DateTime.diff(reload(account).granted_expires_at, period_end) == 0
     end
@@ -98,10 +98,10 @@ defmodule CsuiteFinder.SubscriptionsTest do
       account = account()
       subscription = subscription(account)
 
-      {:ok, first} = Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      {:ok, first} = Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
 
       assert {:error, :already_granted} =
-               Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+               Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
 
       account = reload(account)
       assert account.granted_micro == Plans.seat_grant_micro()
@@ -112,7 +112,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       account = account()
       subscription = subscription(account)
 
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
       # Half the month gets used.
       {:ok, _} =
         Billing.settle(%{
@@ -124,7 +124,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
 
       assert reload(account).granted_micro < Plans.seat_grant_micro()
 
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-2")
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-2")
       assert reload(account).granted_micro == Plans.seat_grant_micro()
     end
 
@@ -139,7 +139,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       {:ok, account} = Billing.credit(account, Pricing.micro(2_000))
       subscription = subscription(account)
 
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
 
       account = reload(account)
       assert account.balance_micro == Pricing.micro(2_000)
@@ -151,10 +151,10 @@ defmodule CsuiteFinder.SubscriptionsTest do
     test "a cancellation does not claw back the month already paid for" do
       account = account()
       subscription = subscription(account)
-      Subscriptions.record_payment(subscription.paypal_subscription_id, "SALE-1")
+      Subscriptions.record_payment(subscription.provider_ref, "SALE-1")
 
       {:ok, cancelled} =
-        Subscriptions.set_status(subscription.paypal_subscription_id, "CANCELLED")
+        Subscriptions.set_status(subscription.provider_ref, "CANCELLED")
 
       assert cancelled.status == "cancelled"
       assert reload(account).granted_micro == Plans.seat_grant_micro()
@@ -165,7 +165,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       subscription = subscription(account)
 
       for {sent, stored} <- [{"SUSPENDED", "suspended"}, {"EXPIRED", "expired"}] do
-        {:ok, updated} = Subscriptions.set_status(subscription.paypal_subscription_id, sent)
+        {:ok, updated} = Subscriptions.set_status(subscription.provider_ref, sent)
         assert updated.status == stored
       end
     end
@@ -174,7 +174,7 @@ defmodule CsuiteFinder.SubscriptionsTest do
       account = account()
       subscription = subscription(account)
 
-      {:ok, updated} = Subscriptions.set_status(subscription.paypal_subscription_id, "WAT")
+      {:ok, updated} = Subscriptions.set_status(subscription.provider_ref, "WAT")
       assert updated.status == "pending"
     end
   end

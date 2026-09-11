@@ -13,7 +13,7 @@ defmodule CsuiteFinder.Billing.PayPal do
 
   alias CsuiteFinder.Accounts.Account
   alias CsuiteFinder.Billing
-  alias CsuiteFinder.Billing.{Payment, PayPalPlan, Plans, Pricing}
+  alias CsuiteFinder.Billing.{Payment, BillingPlan, Plans, Pricing}
   alias CsuiteFinder.Repo
 
   @doc """
@@ -58,7 +58,7 @@ defmodule CsuiteFinder.Billing.PayPal do
         %Payment{}
         |> Payment.changeset(%{
           account_id: account.id,
-          paypal_order_id: response["id"],
+          provider_ref: response["id"],
           amount_micro: round(amount_usd * 1_000_000),
           credit_micro: credit_micro,
           kind: Keyword.get(opts, :kind, "topup"),
@@ -91,7 +91,7 @@ defmodule CsuiteFinder.Billing.PayPal do
   """
   @spec capture_order(String.t()) :: {:ok, Payment.t()} | {:error, term()}
   def capture_order(order_id) do
-    case Repo.get_by(Payment, paypal_order_id: order_id) do
+    case Repo.get_by(Payment, provider_ref: order_id) do
       nil ->
         {:error, :unknown_order}
 
@@ -106,7 +106,7 @@ defmodule CsuiteFinder.Billing.PayPal do
   defp do_capture(%Payment{} = payment) do
     with {:ok, token} <- access_token(),
          {:ok, %{status: status, body: response}} when status in 200..299 <-
-           post("/v2/checkout/orders/#{payment.paypal_order_id}/capture", %{}, token) do
+           post("/v2/checkout/orders/#{payment.provider_ref}/capture", %{}, token) do
       case captured_amount(response) do
         {:ok, capture_id, amount_micro} ->
           credit_once(payment, capture_id, amount_micro, response)
@@ -140,7 +140,7 @@ defmodule CsuiteFinder.Billing.PayPal do
       payment
       |> Payment.changeset(%{
         status: "credited",
-        paypal_capture_id: capture_id,
+        provider_txn_id: capture_id,
         amount_micro: amount_micro,
         credit_micro: credit_micro,
         credited_at: DateTime.utc_now(),
@@ -259,7 +259,7 @@ defmodule CsuiteFinder.Billing.PayPal do
            post(
              "/v1/billing/subscriptions",
              %{
-               plan_id: plan.paypal_plan_id,
+               plan_id: plan.provider_plan_id,
                quantity: to_string(seats),
                subscriber: %{email_address: account.email},
                custom_id: "account_#{account.id}",
@@ -323,12 +323,12 @@ defmodule CsuiteFinder.Billing.PayPal do
   and existing subscribers stay on the plan they agreed to, which is how PayPal
   works and also how it ought to work.
   """
-  @spec ensure_seat_plan() :: {:ok, PayPalPlan.t()} | {:error, term()}
+  @spec ensure_seat_plan() :: {:ok, BillingPlan.t()} | {:error, term()}
   def ensure_seat_plan do
     key = "seat-#{Plans.seat_usd()}-month"
 
-    case Repo.get_by(PayPalPlan, key: key) do
-      %PayPalPlan{} = plan -> {:ok, plan}
+    case Repo.get_by(BillingPlan, key: key) do
+      %BillingPlan{} = plan -> {:ok, plan}
       nil -> create_seat_plan(key)
     end
   end
@@ -370,11 +370,11 @@ defmodule CsuiteFinder.Billing.PayPal do
              },
              token
            ) do
-      %PayPalPlan{}
-      |> PayPalPlan.changeset(%{
+      %BillingPlan{}
+      |> BillingPlan.changeset(%{
         key: key,
-        paypal_product_id: product_id,
-        paypal_plan_id: plan["id"],
+        provider_product_id: product_id,
+        provider_plan_id: plan["id"],
         amount_micro: Plans.seat_micro(),
         raw: plan
       })
