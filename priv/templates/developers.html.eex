@@ -34,7 +34,8 @@
       rows: @sheet,
       rows_label: @sheet_rows,
       date: @sheet_date,
-      visitor: @visitor
+      visitor: @visitor,
+      count: "<strong>$#{@email_price}</strong> / email"
     ) %>
 
 <h2 class="section-label">Example</h2>

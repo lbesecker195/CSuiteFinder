@@ -116,6 +116,8 @@
       visitor: @visitor
     ) %>
 
+<%= CsuiteFinderWeb.Layout.ai(audience: :developer, base_url: @base_url) %>
+
 <h2 class="section-label">The line</h2>
 
 <div class="copyblock" data-signed="out">

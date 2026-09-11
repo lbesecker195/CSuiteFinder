@@ -48,7 +48,7 @@
         <span class="sheet-tab">Sheet2</span>
         <span class="sheet-tab">+</span>
       </div>
-      <div class="sheet-count">Rows <strong><%= @rows_label %></strong> / month</div>
+      <div class="sheet-count"><%= @count %></div>
     </div>
   </div>
 </div>

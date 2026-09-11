@@ -126,16 +126,24 @@ defmodule CsuiteFinderWeb.Layout do
   The sample spreadsheet, as shown on the home, sales and developer pages.
 
   Options: `:rows` (from `CsuiteFinderWeb.SampleSheet`), `:rows_label` for the
-  figure in the status bar, `:date` for the caption, and `:visitor` — a row
-  built from the details an emailed link carried, slotted in third so it lands
-  under the cell cursor.
+  figure in the status bar, `:date` for the caption, `:visitor` — a row built
+  from the details an emailed link carried, slotted in third so it lands under
+  the cell cursor — and `:count`, which replaces the status bar's text outright
+  for a page selling something other than a monthly allowance.
   """
   @spec sheet(keyword()) :: String.t()
   def sheet(opts) do
+    rows_label = Keyword.fetch!(opts, :rows_label)
+
     render_sheet(%{
       rows: with_visitor(Keyword.fetch!(opts, :rows), Keyword.get(opts, :visitor)),
-      rows_label: Keyword.fetch!(opts, :rows_label),
-      date: Keyword.fetch!(opts, :date)
+      rows_label: rows_label,
+      date: Keyword.fetch!(opts, :date),
+      # What the status bar says. A seat is sold by the month, so a monthly row
+      # count is the figure that means something there; the API is sold per
+      # answer, and a page quoting a monthly allowance to someone buying credit
+      # is quoting them the wrong product's number.
+      count: Keyword.get(opts, :count) || ~s(Rows <strong>#{rows_label}</strong> / month)
     })
   end
 

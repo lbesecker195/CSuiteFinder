@@ -219,7 +219,6 @@ defmodule CsuiteFinderWeb.PageTest do
         html = conn |> get(path) |> html_response(200)
 
         assert html =~ ~s|class="sheet"|, "#{path} has no sheet"
-        assert html =~ "Rows <strong>#{delimited(Plans.seat_lookups().emails)}</strong> / month"
 
         for column <- ~w(Name Title Email Deliverable) do
           assert html =~ "<td>#{column}</td>", "#{path} is missing the #{column} column"
@@ -231,6 +230,23 @@ defmodule CsuiteFinderWeb.PageTest do
           assert html =~ row.email
         end
       end
+    end
+
+    test "and its status bar quotes the product that page sells", %{conn: conn} do
+      # The rows are shared; the figure under them is not. A monthly allowance
+      # is what a seat buys, and quoting it to somebody buying credit per answer
+      # is quoting them the wrong product's number.
+      monthly = "Rows <strong>#{delimited(Plans.seat_lookups().emails)}</strong> / month"
+
+      for path <- ["/", "/teams"] do
+        assert conn |> get(path) |> html_response(200) =~ monthly,
+               "#{path} should quote the seat's monthly rows"
+      end
+
+      developers = conn |> get(~p"/developers") |> html_response(200)
+
+      assert developers =~ "<strong>$#{fmt(Pricing.price_usd("email.find"))}</strong> / email"
+      refute developers =~ monthly
     end
 
     test "titles are abbreviated the way a sheet abbreviates them", %{conn: _conn} do
