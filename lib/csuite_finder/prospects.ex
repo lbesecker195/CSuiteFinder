@@ -43,8 +43,13 @@ defmodule CsuiteFinder.Prospects do
   Options:
     * `:department` — one of #{Enum.join(@departments, ", ")}
     * `:limit` — how many to return (1..#{@max_limit}, default #{@page_size})
+    * `:page` — 1-based page, for reaching past the first `limit` people
     * `:kind` — "personal" for named humans, "generic" for role mailboxes
     * `:refresh` — force a fresh sweep
+
+  A company can have thousands of people — Stripe reports over five thousand
+  across five hundred pages — so a single call was never the whole roster, only
+  the first page of one. `:page` walks the rest.
   """
   @spec at_domain(String.t(), keyword()) ::
           {:ok, [CompanyPerson.t()], Lookup.meta()} | {:error, atom()}
@@ -52,13 +57,25 @@ defmodule CsuiteFinder.Prospects do
     with {:ok, domain} <- Cache.normalize_domain(domain),
          {:ok, department} <- validate_department(opts[:department]) do
       limit = clamp_limit(opts[:limit])
+      page = clamp_page(opts[:page])
+      offset = (page - 1) * limit
       refresh? = Keyword.get(opts, :refresh, false)
 
-      if not refresh? and covered?(domain, limit) do
-        {:ok, query(domain, department, opts[:kind], limit), Lookup.hit()}
+      if not refresh? and covered?(domain, offset + limit) do
+        {:ok, query(domain, department, opts[:kind], limit, offset), Lookup.hit()}
       else
-        fetch(domain, department, opts[:kind], limit)
+        fetch(domain, department, opts[:kind], limit, page, offset)
       end
+    end
+  end
+
+  @doc "How many people the provider says a domain has, if we have ever asked."
+  @spec total_at(String.t()) :: non_neg_integer() | nil
+  def total_at(domain) do
+    with {:ok, domain} <- Cache.normalize_domain(domain) do
+      Repo.one(from c in CompanyProfile, where: c.domain == ^domain, select: c.people_total)
+    else
+      _ -> nil
     end
   end
 
@@ -69,6 +86,22 @@ defmodule CsuiteFinder.Prospects do
   @doc "Largest page we will sell in one call."
   @spec max_limit() :: pos_integer()
   def max_limit, do: @max_limit
+
+  defp clamp_page(value) do
+    case value do
+      n when is_integer(n) and n > 0 ->
+        n
+
+      n when is_binary(n) ->
+        case Integer.parse(n) do
+          {parsed, _} when parsed > 0 -> parsed
+          _ -> 1
+        end
+
+      _ ->
+        1
+    end
+  end
 
   defp validate_department(nil), do: {:ok, nil}
 
@@ -88,12 +121,16 @@ defmodule CsuiteFinder.Prospects do
     end
   end
 
-  defp query(domain, department, kind, limit) do
+  # Ordered by id as the tiebreak, which is what makes paging stable: confidence
+  # alone would let two people swap places between calls and a page-two request
+  # would then repeat or skip somebody.
+  defp query(domain, department, kind, limit, offset) do
     CompanyPerson
     |> where([p], p.domain == ^domain)
     |> filter_department(department)
     |> filter_kind(kind)
     |> order_by([p], desc: p.confidence, asc: p.id)
+    |> offset(^offset)
     |> limit(^limit)
     |> Repo.all()
   end
@@ -128,14 +165,14 @@ defmodule CsuiteFinder.Prospects do
     end
   end
 
-  defp fetch(domain, department, kind, limit) do
+  defp fetch(domain, department, kind, limit, page, offset) do
     # Always buy whole pages: a page of ten costs the same as a page of one, so
     # asking for less than we are charged for would be throwing rows away.
     pages = ceil(limit / @page_size)
     fetch_limit = min(pages * @page_size, @max_limit)
 
     query_params =
-      [domain: domain, limit: fetch_limit]
+      [domain: domain, limit: fetch_limit, page: page]
       |> maybe_put(:department, department)
       |> maybe_put(:type, kind)
 
@@ -149,7 +186,7 @@ defmodule CsuiteFinder.Prospects do
       {:ok, body, meta} ->
         record(true, meta, started)
         store(domain, body, meta, fetch_limit)
-        {:ok, query(domain, department, kind, limit), Lookup.miss(meta.cost_micro)}
+        {:ok, query(domain, department, kind, limit, offset), Lookup.miss(meta.cost_micro)}
 
       {:miss, meta} ->
         record(false, meta, started)
@@ -160,7 +197,7 @@ defmodule CsuiteFinder.Prospects do
         record(false, meta, started)
         # Serve whatever we already hold rather than nothing; an upstream having
         # a bad minute should not erase rows we already bought.
-        {:ok, query(domain, department, kind, limit), Lookup.miss(meta.cost_micro)}
+        {:ok, query(domain, department, kind, limit, offset), Lookup.miss(meta.cost_micro)}
     end
   end
 

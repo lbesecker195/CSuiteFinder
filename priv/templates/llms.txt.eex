@@ -338,8 +338,16 @@ carries no numbers, so each one here costs a lookup of its own.
 - `limit` (optional) — 1..50, default 10. **This is the price dial**: you are
   billed per person returned, so ask for what you will use. It is also clamped
   to your balance, so it can never overdraw you.
+- `page` (optional) — 1-based, default 1. **A company is bigger than one page.**
+  Stripe reports over five thousand people; `limit` maxes at 50, so one call is
+  the first page and never the roster. Walk it with `page=2`, `page=3` and so on.
 - `type` (optional) — `personal` for named humans, `generic` for role mailboxes
   like sales@
+
+The response carries `page`, `limit`, `total` and `has_more`. `total` is what
+the provider says exists, so you can tell "that is everyone" from "that is the
+first ten of five thousand" — which a count alone can never distinguish. Stop
+when `has_more` is false rather than guessing from a short page.
 
 ```bash
 curl -H "Authorization: Bearer $KEY" \
@@ -355,7 +363,9 @@ domain you already swept — is answered from what the first one paid for.
 ### POST /csuitefinder/email/company/people — $<%= @email_price %> per person
 
 The same sweep as `/company/people`, returning **email addresses only**. Cheaper
-because no phone lookup is made. Same parameters.
+because no phone lookup is made. Same parameters, `page` included — and this is
+the one to page through, since the phone lookup on the other route is charged
+per person and a deep sweep multiplies it.
 
 ### POST /csuitefinder/phone/find — $<%= @phone_price %>
 

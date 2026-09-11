@@ -40,11 +40,13 @@ defmodule CsuiteFinderWeb.ProspectController do
   defp run(conn, params, opts) do
     with {:ok, domain} <- require_domain(params),
          limit = affordable_limit(conn, params["limit"]),
+         page = page_number(params["page"]),
          {:ok, people, lookup} <-
            Prospects.at_domain(domain,
              department: params["department"],
              kind: params["type"],
              limit: limit,
+             page: page,
              refresh: params["refresh"] in ["true", "1"]
            ) do
       {rendered, phone_spend} =
@@ -69,14 +71,40 @@ defmodule CsuiteFinderWeb.ProspectController do
         request: %{domain: domain, department: params["department"], limit: limit}
       })
 
+      total = Prospects.total_at(domain)
+
       json(conn, %{
         domain: domain,
         department: params["department"],
         count: length(rendered),
+        page: page,
+        limit: limit,
+        # What the provider says exists, so a caller can tell "that is everyone"
+        # from "that is the first page of five hundred" — which one call could
+        # never distinguish, and which decides whether asking again is worth
+        # paying for.
+        total: total,
+        has_more: has_more?(total, page, limit, length(rendered)),
         people: rendered
       })
     end
   end
+
+  defp page_number(value) do
+    case Integer.parse(to_string(value || "")) do
+      {n, _} when n > 0 -> n
+      _ -> 1
+    end
+  end
+
+  # `has_more` errs towards true when the provider never told us a total: a
+  # caller who stops early because we guessed "no more" has silently lost rows
+  # they were entitled to, while one who asks again finds an empty page and
+  # pays nothing for it, since a miss is free.
+  defp has_more?(nil, _page, limit, returned), do: returned >= limit
+
+  defp has_more?(total, page, limit, _returned) when is_integer(total),
+    do: page * limit < total
 
   # You cannot ask for more rows than you can pay for. Clamping here — before
   # the upstream call — is cheaper than discovering the shortfall at settle
