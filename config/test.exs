@@ -70,3 +70,7 @@ config :csuite_finder, CsuiteFinder.Billing.Square,
   notification_url: "https://csuitefinder.test/csuitefinder/billing/webhook",
   seat_plan_id: "VAR_MONTHLY_TEST",
   seat_annual_plan_id: "VAR_ANNUAL_TEST"
+
+# No pings from the suite: a test run must never reach a third party, and a uid
+# here would send one on every settle.
+config :csuite_finder, CsuiteFinder.Ssa, uid: nil

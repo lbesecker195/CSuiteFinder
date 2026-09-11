@@ -203,6 +203,14 @@ config :csuite_finder, CsuiteFinder.Inference,
   model: System.get_env("ANTHROPIC_MODEL"),
   base_url: System.get_env("ANTHROPIC_BASE_URL")
 
+# --- agent-side analytics -------------------------------------------------
+# GA4 measures browsers. This measures the agents calling the API, which is the
+# half of the product a browser never sees. Unset means no pings are sent at
+# all, which is what every environment but production should be.
+config :csuite_finder, CsuiteFinder.Ssa,
+  uid: System.get_env("SSA_UID"),
+  project: System.get_env("SSA_PROJECT") || "CSuiteFinder"
+
 # --- Stripe ---------------------------------------------------------------
 # The secret key is the only credential this process holds; Checkout is hosted,
 # so nothing is rendered client-side and no publishable key is needed. The price
