@@ -240,6 +240,9 @@ defmodule CsuiteFinderWeb.Layout do
 
   def footer(links) when is_list(links) do
     render_footer(%{
+      # Taken from the clock rather than written down, so it is not a thing
+      # somebody has to remember to change every January.
+      year: Date.utc_today().year,
       links:
         Enum.map_join(links, " ·\n  ", fn {href, label} -> ~s(<a href="#{href}">#{label}</a>) end)
     })

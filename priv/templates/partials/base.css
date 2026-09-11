@@ -170,6 +170,11 @@
   .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 0 0 14px; }
   .cta-note { font-size: 13.5px; color: var(--faint); }
 
+  /* A notice, not navigation: right-aligned and set well below the links so it
+     is not read as one of them, and nowhere near the nav. */
+  .copyright { text-align: right; color: var(--faint); font-size: 12px;
+    margin: 10px 0 24px; }
+
   footer {
     margin-top: 72px; padding: 28px 0 56px;
     border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;

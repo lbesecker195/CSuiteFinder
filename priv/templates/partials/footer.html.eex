@@ -1,3 +1,8 @@
 <footer>
   <%= @links %>
 </footer>
+
+<%!-- Outside the footer on purpose: it is a notice rather than navigation, so
+      it does not belong in a row of links people are meant to click, and it
+      sits to the right where the eye is not looking for one. --%>
+<p class="copyright">&copy; Logan Besecker <%= @year %></p>
