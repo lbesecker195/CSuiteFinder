@@ -105,4 +105,43 @@ defmodule CsuiteFinderWeb.AnalyticsTest do
              "#{length(buttons)} checkout links but only #{length(marked)} marked"
     end
   end
+
+  describe "engagement, so the reported time means something" do
+    test "rides along with the tag" do
+      Application.put_env(:csuite_finder, :ga_measurement_id, "G-TEST123")
+
+      assert Analytics.tag() =~ "scroll_depth"
+      assert Analytics.tag() =~ "time_on_page"
+    end
+
+    test "counts time only while the tab is in front" do
+      # GA4 counts engagement the same way, and a tab left open overnight is
+      # not two hours of reading.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ ~s|document.visibilityState !== "visible"|
+    end
+
+    test "treats a page shorter than the window as fully read" do
+      # Otherwise every short page reports 0% depth and drags the average down
+      # for a reason that has nothing to do with the reader.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ "scrollable <= 0 ? 100"
+    end
+
+    test "fires each milestone once rather than on a heartbeat" do
+      # A ping every second would measure the same thing and triple the event
+      # volume, which costs quota and buys nothing.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ "seenDepth[mark]"
+      assert js =~ "reached += 1"
+    end
+
+    test "is silent when analytics are switched off" do
+      Application.put_env(:csuite_finder, :ga_measurement_id, nil)
+      assert Analytics.tag() == ""
+    end
+  end
 end

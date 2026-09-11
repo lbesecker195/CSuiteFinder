@@ -34,6 +34,7 @@ defmodule CsuiteFinderWeb.Analytics do
           gtag('config', '#{id}');
         </script>
         #{click_tracking()}
+        #{engagement_tracking()}
         """
     end
   end
@@ -109,6 +110,87 @@ defmodule CsuiteFinderWeb.Analytics do
 
         window.gtag("event", "cta_click", event);
       }, true);
+    })();
+    </script>
+    """
+  end
+
+  @doc """
+  Report reading milestones, so engagement time means something.
+
+  GA4 does not have a stopwatch. It accumulates engagement time and sends it
+  **attached to events**, so a visit with a page_view and nothing else gives it
+  almost nothing to attribute: the reported average then reflects how often
+  people happen to fire an event, not how long they stayed. A page with two
+  events — arrive, click — tells GA4 about the visitors who clicked, and the
+  ones who read carefully and left are counted as a few seconds.
+
+  So this fires a handful of one-shot events: scroll depth at a quarter, a half,
+  three quarters and the end, and elapsed time at 15, 30, 60 and 120 seconds.
+  They exist to give GA4 timestamps to reason about, which is why each fires once
+  and no more — a heartbeat every second would work too and would triple the
+  event volume for no extra truth.
+
+  Time is only counted while the tab is actually visible, which is GA4's own
+  definition of engagement. A page left open in a background tab overnight is
+  not two hours of reading.
+  """
+  @spec engagement_tracking() :: String.t()
+  def engagement_tracking do
+    """
+    <script>
+    (function () {
+      "use strict";
+
+      if (typeof window.gtag !== "function" && !window.dataLayer) return;
+
+      function send(name, params) {
+        if (typeof window.gtag === "function") window.gtag("event", name, params);
+      }
+
+      // ---- how far down they read -----------------------------------------
+      var depths = [25, 50, 75, 90];
+      var seenDepth = {};
+
+      function depth() {
+        var doc = document.documentElement;
+        var scrollable = doc.scrollHeight - window.innerHeight;
+        // A page shorter than the window is fully read the moment it loads;
+        // reporting 0% for it would drag every average down.
+        var pct = scrollable <= 0 ? 100 : ((window.scrollY / scrollable) * 100);
+
+        for (var i = 0; i < depths.length; i++) {
+          var mark = depths[i];
+          if (pct >= mark && !seenDepth[mark]) {
+            seenDepth[mark] = true;
+            send("scroll_depth", { percent: mark, page_path: window.location.pathname });
+          }
+        }
+      }
+
+      window.addEventListener("scroll", depth, { passive: true });
+      depth();
+
+      // ---- how long they stayed -------------------------------------------
+      var marks = [15, 30, 60, 120];
+      var reached = 0;
+      var seconds = 0;
+
+      window.setInterval(function () {
+        // Only while the tab is in front. GA4 counts engagement the same way,
+        // and a tab left open overnight is not two hours of reading.
+        if (document.visibilityState !== "visible") return;
+
+        seconds += 5;
+
+        while (reached < marks.length && seconds >= marks[reached]) {
+          send("time_on_page", {
+            seconds: marks[reached],
+            page_path: window.location.pathname
+          });
+          reached += 1;
+        }
+      }, 5000);
     })();
     </script>
     """
