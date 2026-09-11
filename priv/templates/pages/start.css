@@ -118,7 +118,47 @@
     text-overflow: ellipsis; white-space: nowrap; }
   .composer-send { flex: none; width: 32px; height: 32px; border-radius: 50%;
     display: grid; place-items: center; background: var(--accent); color: #fff;
-    font-size: 15px; font-weight: 700; line-height: 1; }
+    font-size: 15px; font-weight: 700; line-height: 1; position: relative;
+    animation: send-nudge 2.6s ease-in-out infinite; }
+
+  /* A ring that expands out of the button. Drawn on a pseudo-element rather
+     than as a box-shadow so it can use var(--accent) and follow the theme.
+
+     Both of these rest in their finished-looking state — scale 1, ring
+     invisible — because an animation does not run at all in a background tab.
+     Anything that resolved to "faded out" at rest would simply be missing. */
+  .composer-send::after { content: ""; position: absolute; inset: 0;
+    border-radius: 50%; border: 2px solid var(--accent); opacity: 0;
+    animation: send-ring 2.6s ease-out infinite; }
+
+  @keyframes send-nudge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.07); }
+  }
+
+  @keyframes send-ring {
+    0% { transform: scale(1); opacity: .5; }
+    70%, 100% { transform: scale(1.75); opacity: 0; }
+  }
+
+  /* The placeholder's ellipsis, typing. Each dot dims rather than appears, so
+     a suspended animation leaves three solid dots — a normal ellipsis — instead
+     of a sentence that trails off into nothing. */
+  .dots i { font-style: normal; animation: dot-dim 1.4s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .18s; }
+  .dots i:nth-child(3) { animation-delay: .36s; }
+
+  @keyframes dot-dim {
+    0%, 60%, 100% { opacity: .3; }
+    30% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .composer-send,
+    .composer-send::after,
+    .dots i { animation: none; }
+    .composer-send::after { opacity: 0; }
+  }
 
   .chat-note { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
 

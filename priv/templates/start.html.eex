@@ -99,7 +99,7 @@
   </div>
 
   <div class="composer">
-    <span class="composer-field">Ask for the next twenty…</span>
+    <span class="composer-field">Ask for the next twenty<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></span>
     <span class="composer-send" aria-hidden="true">↑</span>
   </div>
 </div>
