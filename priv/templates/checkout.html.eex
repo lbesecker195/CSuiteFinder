@@ -26,6 +26,8 @@
 <%!-- What the money buys, on the page where it is being spent. Real output, and
       the same sheet the marketing pages show — someone who got this far has
       seen it once already, and recognising it is the point. --%>
+<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
+
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,
       rows_label: @sheet_rows,

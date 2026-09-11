@@ -30,6 +30,8 @@
   first waste turns hunting for a search endpoint they have already been given.
 </div>
 
+<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
+
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,
       rows_label: @sheet_rows,

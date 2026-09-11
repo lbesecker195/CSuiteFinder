@@ -49,6 +49,8 @@
   PayPal.
 </p>
 
+<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
+
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,
       rows_label: @sheet_rows,

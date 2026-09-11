@@ -175,6 +175,149 @@
     border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
   }
 
+  /* ── the conversation ────────────────────────────────────────────────────
+     An app window rather than two loose bubbles, so it reads as something that
+     happened. Markup rather than a screenshot: selectable, theme-aware, and the
+     line in the first bubble is the same string as the paste block below. */
+  .chat-app { border: 1px solid var(--border); border-radius: 16px;
+    background: var(--bg); overflow: hidden; margin-bottom: 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.05); }
+
+  .chat-bar { display: flex; align-items: center; gap: 10px;
+    padding: 11px 15px; border-bottom: 1px solid var(--border);
+    background: var(--surface); }
+  .lights { display: flex; gap: 6px; }
+  .lights i { width: 9px; height: 9px; border-radius: 50%; background: var(--bar);
+    display: block; }
+  .chat-title { font-size: 12px; font-weight: 600; color: var(--muted);
+    letter-spacing: -.01em; }
+
+  .chat { display: flex; flex-direction: column; gap: 18px; padding: 20px 18px; }
+
+  /* Avatar beside the bubble, and the visitor's turn mirrored. Aligned to the
+     top, not the bottom: the assistant's bubble is tall, and an avatar pinned
+     to its foot sits level with nothing and reads as a stray dot. */
+  .turn { display: flex; gap: 10px; align-items: flex-start; max-width: 92%; }
+  .turn.you { align-self: flex-end; flex-direction: row-reverse; }
+  .turn.bot { align-self: flex-start; }
+
+  .avatar { flex: none; width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em;
+    background: var(--bar); color: var(--text); }
+  .avatar.bot { background: var(--accent); color: #fff; font-size: 14px;
+    letter-spacing: 0; }
+
+  .bubble { border-radius: 16px; padding: 13px 16px; font-size: 14.5px;
+    line-height: 1.6; border: 1px solid var(--border); background: var(--surface);
+    min-width: 0; }
+  .turn.you .bubble { background: var(--accent-soft); border-color: var(--accent);
+    border-bottom-right-radius: 4px; }
+  .turn.bot .bubble { border-bottom-left-radius: 4px; }
+  .bubble p { margin: 0 0 12px; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble code { font-size: 0.86em; }
+  .lead { color: var(--muted); font-size: 13.5px; }
+
+  /* The calls it made, as a stack of chips. The price sits on each one: an
+     agent that spends money should show the meter. */
+  .runs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; }
+  .run { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 9px; padding: 8px 11px; font-size: 12.5px; }
+  .run code { background: none; padding: 0; font-size: 12.5px;
+    font-weight: 600; word-break: break-word; }
+  .tick { color: var(--good); font-weight: 700; font-size: 13px; }
+  .verb { font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+    padding: 2px 6px; border-radius: 4px; background: var(--surface);
+    border: 1px solid var(--border); color: var(--muted); }
+  .verb.get { color: var(--good); border-color: var(--good); }
+  .verb.post { color: var(--accent); border-color: var(--accent); }
+  .args { color: var(--faint); font-size: 11.5px; }
+  .cost { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums;
+    white-space: nowrap; font-size: 11.5px; }
+
+  /* The result, counted. Two numbers a buyer actually cares about. */
+  .tally { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 11px; }
+  .pill { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
+  .pill.ok { background: var(--good-soft); color: var(--good); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .tally-note { color: var(--faint); font-size: 11.5px; }
+  .settle { font-size: 13.5px; color: var(--muted); }
+
+  /* The deliverable, drawn as a file. */
+  .file { display: flex; align-items: center; gap: 12px; margin-top: 13px;
+    background: var(--good-soft); border: 1px solid var(--good);
+    border-radius: 11px; padding: 11px 13px; }
+  .file-icon { flex: none; width: 34px; height: 34px; border-radius: 8px;
+    display: grid; place-items: center; background: var(--good); color: #fff;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .04em; }
+  .file-meta { min-width: 0; }
+  .file strong { display: block; font-size: 14px; }
+  /* Scoped to the meta block, not every span in the card: `.file span` also
+     matched the Ready label, and being one point more specific than
+     `.file-done` it quietly greyed it out. */
+  .file-meta span { color: var(--muted); font-size: 12.5px; }
+  .file-done { margin-left: auto; color: var(--good); font-weight: 700;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+    white-space: nowrap; }
+
+  /* The composer. Decorative — the whole window is role="img" — but a chat
+     without somewhere to type does not read as a chat, which is the entire job
+     of this block. Drawn with the same parts a real one has: a rounded field
+     carrying placeholder text, and a send button in the accent. */
+  .composer { display: flex; align-items: center; gap: 9px;
+    padding: 12px 14px; border-top: 1px solid var(--border);
+    background: var(--surface); }
+  .composer-field { flex: 1; min-width: 0; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 99px; padding: 9px 15px;
+    font-size: 13.5px; color: var(--faint); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .composer-send { flex: none; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 700; line-height: 1; position: relative;
+    animation: send-nudge 2.6s ease-in-out infinite; }
+
+  /* A ring that expands out of the button. Drawn on a pseudo-element rather
+     than as a box-shadow so it can use var(--accent) and follow the theme.
+
+     Both of these rest in their finished-looking state — scale 1, ring
+     invisible — because an animation does not run at all in a background tab.
+     Anything that resolved to "faded out" at rest would simply be missing. */
+  .composer-send::after { content: ""; position: absolute; inset: 0;
+    border-radius: 50%; border: 2px solid var(--accent); opacity: 0;
+    animation: send-ring 2.6s ease-out infinite; }
+
+  @keyframes send-nudge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.07); }
+  }
+
+  @keyframes send-ring {
+    0% { transform: scale(1); opacity: .5; }
+    70%, 100% { transform: scale(1.75); opacity: 0; }
+  }
+
+  /* The placeholder's ellipsis, typing. Each dot dims rather than appears, so
+     a suspended animation leaves three solid dots — a normal ellipsis — instead
+     of a sentence that trails off into nothing. */
+  .dots i { font-style: normal; animation: dot-dim 1.4s ease-in-out infinite; }
+  .dots i:nth-child(2) { animation-delay: .18s; }
+  .dots i:nth-child(3) { animation-delay: .36s; }
+
+  @keyframes dot-dim {
+    0%, 60%, 100% { opacity: .3; }
+    30% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .composer-send,
+    .composer-send::after,
+    .dots i { animation: none; }
+    .composer-send::after { opacity: 0; }
+  }
+
   /* ── the sample sheet ────────────────────────────────────────────────────
      Styled as a spreadsheet because that is where this work already happens:
      a salesperson recognises the grid before they have read a word of the

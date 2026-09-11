@@ -1034,4 +1034,46 @@ defmodule CsuiteFinderWeb.PageTest do
       refute html =~ "risky or unknown"
     end
   end
+
+  describe "the sample conversation" do
+    test "runs above the sheet on every page that shows one", %{conn: conn} do
+      # The chat and the sheet are a pair: the file the assistant hands back is
+      # the sheet underneath it. Showing the sheet without the conversation
+      # leaves a table with no story, and the order is the story.
+      for path <- ["/", "/teams", "/developers", "/start", "/checkout?plan=seat"] do
+        html = conn |> get(path) |> html_response(200)
+
+        assert html =~ ~s|class="chat-app"|, "#{path} has no conversation"
+        assert html =~ ~s|class="sheet-wrap"|, "#{path} has no sheet"
+        assert html =~ ~s|class="composer"|, "#{path} lost the composer"
+
+        assert :binary.match(html, ~s|class="chat-app"|) <
+                 :binary.match(html, ~s|class="sheet-wrap"|),
+               "#{path} puts the sheet before the conversation"
+      end
+    end
+
+    test "comes from one partial, so the line cannot differ between pages",
+         %{conn: conn} do
+      lines =
+        for path <- ["/", "/teams", "/developers", "/start"] do
+          html = conn |> get(path) |> html_response(200)
+          [_, rest] = String.split(html, ~s|class="chat-app"|, parts: 2)
+          [bubble, _] = String.split(rest, "</div>", parts: 2)
+          String.replace(bubble, ~r/\s+/, " ")
+        end
+
+      assert length(Enum.uniq(lines)) == 1,
+             "the conversation differs between pages, so it is not one partial"
+    end
+
+    test "and its styles ship with the shared sheet, not one page's block",
+         %{conn: conn} do
+      # The CSS moved out of start.css when the chat stopped being /start's.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ ".composer-send"
+      assert html =~ "@keyframes dot-dim"
+    end
+  end
 end

@@ -44,6 +44,10 @@ defmodule CsuiteFinderWeb.Layout do
   @external_resource @sheet
   EEx.function_from_file(:defp, :render_sheet, @sheet, [:assigns])
 
+  @chat Path.join(@partials, "chat.html.eex")
+  @external_resource @chat
+  EEx.function_from_file(:defp, :render_chat, @chat, [:assigns])
+
   @ai Path.join(@partials, "ai.html.eex")
   @external_resource @ai
   EEx.function_from_file(:defp, :render_ai, @ai, [:assigns])
@@ -145,6 +149,26 @@ defmodule CsuiteFinderWeb.Layout do
       # is quoting them the wrong product's number.
       count: Keyword.get(opts, :count) || ~s(Rows <strong>#{rows_label}</strong> / month)
     })
+  end
+
+  @doc """
+  The sample conversation, shown above the sheet.
+
+  One partial because it sits on every page that shows the sheet, and the two
+  are a pair: the file the assistant hands back in the chat is the sheet
+  underneath it. Five copies would be five places to forget.
+
+  It carries `data-aud` blocks for the per-call prices, so a seat holder is not
+  quoted a per-answer figure, and `data-signed` blocks so a visitor who already
+  has a key sees their own. Both default to the safe half with no script at all.
+
+  Takes `:base_url` — the canonical public URL, because the line in the first
+  bubble is meant to be pasted and must name this service rather than whatever
+  host a request arrived with.
+  """
+  @spec chat(keyword()) :: String.t()
+  def chat(opts) do
+    render_chat(%{base_url: Keyword.fetch!(opts, :base_url)})
   end
 
   @doc """
