@@ -130,14 +130,16 @@ defmodule CsuiteFinderWeb.Analytics do
   They exist to give GA4 timestamps to reason about, which is why each fires
   once and no more.
 
-  The visit's actual length is counted every second and reported once, as
-  `dwell_time`, when the visitor leaves. Those are deliberately two different
-  things: a one-second tick is what makes the figure accurate to a second, while
-  an event per second would be 120 events from a two-minute read to say
-  something that can be said once at the end. It goes out over `beacon`, because
-  an ordinary request is cancelled when the page goes away — which is exactly
-  when it fires, and the visits worth measuring are the ones that end without a
-  click.
+  The visit's length is sent every second as `dwell_time`, aligned to the wall
+  clock so every visitor's events land on the same boundaries and two sessions
+  compare without allowing for when each began.
+
+  It stops at 400 seconds. GA4 drops everything after the 500th event in a
+  session, and the events worth keeping are the ones that arrive late — a click,
+  a purchase. Stopping here leaves about a hundred for them rather than spending
+  the lot on a counter that has already said "still here" four hundred times.
+  A `dwell_capped` event marks the stop, so a visit that ran long is
+  distinguishable from one that ended at 400 seconds.
 
   Time is only counted while the tab is actually visible, which is GA4's own
   definition of engagement. A page left open in a background tab overnight is
@@ -181,22 +183,36 @@ defmodule CsuiteFinderWeb.Analytics do
 
       // ---- how long they stayed -------------------------------------------
       //
-      // Counted every second, reported twice. The counter and the events are
-      // deliberately different things: a tick per second is what makes the
-      // final figure accurate to a second, while sending an event per second
-      // would be 120 events from a two-minute read, for a number that can be
-      // stated once at the end.
+      // One event a second, on the second. The first tick waits for the next
+      // whole second so every visitor's events land on the same boundaries, and
+      // two sessions compare without allowing for when each happened to begin.
+      //
+      // The cost is real and is accepted deliberately: GA4 caps a session at
+      // 500 events, so a visit past roughly eight minutes stops recording
+      // anything further — cta_click included.
       var marks = [15, 30, 60, 120];
       var reached = 0;
       var seconds = 0;
-      var reported = -1;
+      var timer = null;
 
-      window.setInterval(function () {
+      // Stops at 400. GA4 drops everything after the 500th event in a session,
+      // and the events worth keeping are the ones that arrive late — a click,
+      // a purchase. Spending the last hundred on a counter that has already
+      // said "this visitor is still here" four hundred times would trade the
+      // conversion signal for a number nobody reads.
+      var LIMIT = 400;
+
+      function tick() {
         // Only while the tab is in front. GA4 counts engagement the same way,
         // and a tab left open overnight is not two hours of reading.
         if (document.visibilityState !== "visible") return;
 
         seconds += 1;
+
+        send("dwell_time", {
+          seconds: seconds,
+          page_path: window.location.pathname
+        });
 
         while (reached < marks.length && seconds >= marks[reached]) {
           send("time_on_page", {
@@ -205,32 +221,24 @@ defmodule CsuiteFinderWeb.Analytics do
           });
           reached += 1;
         }
-      }, 1000);
 
-      // The exact figure, sent when they actually leave. `beacon` because a
-      // normal request is cancelled when the page goes away, which is precisely
-      // when this fires — and the whole point is to measure the visits that end
-      // without a click.
-      function report() {
-        if (seconds === reported) return;
-        reported = seconds;
+        if (seconds >= LIMIT && timer) {
+          window.clearInterval(timer);
+          timer = null;
 
-        send("dwell_time", {
-          seconds: seconds,
-          page_path: window.location.pathname,
-          transport_type: "beacon"
-        });
+          // Said once, so a session that ran long is distinguishable in the
+          // data from one that ended at 400 seconds.
+          send("dwell_capped", {
+            seconds: seconds,
+            page_path: window.location.pathname
+          });
+        }
       }
 
-      document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState === "hidden") report();
-      });
-
-      // pagehide as well as visibilitychange: a tab switch fires the first, a
-      // navigation away fires both on some browsers and only this on others.
-      // `report` is guarded against sending the same number twice, so the
-      // overlap costs nothing.
-      window.addEventListener("pagehide", report);
+      window.setTimeout(function () {
+        tick();
+        timer = window.setInterval(tick, 1000);
+      }, 1000 - (Date.now() % 1000));
     })();
     </script>
     """

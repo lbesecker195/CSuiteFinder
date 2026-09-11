@@ -139,34 +139,38 @@ defmodule CsuiteFinderWeb.AnalyticsTest do
       assert js =~ "reached += 1"
     end
 
-    test "counts every second, but reports the total once" do
-      # One-second resolution comes from the tick, not from the event rate. An
-      # event per second would be 120 of them from a two-minute read.
+    test "sends the count every second, on the second" do
       js = Analytics.engagement_tracking()
 
-      assert js =~ "seconds += 1"
-      assert js =~ "}, 1000);"
       assert js =~ "dwell_time"
-      refute js =~ "seconds += 5"
+      assert js =~ "setInterval(tick, 1000)"
+      # Aligned to the wall clock, so two visitors' events land on the same
+      # boundaries and compare without allowing for when each began.
+      assert js =~ "1000 - (Date.now() % 1000)"
     end
 
-    test "sends the total over beacon, on the way out" do
-      # An ordinary request is cancelled when the page goes away, which is
-      # exactly when this fires — and the visits worth measuring are the ones
-      # that end without a click.
+    test "stops at 400 so the session has events left for a conversion" do
+      # GA4 drops everything after the 500th event in a session. The ones worth
+      # keeping arrive late — a click, a purchase — so the counter yields the
+      # last hundred rather than spending them saying "still here" again.
       js = Analytics.engagement_tracking()
 
-      assert js =~ ~s|transport_type: "beacon"|
-      assert js =~ ~s|addEventListener("pagehide"|
-      assert js =~ ~s|document.visibilityState === "hidden"|
+      assert js =~ "var LIMIT = 400;"
+      assert js =~ "clearInterval(timer)"
     end
 
-    test "and does not report the same number twice" do
-      # visibilitychange and pagehide overlap on some browsers and not others,
-      # so both are listened for and the guard is what makes that free.
+    test "and marks the stop, so a long visit is not mistaken for a short one" do
       js = Analytics.engagement_tracking()
 
-      assert js =~ "if (seconds === reported) return;"
+      assert js =~ "dwell_capped"
+    end
+
+    test "does not report on the way out" do
+      # Asked for explicitly: the count goes out as it accrues, not at the end.
+      js = Analytics.engagement_tracking()
+
+      refute js =~ "pagehide"
+      refute js =~ "beacon"
     end
 
     test "is silent when analytics are switched off" do
