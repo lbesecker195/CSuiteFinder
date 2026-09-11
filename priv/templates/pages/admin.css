@@ -106,3 +106,14 @@
     padding: 6px 10px; font-size: 12px; color: var(--text); white-space: nowrap;
     box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
   }
+
+  /* The refresh indicator. Red once the poll has failed twice: a dashboard that
+     has quietly stopped updating is worse than one that says so, because every
+     number on it still looks current.
+
+     No transition on it, deliberately. A transition is driven by the same clock
+     as requestAnimationFrame and is suspended in a background tab — so the one
+     message that has to be readable when nobody is looking at the tab would
+     have stayed the colour it started. Measured: the class applied and the
+     colour did not move. */
+  #generated.stale { color: var(--bad); font-weight: 700; }

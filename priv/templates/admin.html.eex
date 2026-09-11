@@ -1,17 +1,23 @@
 <%= CsuiteFinderWeb.Layout.head(
       title: "CSuiteFinder — admin",
       robots: "noindex, nofollow",
-      refresh: "60",
       nav: false,
       css: CsuiteFinderWeb.Layout.page_css(:admin),
       wrap_class: "wrap-wide"
     ) %>
 
+<%!-- Everything inside #dash is replaced wholesale on each poll. The page is
+      rendered by the server and swapped in as markup, so there is one
+      description of what a figure looks like rather than an Elixir one and a
+      JavaScript one that drift. The scripts sit outside it and survive. --%>
+<div id="dash">
+
 <header>
   <div>
     <div class="title">CSuiteFinder <span>admin</span></div>
     <div class="meta">
-      Last <%= @days %> days · generated <%= Calendar.strftime(@generated_at, "%Y-%m-%d %H:%M UTC") %> · refreshes every 60s
+      Last <%= @days %> days ·
+      <span id="generated">generated <%= Calendar.strftime(@generated_at, "%Y-%m-%d %H:%M:%S UTC") %> · live, every 5s</span>
     </div>
   </div>
   <div class="windows">
@@ -313,6 +319,8 @@
 
 </div>
 
+</div><%!-- /#dash --%>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
 // The daily-volume chart. D3 rather than geometry computed in the controller:
@@ -320,7 +328,10 @@
 // server sends a series with no opinion about pixels. Pinned to an exact
 // version — a dashboard that changes shape because a CDN moved on is worse than
 // one that does not change at all.
-(function () {
+// Exposed rather than fire-and-forget: #dash is replaced on every poll, which
+// takes the chart's host element with it, so this has to be runnable again
+// against whatever is in the DOM now.
+window.csfDrawChart = function () {
   "use strict";
 
   var host = document.getElementById("volume");
@@ -431,8 +442,75 @@
     groups.exit().remove();
   }
 
-  new ResizeObserver(draw).observe(host);
+  // One observer per host. The previous host is gone, so the observer watching
+  // it would otherwise be left holding a detached node and firing forever.
+  if (window.csfChartObserver) { window.csfChartObserver.disconnect(); }
+  window.csfChartObserver = new ResizeObserver(draw);
+  window.csfChartObserver.observe(host);
   draw();
+};
+
+window.csfDrawChart();
+</script>
+
+<script>
+// Five-second refresh, by fetching this page and swapping #dash.
+//
+// A meta refresh reloaded the whole document every minute: it lost the scroll
+// position, re-downloaded D3, and flashed. This asks for the same URL, takes
+// the one element that holds figures, and puts it in place.
+(function () {
+  "use strict";
+
+  var EVERY = 5000;
+  var dash = document.getElementById("dash");
+  if (!dash || !window.fetch) return;
+
+  var stamp = document.getElementById("generated");
+  var failures = 0;
+
+  function poll() {
+    // Same URL, so the window and the admin token come along without being
+    // reassembled here — and a token is not something to be rebuilding in
+    // JavaScript.
+    fetch(window.location.href, {
+      credentials: "same-origin",
+      headers: { "x-requested-with": "fetch" }
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.text();
+      })
+      .then(function (html) {
+        var next = new DOMParser()
+          .parseFromString(html, "text/html")
+          .getElementById("dash");
+
+        if (!next) throw new Error("no #dash in the response");
+
+        dash.replaceWith(next);
+        dash = next;
+        // The stamp lived inside the element just replaced, so the reference is
+        // now pointing at a node nobody can see.
+        stamp = document.getElementById("generated");
+        failures = 0;
+        window.csfDrawChart();
+      })
+      .catch(function (error) {
+        // Say so on the page rather than only in the console: a dashboard that
+        // has quietly stopped updating is worse than one that says it has,
+        // because every number on it still looks current.
+        failures += 1;
+
+        if (failures > 1 && stamp) {
+          stamp.textContent =
+            "not updating — " + error.message + " (retrying every 5s)";
+          stamp.className = "stale";
+        }
+      });
+  }
+
+  setInterval(poll, EVERY);
 })();
 </script>
 </body>

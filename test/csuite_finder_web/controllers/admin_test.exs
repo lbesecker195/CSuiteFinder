@@ -162,4 +162,41 @@ defmodule CsuiteFinderWeb.AdminTest do
       assert length(body["daily"]) == 7
     end
   end
+
+  describe "how the page keeps itself current" do
+    test "polls instead of reloading the document", %{conn: conn} do
+      # A meta refresh threw away the scroll position, re-fetched D3 and
+      # flashed, once a minute. This asks for the same URL every five seconds
+      # and swaps the one element that holds figures.
+      html = conn |> get(~p"/admin?token=#{@token}") |> html_response(200)
+
+      refute html =~ ~s|http-equiv="refresh"|
+      assert html =~ ~s|id="dash"|
+      assert html =~ "setInterval(poll"
+    end
+
+    test "re-draws the chart after a swap rather than leaving a dead one",
+         %{conn: conn} do
+      # #dash contains the chart's host element, so every poll destroys it. The
+      # draw has to be callable again, and the old resize observer disconnected
+      # or it is left watching a node nobody can see.
+      html = conn |> get(~p"/admin?token=#{@token}") |> html_response(200)
+
+      assert html =~ "window.csfDrawChart"
+      assert html =~ "csfChartObserver.disconnect()"
+    end
+
+    test "says so on the page when it has stopped updating", %{conn: conn} do
+      # Every figure still looks current when the poll dies, which is exactly
+      # why silence is the wrong failure.
+      html = conn |> get(~p"/admin?token=#{@token}") |> html_response(200)
+
+      assert html =~ ~s|id="generated"|
+      assert html =~ "not updating"
+      assert html =~ "#generated.stale"
+      # No transition on that colour: transitions stop in a background tab, and
+      # this is the message that most needs to render when nobody is looking.
+      refute html =~ "#generated { transition"
+    end
+  end
 end
