@@ -27,6 +27,12 @@ defmodule CsuiteFinder.Billing.Plans do
 
   @seat_usd_per_month 999
 
+  # An annual seat is twelve months for the price of ten. Derived from the two
+  # constants rather than typed, so "$9,990" and "2 months free" cannot drift
+  # apart from each other or from the monthly price.
+  @seat_annual_months_paid 10
+  @months_in_year 12
+
   @doc "Price of one seat, per month, in USD."
   @spec seat_usd() :: pos_integer()
   def seat_usd, do: @seat_usd_per_month
@@ -34,6 +40,14 @@ defmodule CsuiteFinder.Billing.Plans do
   @doc "Price of one seat, per month, in micro-USD."
   @spec seat_micro() :: pos_integer()
   def seat_micro, do: Pricing.micro(@seat_usd_per_month)
+
+  @doc "Price of one annual seat, in USD — twelve months for the price of ten."
+  @spec seat_annual_usd() :: pos_integer()
+  def seat_annual_usd, do: @seat_usd_per_month * @seat_annual_months_paid
+
+  @doc "How many months an annual seat is not charged for."
+  @spec seat_annual_months_free() :: pos_integer()
+  def seat_annual_months_free, do: @months_in_year - @seat_annual_months_paid
 
   @doc """
   Credit a seat grants each month, in micro-USD.
