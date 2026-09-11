@@ -12,6 +12,9 @@ defmodule CsuiteFinder.Application do
       CsuiteFinder.Repo,
       {DNSCluster, query: Application.get_env(:csuite_finder, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: CsuiteFinder.PubSub},
+      # Hands annual seats their monthly credit. Safe to run on every node —
+      # see CsuiteFinder.Billing.SeatRefresher.
+      CsuiteFinder.Billing.SeatRefresher,
       # Start a worker by calling: CsuiteFinder.Worker.start_link(arg)
       # {CsuiteFinder.Worker, arg},
       # Start to serve requests, typically the last entry

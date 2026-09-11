@@ -41,26 +41,40 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   will start and never approve.
 
   Returns the row and the URL the customer opens to approve it.
+
+  `:interval` is `:month` (the default) or `:year`. It is stored rather than
+  inferred later, because it decides who hands out the monthly credit: a monthly
+  seat is granted by each payment, an annual one by
+  `refresh_annual_seats/1`. Guess it wrong in either direction and the customer
+  is either short eleven months of credit or given twelve at once.
   """
   @spec start(Account.t(), pos_integer(), keyword()) ::
           {:ok, Subscription.t(), String.t()} | {:error, term()}
   def start(%Account{} = account, seats, opts \\ []) do
     with {:ok, seats} <- validate_seats(seats),
+         {:ok, interval} <- validate_interval(Keyword.get(opts, :interval, :month)),
          {:ok, response} <- PayPal.create_seat_subscription(account, seats, opts),
-         {:ok, subscription} <- store_new(account, seats, response) do
+         {:ok, subscription} <- store_new(account, seats, interval, response) do
       {:ok, subscription, PayPal.approve_link(response)}
     end
   end
+
+  defp validate_interval(interval) when interval in [:month, :year],
+    do: {:ok, to_string(interval)}
+
+  defp validate_interval(interval) when interval in ["month", "year"], do: {:ok, interval}
+  defp validate_interval(_), do: {:error, :invalid_interval}
 
   defp validate_seats(seats) when is_integer(seats) and seats > 0 and seats <= @max_seats,
     do: {:ok, seats}
 
   defp validate_seats(_), do: {:error, :invalid_seats}
 
-  defp store_new(account, seats, %{"id" => id} = response) do
+  defp store_new(account, seats, interval, %{"id" => id} = response) do
     %Subscription{}
     |> Subscription.changeset(%{
       account_id: account.id,
+      interval: interval,
       provider_ref: id,
       provider_plan_id: response["plan_id"],
       seats: seats,
@@ -71,7 +85,8 @@ defmodule CsuiteFinder.Billing.Subscriptions do
     |> Repo.insert()
   end
 
-  defp store_new(_account, _seats, _response), do: {:error, :paypal_no_subscription_id}
+  defp store_new(_account, _seats, _interval, _response),
+    do: {:error, :paypal_no_subscription_id}
 
   @doc "The maximum seats one subscription may carry."
   @spec max_seats() :: pos_integer()
@@ -100,21 +115,117 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   end
 
   defp grant_period(%Subscription{} = subscription, payment_id, period_end) do
-    expires_at = period_end || Plans.seat_grant_expires_at()
+    paid_through = period_end || default_period_end(subscription)
     account = Repo.get!(Account, subscription.account_id)
     micro = subscription.grant_micro_per_period
 
+    # An annual payment buys a year of service but only a month of credit at a
+    # time — the other eleven arrive from refresh_annual_seats/1. Granting the
+    # whole year here would hand over $999 that has to last twelve months, which
+    # is the opposite of what the customer bought.
+    month = Date.beginning_of_month(Date.utc_today())
+
+    {grant_until, refreshed_for} =
+      if annual?(subscription) do
+        {month
+         |> Date.shift(month: 1)
+         |> DateTime.new!(~T[00:00:00.000000], "Etc/UTC")
+         |> earlier_of(paid_through), month}
+      else
+        {paid_through, nil}
+      end
+
     Repo.transaction(fn ->
-      {:ok, _account} = Billing.grant(account, micro, expires_at)
+      {:ok, _account} = Billing.grant(account, micro, grant_until)
 
       subscription
       |> Subscription.changeset(%{
         status: "active",
         last_payment_id: payment_id,
-        current_period_end: expires_at
+        current_period_end: paid_through,
+        # Claimed here as well as in the refresher, so the month a payment
+        # already granted cannot be granted a second time an hour later.
+        refreshed_for: refreshed_for
       })
       |> Repo.update!()
     end)
+  end
+
+  defp annual?(%Subscription{interval: "year"}), do: true
+  defp annual?(_), do: false
+
+  defp default_period_end(%Subscription{interval: "year"}),
+    do: DateTime.shift(DateTime.utc_now(), year: 1)
+
+  defp default_period_end(_), do: Plans.seat_grant_expires_at()
+
+  # ------------------------------------------------------- the monthly refresh
+
+  @doc """
+  Top every live annual seat back up for the current month.
+
+  A monthly seat needs none of this: it is invoiced monthly, and the grant rides
+  on the payment. An annual seat is invoiced once and owes twelve monthly
+  grants, so after the first one there is no payment left to hang them on.
+  Without this, someone who paid $9,990 would be credited once and have nothing
+  to spend for eleven months.
+
+  Returns the number of seats topped up.
+  """
+  @spec refresh_annual_seats(Date.t()) :: non_neg_integer()
+  def refresh_annual_seats(today \\ Date.utc_today()) do
+    month = Date.beginning_of_month(today)
+    now = DateTime.utc_now()
+
+    from(s in Subscription,
+      where:
+        s.interval == "year" and s.status == "active" and
+          (is_nil(s.refreshed_for) or s.refreshed_for < ^month) and
+          not is_nil(s.current_period_end) and s.current_period_end > ^now
+    )
+    |> Repo.all()
+    |> Enum.count(&refresh_one(&1, month))
+  end
+
+  # Claim the month before granting it, in one conditional UPDATE.
+  #
+  # Two things make this necessary. The refresher runs on a timer, so a restart
+  # can call it twice in a minute; and the app can run on more than one node,
+  # where every node's timer fires. The UPDATE is the lock: whoever moves
+  # `refreshed_for` forward is the one who grants, and everybody else sees zero
+  # rows and does nothing. Granting first and marking afterwards would hand out
+  # a second $999 every time this raced.
+  defp refresh_one(%Subscription{} = subscription, month) do
+    {count, _} =
+      from(s in Subscription,
+        where:
+          s.id == ^subscription.id and
+            (is_nil(s.refreshed_for) or s.refreshed_for < ^month)
+      )
+      |> Repo.update_all(set: [refreshed_for: month, updated_at: DateTime.utc_now()])
+
+    count == 1 and grant_month(subscription, month)
+  end
+
+  defp grant_month(%Subscription{} = subscription, month) do
+    account = Repo.get!(Account, subscription.account_id)
+
+    # One month of credit, and never past the period already paid for: a seat
+    # that lapses in a fortnight must not hand out a month that outlives it.
+    expires_at =
+      month
+      |> Date.shift(month: 1)
+      |> DateTime.new!(~T[00:00:00.000000], "Etc/UTC")
+      |> earlier_of(subscription.current_period_end)
+
+    {:ok, _account} = Billing.grant(account, subscription.grant_micro_per_period, expires_at)
+    true
+  end
+
+  defp earlier_of(a, nil), do: a
+
+  defp earlier_of(a, b) do
+    if DateTime.compare(a, b) == :lt, do: a, else: b
   end
 
   @doc """

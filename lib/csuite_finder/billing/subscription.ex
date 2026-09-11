@@ -17,6 +17,8 @@ defmodule CsuiteFinder.Billing.Subscription do
 
   schema "subscriptions" do
     field :provider, :string, default: "paypal"
+    field :interval, :string, default: "month"
+    field :refreshed_for, :date
     field :provider_ref, :string
     field :provider_plan_id, :string
     field :seats, :integer, default: 1
@@ -35,6 +37,8 @@ defmodule CsuiteFinder.Billing.Subscription do
     struct
     |> cast(attrs, [
       :provider,
+      :interval,
+      :refreshed_for,
       :account_id,
       :provider_ref,
       :provider_plan_id,
