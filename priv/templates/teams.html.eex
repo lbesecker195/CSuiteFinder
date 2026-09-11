@@ -131,62 +131,6 @@
   cannot resolve costs you nothing.
 </p>
 
-<h2 class="section-label">The objections, answered plainly</h2>
-
-<div class="faq">
-  <div class="q">
-    <strong>Will these bounce?</strong>
-    <span>
-      Every address can be checked against the live mailbox before you send, and
-      that check is included. Two of the rows in the sheet above came back
-      undeliverable — that is the point of showing them. A bounce you catch here
-      costs nothing; one you catch after sending costs your sending domain.
-    </span>
-  </div>
-  <div class="q">
-    <strong>What if my reps won't learn another tool?</strong>
-    <span>
-      There is nothing to learn. They ask their assistant — ChatGPT, Claude,
-      whatever they already use — in plain English, and it does the lookups.
-      <a href="/start">One line of setup</a>, once.
-    </span>
-  </div>
-  <div class="q">
-    <strong>What happens to unused credit?</strong>
-    <span>
-      It does not roll over. Each month starts at $<%= @seat_usd %> again, which
-      is why a seat is priced as a month of capacity rather than a balance.
-      Credit you buy outright is separate and never expires.
-    </span>
-  </div>
-  <div class="q">
-    <strong>What if it doesn't work for my list?</strong>
-    <span>
-      Spend $<%= @trial_price %> and find out on your own names before you commit
-      to anything. Same lookups, same terms — it is a trial of the seat rather
-      than a different product.
-      <strong>The credit expires after <%= @trial_months %> month</strong>, the
-      same way a seat's does.
-    </span>
-  </div>
-  <div class="q">
-    <strong>Am I locked in?</strong>
-    <span>
-      No contract and no minimum. Cancel from your account page any time and the
-      month you have already paid for runs to its end.
-    </span>
-  </div>
-  <div class="q">
-    <strong>Who is this for?</strong>
-    <span>
-      Teams that already know who they want to reach — founders selling into
-      named accounts, reps working a territory list, recruiters chasing named
-      candidates. It resolves people you can name. It is not a prospect database
-      and will not build the list for you.
-    </span>
-  </div>
-</div>
-
 <!-- ── pricing ─────────────────────────────────────────────────────────────
      At the foot of the page on purpose: the nav's Pricing link is a bare
      #pricing fragment, so it scrolls down this page rather than sending a
