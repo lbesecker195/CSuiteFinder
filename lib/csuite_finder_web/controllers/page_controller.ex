@@ -9,10 +9,11 @@ defmodule CsuiteFinderWeb.PageController do
 
   use CsuiteFinderWeb, :controller
 
-  alias CsuiteFinder.Billing.{Plans, Pricing}
+  alias CsuiteFinder.Billing.{Plans, Pricing, Stripe}
   alias CsuiteFinderWeb.SampleSheet
 
   require EEx
+  require Logger
 
   @template Path.join(:code.priv_dir(:csuite_finder), "templates/landing.html.eex")
   @external_resource @template
@@ -102,6 +103,50 @@ defmodule CsuiteFinderWeb.PageController do
         })
       )
     )
+  end
+
+  @doc """
+  GET /checkout/seat — straight to the payment page, no form in between.
+
+  A plain link rather than a form post, so the CTA on a marketing page is an
+  ordinary href and the buyer's first click lands them on Checkout. Nothing is
+  created here but a Checkout Session: no account, no subscription, no charge.
+  The account is opened from the address Stripe collects, once the payment
+  actually completes — so a link scanner or a prefetch produces an abandoned
+  session and nothing else, which is what makes a side effect on GET acceptable
+  here.
+
+  `?email=` is passed through when a campaign link carried one, purely to
+  prefill. It is never trusted as identity: the address that opens the account
+  is the one Stripe confirms was paid with.
+  """
+  def seat_checkout(conn, params) do
+    interval = if params["interval"] == "year", do: :year, else: :month
+    base = base_url(conn)
+
+    opts = [
+      email: CsuiteFinderWeb.Prefill.email(params["email"]),
+      return_url: base <> "/account?bought=seat",
+      cancel_url: base <> "/teams#pricing"
+    ]
+
+    case Stripe.create_seat_session(nil, seats(params["seats"]), interval, opts) do
+      {:ok, url, _session} ->
+        redirect(conn, external: url)
+
+      {:error, reason} ->
+        # Never a dead end on the page that takes the money: fall back to the
+        # form, which can still get them through by any route still working.
+        Logger.warning("seat checkout unavailable: #{inspect(reason)}")
+        redirect(conn, to: "/checkout?plan=seat")
+    end
+  end
+
+  defp seats(value) do
+    case Integer.parse(to_string(value)) do
+      {n, _} when n > 0 and n <= 100 -> n
+      _ -> 1
+    end
   end
 
   @doc "GET /developers — the API, its prices and its reference."

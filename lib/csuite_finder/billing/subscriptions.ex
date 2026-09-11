@@ -83,6 +83,42 @@ defmodule CsuiteFinder.Billing.Subscriptions do
   end
 
   @doc """
+  A seat was bought by someone with no account, and has now been paid for.
+
+  Nothing was stored when they were sent to Checkout, because there was nobody
+  to store it against. Stripe has since collected an address and confirmed the
+  money moved, so this is the first moment the row can exist — and the first
+  moment it should, since a row created any earlier would be a subscription
+  nobody had paid for.
+  """
+  @spec open_from_session(integer(), String.t(), map()) ::
+          {:ok, Subscription.t()} | {:error, term()}
+  def open_from_session(account_id, subscription_id, session) do
+    seats = int_or(get_in(session, ["metadata", "seats"]), 1)
+    interval = get_in(session, ["metadata", "interval"]) || "month"
+
+    %Subscription{}
+    |> Subscription.changeset(%{
+      account_id: account_id,
+      provider: "stripe",
+      provider_ref: subscription_id,
+      interval: interval,
+      seats: seats,
+      status: "active",
+      grant_micro_per_period: Plans.seat_grant_micro() * seats,
+      raw: session
+    })
+    |> Repo.insert()
+  end
+
+  defp int_or(value, fallback) do
+    case Integer.parse(to_string(value)) do
+      {n, _} when n > 0 -> n
+      _ -> fallback
+    end
+  end
+
+  @doc """
   A Checkout Session was paid: attach the real subscription id and grant.
 
   Until this point the row is keyed on the session, which is the only id that

@@ -39,21 +39,30 @@ defmodule CsuiteFinder.Billing.Stripe do
   `seats` becomes the line quantity, so three seats is one subscription at three
   times the price rather than three subscriptions to reconcile.
   """
-  @spec create_seat_session(Account.t(), pos_integer(), :month | :year, keyword()) ::
+  @spec create_seat_session(Account.t() | nil, pos_integer(), :month | :year, keyword()) ::
           {:ok, String.t(), map()} | {:error, term()}
-  def create_seat_session(%Account{} = account, seats, interval \\ :month, opts \\ []) do
-    case price_id(interval) do
-      nil ->
+  def create_seat_session(account, seats, interval \\ :month, opts \\ []) do
+    # Checked before the price, and before anything is sent: without a key this
+    # would otherwise reach api.stripe.com with `Basic bmlsOg==` and wait out a
+    # 30-second timeout to be told what we already knew.
+    cond do
+      not configured?() ->
+        {:error, :stripe_not_configured}
+
+      is_nil(price_id(interval)) ->
         {:error, :stripe_price_not_configured}
 
-      price ->
+      true ->
+        price = price_id(interval)
+
         [
           {"mode", "subscription"},
           {"line_items[0][price]", price},
           {"line_items[0][quantity]", to_string(seats)},
-          {"subscription_data[metadata][account_id]", to_string(account.id)},
           {"subscription_data[metadata][interval]", to_string(interval)},
-          {"subscription_data[metadata][seats]", to_string(seats)}
+          {"subscription_data[metadata][seats]", to_string(seats)},
+          {"metadata[interval]", to_string(interval)},
+          {"metadata[seats]", to_string(seats)}
         ]
         |> common(account, opts)
         |> session()
@@ -70,6 +79,14 @@ defmodule CsuiteFinder.Billing.Stripe do
   @spec create_payment_session(Account.t(), number(), String.t(), keyword()) ::
           {:ok, String.t(), map()} | {:error, term()}
   def create_payment_session(%Account{} = account, amount_usd, kind, opts \\ []) do
+    if not configured?() do
+      {:error, :stripe_not_configured}
+    else
+      build_payment_session(account, amount_usd, kind, opts)
+    end
+  end
+
+  defp build_payment_session(account, amount_usd, kind, opts) do
     [
       {"mode", "payment"},
       {"line_items[0][price_data][currency]", "usd"},
@@ -84,16 +101,30 @@ defmodule CsuiteFinder.Billing.Stripe do
     |> session()
   end
 
-  defp common(fields, %Account{} = account, opts) do
+  # `account` may be nil. That is the whole point of buying before registering:
+  # there is nobody to reference yet, Checkout collects the address, and the
+  # account is opened from it when the payment completes. Anything we already
+  # know is still sent, so someone arriving from a campaign link does not retype
+  # an address we were given in the URL.
+  defp common(fields, account, opts) do
+    identity =
+      case account do
+        %Account{} = a ->
+          [
+            {"client_reference_id", "account_#{a.id}"},
+            {"customer_email", a.email},
+            {"metadata[account_id]", to_string(a.id)}
+          ]
+
+        _ ->
+          [{"customer_email", Keyword.get(opts, :email)}]
+      end
+
     (fields ++
+       identity ++
        [
-         {"client_reference_id", "account_#{account.id}"},
-         # Prefilled so the buyer does not retype what we already know, and so
-         # the address on the Stripe receipt matches the account we credit.
-         {"customer_email", account.email},
          {"success_url", Keyword.get(opts, :return_url, "")},
-         {"cancel_url", Keyword.get(opts, :cancel_url, "")},
-         {"metadata[account_id]", to_string(account.id)}
+         {"cancel_url", Keyword.get(opts, :cancel_url, "")}
        ])
     |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
   end

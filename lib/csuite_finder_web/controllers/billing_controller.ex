@@ -132,7 +132,12 @@ defmodule CsuiteFinderWeb.BillingController do
         |> put_status(:bad_request)
         |> json(%{error: "invalid_amount", message: "`amount_usd` must be a positive number."})
 
-      {:error, reason} when reason in [:paypal_not_configured, :stripe_price_not_configured] ->
+      {:error, reason}
+      when reason in [
+             :paypal_not_configured,
+             :stripe_not_configured,
+             :stripe_price_not_configured
+           ] ->
         conn
         |> put_status(:service_unavailable)
         |> json(%{
@@ -173,7 +178,12 @@ defmodule CsuiteFinderWeb.BillingController do
           message: "This account has already had its trial. A seat is the next step."
         })
 
-      {:error, reason} when reason in [:paypal_not_configured, :stripe_price_not_configured] ->
+      {:error, reason}
+      when reason in [
+             :paypal_not_configured,
+             :stripe_not_configured,
+             :stripe_price_not_configured
+           ] ->
         conn
         |> put_status(:service_unavailable)
         |> json(%{error: "payments_not_configured"})
@@ -288,7 +298,12 @@ defmodule CsuiteFinderWeb.BillingController do
           message: "`seats` must be a whole number from 1 to #{Subscriptions.max_seats()}."
         })
 
-      {:error, reason} when reason in [:paypal_not_configured, :stripe_price_not_configured] ->
+      {:error, reason}
+      when reason in [
+             :paypal_not_configured,
+             :stripe_not_configured,
+             :stripe_price_not_configured
+           ] ->
         conn
         |> put_status(:service_unavailable)
         |> json(%{
@@ -412,12 +427,7 @@ defmodule CsuiteFinderWeb.BillingController do
   defp handle_stripe(%{"type" => "checkout.session.completed", "data" => %{"object" => session}}) do
     case session["mode"] do
       "subscription" ->
-        with id when is_binary(id) <- session["subscription"],
-             {:ok, _} <- Subscriptions.attach_stripe_subscription(session["id"], id, session) do
-          # The first period's credit. Renewals arrive as invoice.paid, and an
-          # annual seat's other eleven months come from the refresher.
-          Subscriptions.record_payment(id, session["id"], nil)
-        end
+        grant_seat(session)
 
       _ ->
         credit_stripe_payment(session)
@@ -444,6 +454,26 @@ defmodule CsuiteFinderWeb.BillingController do
   end
 
   defp handle_stripe(_event), do: :ok
+
+  # Two ways a seat arrives. From /checkout there is already a pending row, keyed
+  # on the session because the subscription did not exist yet; it is re-keyed
+  # here. From a $999 CTA there is no row and no account at all — Stripe
+  # collected the address, so both are created now, which is the first moment
+  # anything has been paid for.
+  defp grant_seat(session) do
+    with id when is_binary(id) <- session["subscription"] do
+      case Subscriptions.attach_stripe_subscription(session["id"], id, session) do
+        {:ok, _} ->
+          Subscriptions.record_payment(id, session["id"], nil)
+
+        {:error, :unknown_subscription} ->
+          with {:ok, account_id} <- Stripe.account_for(session),
+               {:ok, _} <- Subscriptions.open_from_session(account_id, id, session) do
+            Subscriptions.record_payment(id, session["id"], nil)
+          end
+      end
+    end
+  end
 
   defp credit_stripe_payment(session) do
     case Stripe.record_payment(session) do
