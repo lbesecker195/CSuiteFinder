@@ -38,7 +38,20 @@ defmodule CsuiteFinderWeb.PageTest do
       html = conn |> get(~p"/developers") |> html_response(200)
 
       assert html =~ "CSuiteFinder"
-      assert html =~ "/csuitefinder/register"
+      assert html =~ "/csuitefinder/email/find"
+    end
+
+    test "sends a reader to the account page for the token the example needs",
+         %{conn: conn} do
+      # The register call is no longer shown here — an agent gets it from
+      # llms.txt, and a person wants the key rather than the call that mints
+      # one. So the link that hands out the key has to stay, or the very next
+      # thing on the page is a request the reader cannot make.
+      html = conn |> get(~p"/developers") |> html_response(200)
+
+      refute html =~ "/csuitefinder/register"
+      assert html =~ ~s|<a href="/account">|
+      assert html =~ "Authorization: Bearer"
     end
 
     test "shows the live per-lookup pricing", %{conn: conn} do

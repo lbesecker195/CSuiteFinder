@@ -37,18 +37,16 @@
       visitor: @visitor
     ) %>
 
-<h2 class="section-label">Getting a key</h2>
+<h2 class="section-label">Example</h2>
 
-<pre><code>curl -X POST <%= @base_url %>/csuitefinder/register \
-  -H 'content-type: application/json' \
-  -d '{"email": "you@company.com"}'</code></pre>
-
+<%!-- The register curl is gone: an agent reading llms.txt already has it, and a
+      person reading this page wants the key rather than the call that mints it.
+      The account link stays, because the request below cannot be made without
+      the token it hands out. --%>
 <p class="quiet">
-  Send the key as <code>Authorization: Bearer &lt;key&gt;</code> on every request. Prefer a
-  browser? <a href="/account">Your account page</a> does the same thing, plus balance and billing.
+  Send your key as <code>Authorization: Bearer &lt;key&gt;</code> on every request.
+  <a href="/account">Your account page</a> issues one, and shows your balance and billing.
 </p>
-
-<h3 class="sub-label">Example</h3>
 
 <pre><code>curl -H "Authorization: Bearer $CSF_KEY" \
   "<%= @base_url %>/csuitefinder/email/find?full_name=Jensen%20Huang&domain=nvidia.com"
