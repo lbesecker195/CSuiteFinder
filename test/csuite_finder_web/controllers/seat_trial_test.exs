@@ -165,10 +165,16 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
       # they would find out at their first lookup.
       html = conn |> get(~p"/account") |> html_response(200)
 
-      assert html =~ "There is no free tier"
       assert html =~ "$29.99 trial"
       assert html =~ "Credit you buy afterwards does not expire"
+
+      # The page used to rule the free tier out in words. It no longer mentions
+      # one in either direction, so what is asserted is that nothing on the page
+      # offers anything free — a denial was never the point, the absence was.
       refute html =~ "of free credit"
+      refute html =~ "free tier"
+      refute html =~ "free account"
+      refute html =~ "free trial"
     end
 
     test "and the account page says it at the moment of payment", %{conn: conn} do
@@ -195,7 +201,7 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
 
       assert html =~ "Start the trial — $29.99"
       assert html =~ "One per account"
-      assert html =~ "no free tier on this side"
+      refute html =~ "free tier"
     end
   end
 end

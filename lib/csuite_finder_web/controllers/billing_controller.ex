@@ -34,9 +34,6 @@ defmodule CsuiteFinderWeb.BillingController do
           purchased_usd: balances.purchased_usd,
           granted_usd: balances.granted_usd,
           granted_expires_at: balances.granted_expires_at,
-          on_free_trial:
-            not is_nil(account.trial_granted_at) and account.balance_micro == 0 and
-              balances.granted_usd > 0,
           # Once, per account, whether it was granted or bought.
           trial_taken: not is_nil(account.trial_granted_at),
           status: account.status,
@@ -146,7 +143,7 @@ defmodule CsuiteFinderWeb.BillingController do
   @doc """
   POST /csuitefinder/billing/trial — buy one trial of the seat.
 
-  A fixed price, once per account. There is no free tier on this side: a card up
+  A fixed price, once per account. Every trial is paid: a card up
   front is what separates someone evaluating a seat from a drive-by signup.
   """
   def trial(conn, params) do

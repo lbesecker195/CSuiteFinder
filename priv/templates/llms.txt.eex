@@ -30,7 +30,7 @@ curl -X POST <%= @base_url %>/csuitefinder/register \
 ```
 
 Returns `api_key` once and never again — only a hash is stored, so it cannot be
-resent. Registering grants no credit — there is no free tier. A trial is
+resent. Registering grants no credit. A trial is
 $<%= @trial_price %>, once per account, and buys $<%= @trial_price %> of credit
 good for <%= @trial_months %> month. Buy it with
 `POST /csuitefinder/billing/trial`, which answers with a PayPal approval URL.
@@ -101,36 +101,38 @@ And none of them edits what the caller gave you. Where a command produces a
 file, write a new one and leave the input exactly as it was — a row you delete
 is a row nobody can get back, and a verdict you deleted it on can be wrong.
 
-### /demo
-Spend up to $1 and come back with as many C-suite emails as it buys. What to
-run when someone wants to see what this does rather than read about it.
+### /demo [domain]
+Twenty C-suite rows from one company, checked. What to run when someone wants to
+see what this does rather than read about it. `/demo stripe.com` — with no
+domain given, use `stripe.com`.
 
 Works on any account. A key is a key: whether it was opened as a sales seat or
 as a developer account changes what the website shows and nothing about what the
 API will do. It spends the account's own credit, so buy the
 $<%= @trial_price %> trial first if there is none.
 
-1. `/company/search?industry=…&limit=20` — about $0.05, and any industry will do.
-   Skip it if they named the companies.
-2. `/email/company/people?domain=…&department=executive&limit=…` per domain,
-   until the budget is gone. $<%= @email_price %> a person, so the remaining
-   $0.95 is roughly 380 rows.
-3. `/email/deliverable` on every email. It is included, so checking all of
-   them costs nothing.
-4. Hand back everything, in the order it arrived.
+1. `/email/company/people?domain=…&department=executive&limit=20` — one call.
+   $<%= @email_price %> a person, so twenty rows is about $0.05.
+2. `/email/deliverable` on every email. It is included, so checking all twenty
+   costs nothing.
+3. Hand back everything, in the order it arrived.
 
 **Do not filter and do not de-duplicate.** Someone appearing under two
 departments is two rows, and that is fine — it is what was returned.
 
-*Two things to say when you hand it over, because the numbers invite a wrong
-reading. Quote the count as **rows**, not people: a sweep of 90 domains returned
-1,157 rows and 400 distinct emails, and someone comparing the bill to the
-per-email price will otherwise think they were overcharged. And quote the
-deliverable count separately — on a catch-all domain `accept_all` is not a pass,
-and a list that treats it as one is a list that bounces.*
+*Quote the count as **rows**, not people: the same person can come back under
+two departments, and someone comparing the bill to the per-email price will
+otherwise think they were overcharged. And quote the deliverable count
+separately — on a catch-all domain `accept_all` is not a pass, and a list that
+treats it as one is a list that bounces.*
 
-*Check `/billing/balance` before you start and again as you go. Stop at the
-budget; do not let a demo run into money the account needed.*
+*Fewer than twenty is a real answer, not a failure. Not every company lists
+twenty executives, and a short list is the honest one — say how many came back
+rather than widening the search to fill it out.*
+
+*Twenty is the cap, not a target to spend up to. Check `/billing/balance` first;
+one run is about $0.05, so an account that cannot cover that needs credit before
+it needs a demo.*
 
 ### /find <name> at <company>
 The core job. One person, one email.

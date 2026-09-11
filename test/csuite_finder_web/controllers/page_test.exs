@@ -311,7 +311,7 @@ defmodule CsuiteFinderWeb.PageTest do
       assert html =~ "jane.doe@acme.com"
       # Third in the sheet, which is the cell the cursor sits on.
       assert html =~ ~r/row-head">3<\/td>\s*<td>Jane Doe/
-      assert html =~ ~s|<tr class="you-row">|
+      assert html =~ ~r/<tr class="[^"]*\byou-row\b/
     end
 
     test "grey for the reader, green for confirmed, red for failed", %{conn: conn} do
@@ -321,16 +321,16 @@ defmodule CsuiteFinderWeb.PageTest do
         |> html_response(200)
 
       # The reader's own row is not another result and must not read as one.
-      assert html =~ ~s|<tr class="you-row">|
-      assert html =~ ~s|<tr class="ok-row">|
-      assert html =~ ~s|<tr class="bad-row">|
+      assert html =~ ~r/<tr class="[^"]*\byou-row\b/
+      assert html =~ ~r/<tr class="[^"]*\bok-row\b/
+      assert html =~ ~r/<tr class="[^"]*\bbad-row\b/
     end
 
     test "a name alone is not a row", %{conn: conn} do
       # Without an address there is nothing to put in the Email column, and a
       # half-filled row is worse than none.
       html = conn |> get(~p"/teams?name=Jane%20Doe") |> html_response(200)
-      refute html =~ ~s|<tr class="you-row">|
+      refute html =~ ~r/<tr class="[^"]*\byou-row\b/
     end
 
     test "the name is derived from the address when the link carries only one",
@@ -338,7 +338,7 @@ defmodule CsuiteFinderWeb.PageTest do
       html = conn |> get(~p"/teams?email=sam.roe@acme.com") |> html_response(200)
 
       assert html =~ "Sam Roe"
-      assert html =~ ~s|<tr class="you-row">|
+      assert html =~ ~r/<tr class="[^"]*\byou-row\b/
     end
 
     test "neither value can carry markup into the page", %{conn: conn} do
@@ -641,16 +641,23 @@ defmodule CsuiteFinderWeb.PageTest do
       assert body =~ "They are not routes"
     end
 
-    test "/demo holds to its budget and reports rows honestly", %{conn: conn} do
+    test "/demo is capped at twenty rows and reports them honestly", %{conn: conn} do
       body = conn |> get(~p"/llms.txt") |> response(200)
       [demo | _] = String.split(body, "### /find", parts: 2)
       [_, demo] = String.split(demo, "### /demo", parts: 2)
       # This is prose, so it wraps. Assert on the words, not the line breaks.
       demo = String.replace(demo, ~r/\s+/, " ")
 
-      # An unattended demo that overspends is worse than no demo.
-      assert demo =~ "Stop at the budget"
-      # And a row count read as a headcount is the mistake the last receipt made.
+      # Twenty rows from one company, so the cap is what bounds the spend — not
+      # a budget the agent has to watch as it goes.
+      assert demo =~ "limit=20"
+      assert demo =~ "Twenty is the cap, not a target"
+
+      # A short answer is the honest one; an agent told only "twenty" will widen
+      # the search until it has twenty of something.
+      assert demo =~ "Fewer than twenty is a real answer"
+
+      # A row count read as a headcount is the mistake the last receipt made.
       assert demo =~ "as **rows**, not people"
       assert demo =~ "`accept_all` is not a pass"
     end

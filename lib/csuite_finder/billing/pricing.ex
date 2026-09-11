@@ -64,7 +64,7 @@ defmodule CsuiteFinder.Billing.Pricing do
   # no bonus, nothing to reconcile later.
   @bundles [1_000, 2_000, 3_000]
 
-  # There is no free tier. Registering gets you an account and a key; a trial is
+  # Every trial is paid. Registering gets you an account and a key; a trial is
   # bought, once, and grants its own value in credit for a month. A card up
   # front filters for people who intend to use the thing, and it means the
   # credit someone is trying is the credit they would buy.
@@ -193,8 +193,8 @@ defmodule CsuiteFinder.Billing.Pricing do
       seat_usd_per_month: seat,
       credit_usd_per_month: seat,
       credit_rolls_over: false,
-      # There is no free tier at all. Reporting one would be quoting a product
-      # we do not sell.
+      # Every trial is paid. Reporting a free one would be quoting a product we
+      # do not sell.
       trial_usd: @trial_usd,
       trial_months: @trial_months,
       trial_credit_expires: true,

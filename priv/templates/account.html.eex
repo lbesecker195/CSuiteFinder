@@ -20,7 +20,7 @@
   <div class="card" data-pricing-anchor>
     <h3 style="margin:0 0 4px;font-size:17px">New here?</h3>
     <p class="muted" style="margin-bottom:16px">
-      Registering is instant and free, and gets you a key. There is no free tier: a
+      Registering is instant and gets you a key. A
       <strong>$<%= @trial_price %> trial</strong> buys $<%= @trial_price %> of credit for
       <%= @trial_months %> month. Credit you buy afterwards does not expire.
     </p>
@@ -108,7 +108,7 @@
   <p class="muted" style="margin-top:-6px">
     $<%= @trial_price %> buys $<%= @trial_price %> of credit for one month — the same
     lookups a seat gets, on the same terms, so what you are trying is the thing you
-    would buy. One per account. There is no free tier on this side.
+    would buy. One per account.
   </p>
 
   <div class="card" id="trialcard">
@@ -340,8 +340,8 @@
   }
 
   function renderTrial(b) {
-    // Offered only until it has been taken. `on_free_trial` is the developer
-    // flag; what settles it here is whether a trial was ever granted at all.
+    // Offered only until it has been taken: what settles it is whether a trial
+    // was ever granted at all, not whether its credit is still unspent.
     var card = $("trialcard");
     if (card) card.hidden = b.trial_taken === true;
   }

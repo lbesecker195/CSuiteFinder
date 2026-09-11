@@ -244,6 +244,32 @@
   /* The cell the cursor is "in", so the grid reads as a live sheet. */
   .sheet td.active { outline: 2px solid var(--s-accent); outline-offset: -2px; position: relative; }
 
+  /* Hovering a data row outlines it, the way clicking a row number would.
+     Drawn with an inset box-shadow rather than borders or an outline: the table
+     is border-collapse: collapse, where two adjacent cells share one border and
+     the winner of a colour conflict is not something to rely on. A shadow takes
+     no part in that, paints over the shared line, and shifts no layout. */
+  .sheet tbody tr.sheet-row td {
+    box-shadow: inset 0 0 0 0 transparent;
+    transition: box-shadow .12s ease-out;
+  }
+  .sheet tbody tr.sheet-row:hover td {
+    box-shadow: inset 0 2px 0 0 var(--s-accent), inset 0 -2px 0 0 var(--s-accent);
+  }
+  .sheet tbody tr.sheet-row:hover td:first-child {
+    box-shadow: inset 0 2px 0 0 var(--s-accent), inset 0 -2px 0 0 var(--s-accent),
+                inset 2px 0 0 0 var(--s-accent);
+  }
+  .sheet tbody tr.sheet-row:hover td:last-child {
+    box-shadow: inset 0 2px 0 0 var(--s-accent), inset 0 -2px 0 0 var(--s-accent),
+                inset -2px 0 0 0 var(--s-accent);
+  }
+
+  /* Two selections drawn at once reads as a bug, so the resting one steps back
+     while the reader is pointing at a row, and returns the moment they leave
+     the table. Colour rather than width, so nothing moves. */
+  .sheet:has(tbody tr.sheet-row:hover) td.active { outline-color: transparent; }
+
   /* A pointer resting on that cell, to put the reader's eye on the one address
      that is theirs. Drawn rather than real: it never moves with the mouse and
      never intercepts a click, so it cannot be mistaken for the cursor they are
