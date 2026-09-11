@@ -139,6 +139,17 @@ defmodule CsuiteFinderWeb.AnalyticsTest do
       assert js =~ "reached += 1"
     end
 
+    test "sends an increment, not a running total" do
+      # GA4 aggregates by sum or average, never by max. A cumulative counter
+      # therefore reads wrong in every default view — 1..30 sums to 465 and
+      # averages to 15.5 for a visit that lasted 30 seconds.
+      js = Analytics.engagement_tracking()
+
+      assert js =~ "seconds: 1,"
+      assert js =~ "elapsed: seconds,"
+      refute js =~ "seconds: seconds,\n          page_path"
+    end
+
     test "sends the count every second, on the second" do
       js = Analytics.engagement_tracking()
 

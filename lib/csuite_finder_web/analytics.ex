@@ -134,6 +134,14 @@ defmodule CsuiteFinderWeb.Analytics do
   clock so every visitor's events land on the same boundaries and two sessions
   compare without allowing for when each began.
 
+  Each event carries `seconds: 1` — an increment, not a running total. GA4
+  aggregates a custom metric by sum or average and never by maximum, so a
+  cumulative counter reads wrong in every default view: a thirty-second visit
+  sends 1..30, which sums to 465 and averages to 15.5, and only the maximum is
+  the real answer. As an increment the sum *is* the dwell in seconds, and so is
+  the event count. `elapsed` carries the running total alongside it for anyone
+  looking at one visit rather than an aggregate.
+
   It stops at 400 seconds. GA4 drops everything after the 500th event in a
   session, and the events worth keeping are the ones that arrive late — a click,
   a purchase. Stopping here leaves about a hundred for them rather than spending
@@ -209,8 +217,19 @@ defmodule CsuiteFinderWeb.Analytics do
 
         seconds += 1;
 
+        // `seconds: 1` is the increment, not the running total, and that is
+        // the whole point: GA4 aggregates a custom metric by sum or average,
+        // never by max. A cumulative counter therefore reads wrong in every
+        // default view — a thirty-second visit sends 1..30, which sums to 465
+        // and averages to 15.5, and only the maximum is the real answer.
+        //
+        // Sent as an increment, all three readings agree: the sum is the dwell
+        // in seconds, the event count is the dwell in seconds, and `elapsed`
+        // still carries the running total for anyone who wants the shape of a
+        // single visit.
         send("dwell_time", {
-          seconds: seconds,
+          seconds: 1,
+          elapsed: seconds,
           page_path: window.location.pathname
         });
 
