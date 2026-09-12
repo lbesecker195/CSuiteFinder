@@ -197,7 +197,27 @@
   .chat-title { font-size: 12px; font-weight: 600; color: var(--muted);
     letter-spacing: -.01em; }
 
-  .chat { display: flex; flex-direction: column; gap: 18px; padding: 20px 18px; }
+  /* The transcript scrolls; the composer below it does not. That is the way a
+     chat window actually behaves, and it stops a tall conversation from setting
+     the height of five different pages.
+
+     Cut just below the fold of the content rather than halfway up it: enough is
+     hidden to show the thing scrolls, not so much that the reader has to work
+     for the part that sells it. Left at the top on load, because the story runs
+     top to bottom — the pasted line is the hook and the CSV is the payoff. */
+  .chat { display: flex; flex-direction: column; gap: 18px; padding: 20px 18px;
+    max-height: 360px; overflow-y: auto; }
+
+  /* A scrollable region needs to be reachable without a mouse. */
+  .chat:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* Thin and in the page's own colours; the default bar is a grey slab that
+     undoes the window styling around it. */
+  .chat { scrollbar-width: thin; scrollbar-color: var(--bar) transparent; }
+  .chat::-webkit-scrollbar { width: 8px; }
+  .chat::-webkit-scrollbar-track { background: transparent; }
+  .chat::-webkit-scrollbar-thumb { background: var(--bar); border-radius: 4px;
+    border: 2px solid var(--bg); }
 
   /* Avatar beside the bubble, and the visitor's turn mirrored. Aligned to the
      top, not the bottom: the assistant's bubble is tall, and an avatar pinned
@@ -268,17 +288,28 @@
     font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
     white-space: nowrap; }
 
-  /* The composer. Decorative — the whole window is role="img" — but a chat
-     without somewhere to type does not read as a chat, which is the entire job
-     of this block. Drawn with the same parts a real one has: a rounded field
-     carrying placeholder text, and a send button in the accent. */
+  /* The composer. Drawn with the same parts a real one has — a rounded field
+     carrying placeholder text, and a send button in the accent — and it is now
+     a link rather than a picture of one: the field and the arrow are a single
+     anchor, so a click lands wherever the pointer does.
+
+     `color: inherit` and no underline because the parts inside carry their own
+     colours; left to itself an anchor would repaint the placeholder in the
+     accent and rule a line under it. */
   .composer { display: flex; align-items: center; gap: 9px;
     padding: 12px 14px; border-top: 1px solid var(--border);
-    background: var(--surface); }
+    background: var(--surface); color: inherit; text-decoration: none;
+    cursor: pointer; }
+  .composer:hover .composer-field { border-color: var(--accent);
+    color: var(--muted); }
+  .composer:hover .composer-send { filter: brightness(1.07); }
+  .composer:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
   .composer-field { flex: 1; min-width: 0; background: var(--bg);
     border: 1px solid var(--border); border-radius: 99px; padding: 9px 15px;
     font-size: 13.5px; color: var(--faint); overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap; }
+    text-overflow: ellipsis; white-space: nowrap;
+    transition: border-color .15s ease, color .15s ease; }
   .composer-send { flex: none; width: 32px; height: 32px; border-radius: 50%;
     display: grid; place-items: center; background: var(--accent); color: #fff;
     font-size: 15px; font-weight: 700; line-height: 1; position: relative;
@@ -370,10 +401,19 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--s-text);
   }
 
-  /* Scrolls in both directions. The height is in rows rather than pixels so the
-     cut lands between rows and the sheet reads as continuing rather than as
-     clipped. */
-  .sheet-scroll { overflow: auto; max-height: 21.5em; }
+  /* Scrolls in both directions, and where it cuts is the whole point.
+
+     This was 21.5em, written as though an em tracked a row. It does not: a row
+     here is 29.8px and an em is 13px, so the boundary landed about halfway into
+     a row and sliced the addresses through the middle of their letters — which
+     reads as a broken table rather than a table with more in it.
+
+     Measured instead: 26px of column letters, 29px of the header row, seven data
+     rows, and 8px of the eighth. Eight pixels is that row's top padding and
+     nothing else, so what shows below the last full row is a clean sliver of
+     empty cell — enough to say the sheet continues, never a cut letter. */
+  .sheet-scroll { overflow: auto;
+    max-height: calc(26px + 29px + (7 * 29.8px) + 8px); }
 
   /* border-collapse: separate, not collapse. Collapse merges each pair of
      adjacent borders into one line owned by neither cell, and a sticky cell

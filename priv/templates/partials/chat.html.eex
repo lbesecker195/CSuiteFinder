@@ -1,13 +1,20 @@
 <%!-- Framed as an app window so it reads as a thing that happened rather than
       a diagram of one. Still markup: selectable, theme-aware, and the line in
       the first bubble is the same string as the paste block below it. --%>
-<div class="chat-app" role="img" aria-label="A conversation with an assistant: the visitor pastes the setup line, the assistant reads llms.txt, runs two calls, and returns Prospects.csv with twenty verified work emails.">
+<div class="chat-app">
   <div class="chat-bar">
     <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
     <span class="chat-title">Your assistant</span>
   </div>
 
-  <div class="chat">
+  <%!-- `role="img"` sits on the transcript rather than the whole window. It has
+        to: the role makes everything inside it presentational, and the composer
+        below is now a real link. Labelling the window would have hidden that
+        link from every screen reader.
+
+        `tabindex` because the transcript scrolls, and a region that scrolls has
+        to be reachable without a mouse. --%>
+  <div class="chat" tabindex="0" role="img" aria-label="A conversation with an assistant: the visitor pastes the setup line, the assistant reads llms.txt, runs two calls, and returns Prospects.csv with twenty verified work emails.">
     <div class="turn you">
       <span class="avatar" aria-hidden="true">You</span>
       <div class="bubble" data-signed="out">
@@ -69,8 +76,15 @@
     </div>
   </div>
 
-  <div class="composer">
+  <%!-- The whole composer is the link, not just the arrow. Someone who wants to
+        reply to this conversation clicks where they would type, and a box that
+        looks like an input and does nothing when clicked is worse than no box.
+        One anchor rather than two so there is a single focus stop and a single
+        target, however far right the pointer lands. --%>
+  <a class="composer" href="<%= CsuiteFinderWeb.Layout.sales_href() %>"
+     aria-label="Email sales about CSuiteFinder"
+     data-cta="chat_composer">
     <span class="composer-field">Ask for the next twenty<span class="dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></span>
     <span class="composer-send" aria-hidden="true">↑</span>
-  </div>
+  </a>
 </div>
