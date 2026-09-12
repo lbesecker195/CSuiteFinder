@@ -45,6 +45,10 @@ defmodule CsuiteFinderWeb.PageController do
   @external_resource @checkout_template
   EEx.function_from_file(:defp, :render_checkout, @checkout_template, [:assigns])
 
+  @privacy_template Path.join(:code.priv_dir(:csuite_finder), "templates/privacy.html.eex")
+  @external_resource @privacy_template
+  EEx.function_from_file(:defp, :render_privacy, @privacy_template, [:assigns])
+
   @doc "GET /"
   def index(conn, params) do
     conn
@@ -177,6 +181,30 @@ defmodule CsuiteFinderWeb.PageController do
   end
 
   @doc """
+  GET /privacy
+
+  What is collected, why, for how long, and how to have it removed — for account
+  holders and, in its own section, for the people whose work details are looked
+  up here and who never visited this site.
+
+  The contact address and the date come from here rather than from the template
+  so there is one place to change them, and so the date cannot quietly describe
+  an edit nobody made.
+  """
+  def privacy(conn, params) do
+    conn
+    |> put_resp_content_type("text/html")
+    |> send_resp(
+      200,
+      render_privacy(
+        Map.merge(assigns(conn, params), %{
+          updated_on: CsuiteFinderWeb.Layout.privacy_updated_on()
+        })
+      )
+    )
+  end
+
+  @doc """
   GET /llms.txt
 
   The agent-facing description of this API, generated from the same pricing the
@@ -209,6 +237,9 @@ defmodule CsuiteFinderWeb.PageController do
           CsuiteFinderWeb.Prefill.email(params["email"])
         ),
       base_url: base_url(conn),
+      # Every page and llms.txt can name where a privacy request goes, without
+      # each one carrying its own copy of the address.
+      privacy_contact: CsuiteFinderWeb.Layout.privacy_contact(),
       seat_usd: delimit(Plans.seat_usd()),
       email_price: format(Pricing.price_usd("email.find")),
       phone_price: format(Pricing.price_usd("phone.find")),

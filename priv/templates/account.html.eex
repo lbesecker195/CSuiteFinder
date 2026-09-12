@@ -36,6 +36,12 @@
       No password needed to start — you set one after your first payment, when
       there is an account worth getting back into.
     </p>
+    <p class="muted" style="margin:12px 0 0">
+      We use your email to run and bill the account, and nothing else — no
+      marketing, no sharing. Card details are entered on the payment provider's
+      own page and never reach us. <a href="/privacy">What we collect and how to
+      have it removed</a>.
+    </p>
   </div>
 
   <div class="card">

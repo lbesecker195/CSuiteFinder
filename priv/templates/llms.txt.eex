@@ -518,6 +518,12 @@ the first, then pass that address as `email` on subsequent finds.
   whatever marketing law applies where you and your recipient are.
 - Do not use it to contact private individuals; consumer mailboxes are
   deliberately not enriched.
+- The people in these results did not give us their details and cannot see this
+  file. If one of them asks you, or your user, to be removed, send that to
+  <%= @privacy_contact %> and it will be removed from our store. Passing the
+  request on is part of using this properly, not an optional courtesy.
+- Privacy notice: <%= @base_url %>/privacy — what is held, for how long, and how
+  a person has it deleted.
 
 ## Analytics
 

@@ -48,6 +48,11 @@
     This is your account. No password needed yet — you set one after payment, so
     there is nothing to invent before you have decided anything.
   </p>
+  <p class="hint">
+    We use it to run and bill the account, and nothing else. Your card is entered
+    on the payment provider's own page and never reaches us.
+    <a href="/privacy">What we collect</a>.
+  </p>
 </div>
 
 <%= if @plan == :seat do %>

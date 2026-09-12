@@ -1,0 +1,42 @@
+/* A policy is read, not scanned, so the measure is narrower than the marketing
+   pages and the paragraphs are given room. */
+header h1 { margin-bottom: 6px; }
+
+h2.section-label { margin-top: 40px; }
+
+p.quiet { max-width: 70ch; }
+
+/* Two columns: the thing held, and why. A definition list would be more correct
+   semantically but reads worse at this width, where the term needs its own
+   column to stay scannable. */
+table.plain {
+  border-collapse: collapse;
+  margin: 18px 0 26px;
+  max-width: 70ch;
+  width: 100%;
+}
+
+table.plain th,
+table.plain td {
+  border-top: 1px solid var(--border);
+  padding: 10px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.plain th {
+  font-weight: 600;
+  padding-right: 20px;
+  white-space: nowrap;
+  width: 1%;
+}
+
+table.plain td { color: var(--muted); }
+
+/* The term column cannot stay on its own line on a phone. */
+@media (max-width: 560px) {
+  table.plain th,
+  table.plain td { display: block; white-space: normal; width: auto; }
+  table.plain th { border-top: 1px solid var(--border); padding-bottom: 2px; }
+  table.plain td { border-top: 0; padding-top: 0; }
+}

@@ -211,7 +211,8 @@ defmodule CsuiteFinderWeb.Layout do
       {"/teams", "For sales teams"},
       {"/developers", "For developers"},
       {"/start", "Get started"},
-      {"/account", "Your account"}
+      {"/account", "Your account"},
+      {"/privacy", "Privacy"}
     ])
   end
 
@@ -223,7 +224,8 @@ defmodule CsuiteFinderWeb.Layout do
       # pointed at llms.txt, and that walkthrough is /start. It belongs in
       # front of a seat holder, not only a developer.
       {"/start", "Get started"},
-      {"/account", "Your account"}
+      {"/account", "Your account"},
+      {"/privacy", "Privacy"}
     ])
   end
 
@@ -234,7 +236,8 @@ defmodule CsuiteFinderWeb.Layout do
       {"/developers#pricing", "Pricing"},
       {"/llms.txt", "llms.txt"},
       {"/csuitefinder/pricing", "pricing as JSON"},
-      {"/account", "Your account"}
+      {"/account", "Your account"},
+      {"/privacy", "Privacy"}
     ])
   end
 
@@ -247,4 +250,25 @@ defmodule CsuiteFinderWeb.Layout do
         Enum.map_join(links, " ·\n  ", fn {href, label} -> ~s(<a href="#{href}">#{label}</a>) end)
     })
   end
+
+  @doc """
+  Where a privacy request goes.
+
+  One address, named once. A policy that points at three different mailboxes is a
+  policy that loses a request.
+  """
+  @spec privacy_contact() :: String.t()
+  def privacy_contact do
+    Application.get_env(:csuite_finder, :privacy_contact, "privacy@csuitefinder.com")
+  end
+
+  @doc """
+  The date the privacy policy last changed, in words.
+
+  Written down rather than taken from the clock: "last updated" has to mean the
+  last time the text changed, and a date from `Date.utc_today/0` would claim a
+  revision every morning.
+  """
+  @spec privacy_updated_on() :: String.t()
+  def privacy_updated_on, do: "11 September 2026"
 end
