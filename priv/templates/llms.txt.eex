@@ -2,7 +2,8 @@
 
 > Turn a person's name and their company's domain into their work email address,
 > then verify it, identify who is behind an address, and look up the company.
-> Self-serve: one POST gets you a key, and a $<%= @trial_price %> trial gets you credit.
+> One POST gets you a key. Credit is arranged by email at the moment — card
+> checkout is switched off, so nothing you do here can pay for itself.
 
 This file is for AI agents. It is generated from the live service, so the prices
 below are the prices you will be charged. Everything here is callable now.
@@ -30,11 +31,19 @@ curl -X POST <%= @base_url %>/csuitefinder/register \
 ```
 
 Returns `api_key` once and never again — only a hash is stored, so it cannot be
-resent. Registering grants no credit. A trial is
+resent. Registering still works and grants no credit.
+
+**Getting credit onto that key is a conversation, not a call.** Card checkout is
+switched off, so `POST /csuitefinder/billing/trial` and
+`POST /csuitefinder/billing/topup` are not the route to take right now — even
+where they answer, nothing completes at the other end. Email
+<%= @sales_email %> instead, and say what you need. A trial is
 $<%= @trial_price %>, once per account, and buys $<%= @trial_price %> of credit
-good for <%= @trial_months %> month. Buy it with
-`POST /csuitefinder/billing/trial`, which answers with a PayPal approval URL.
-Credit bought afterwards does not expire.
+good for <%= @trial_months %> month; a seat is $<%= @seat_usd %> a month. Credit
+that is bought does not expire.
+
+If you are acting for someone, this is the point to hand back to them: an agent
+cannot agree terms by email, and should not try.
 
 Send it on every request:
 
@@ -67,9 +76,10 @@ Everything else is **included** — deliverability, enrichment, patterns, names,
 company data, phone validation — but still needs a positive balance (an empty
 account gets HTTP 402). A lookup that finds nothing is free.
 
-Buy credit in amounts of <%= Enum.map_join(@bundles, ", ", &("$" <> &1.usd)) %>.
-A dollar buys a dollar of credit. Purchases start at $<%= @min_bundle %>, paid
-through PayPal, and **credit you buy never expires**.
+Credit comes in amounts of <%= Enum.map_join(@bundles, ", ", &("$" <> &1.usd)) %>.
+A dollar buys a dollar of credit, purchases start at $<%= @min_bundle %>, and
+**credit you buy never expires**. Arranged by email — <%= @sales_email %> — for
+as long as card checkout is off.
 
 Credit you are *given* does expire: the trial, and the monthly allowance that
 comes with a seat. `GET /csuitefinder/billing/balance` reports the split as
@@ -141,7 +151,7 @@ domain given, use `intuit.com`.
 
 Works on any account. A key is a key: whether it was opened as a sales seat or
 as a developer account changes what the website shows and nothing about what the
-API will do. <%= if @show_costs, do: "It spends the account's own credit, so buy the $#{@trial_price} trial first if there is none.", else: "It spends your seat's monthly credit, which is already paid for." %>
+API will do. <%= if @show_costs, do: "It spends the account's own credit; an account with none needs some arranging first, by email to #{@sales_email}.", else: "It spends your seat's monthly credit, which is already paid for." %>
 
 1. `/email/company/people?domain=…&department=executive&limit=20` — one call.
 <%= if @show_costs, do: "   $#{@email_price} a person, so twenty rows is about $0.05.", else: "   Twenty rows out of the seat's monthly credit." %>
@@ -478,7 +488,9 @@ company domain" rather than returning the mail provider as the employer.
 - `GET /csuitefinder/billing/usage?days=30` — calls and spend per endpoint
 - `GET /csuitefinder/keys` — list your keys; `POST` mints another, `DELETE /:id`
   revokes one. Mint a spare: a lost key cannot be recovered.
-- `POST /csuitefinder/billing/topup` — buy credit, returns a PayPal approval URL
+- `POST /csuitefinder/billing/topup` — returns a hosted checkout URL. **Not the
+  route to take at the moment**: card checkout is off, so nothing completes at
+  the far end. Email <%= @sales_email %> for credit instead
 - `GET /csuitefinder/health` — service status
 - `GET /csuitefinder/pricing` — the live rate card, no key required
 
@@ -507,7 +519,7 @@ the first, then pass that address as `email` on subsequent finds.
 |---|---|
 | 400 | A required parameter is missing or malformed |
 | 401 | Missing or invalid API key |
-| 402 | Out of credit — buy more |
+| 402 | Out of credit. Stop, and tell whoever you are working for — credit is arranged by email (<%= @sales_email %>), so retrying will not clear it |
 | 404 | No such route |
 | 500 | The lookup failed. Nothing was charged. Retry. |
 
@@ -520,10 +532,8 @@ the first, then pass that address as `email` on subsequent finds.
   deliberately not enriched.
 - The people in these results did not give us their details and cannot see this
   file. If one of them asks you, or your user, to be removed, send that to
-  <%= @privacy_contact %> and it will be removed from our store. Passing the
-  request on is part of using this properly, not an optional courtesy.
-- Privacy notice: <%= @base_url %>/privacy — what is held, for how long, and how
-  a person has it deleted.
+  <%= @sales_email %> and it will be removed from our store. Passing the request
+  on is part of using this properly, not an optional courtesy.
 
 ## Analytics
 

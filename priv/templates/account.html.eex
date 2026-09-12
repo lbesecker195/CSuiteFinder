@@ -45,12 +45,12 @@
     </p>
     <%!-- The register form carried this and has gone, but the address and
           password boxes are still on this page, so the notice still belongs
-          beside them rather than only in the footer. --%>
+          beside them. It no longer links anywhere: the page it pointed at was
+          removed, and a link to a 404 is worse than the sentence alone. --%>
     <p class="muted" style="margin:12px 0 0">
       We use your email to run and bill the account, and nothing else — no
       marketing, no sharing. Card details are entered on the payment provider's
-      own page and never reach us. <a href="/privacy">What we collect and how to
-      have it removed</a>.
+      own page and never reach us.
     </p>
   </div>
 

@@ -211,8 +211,7 @@ defmodule CsuiteFinderWeb.Layout do
       {"/teams", "For sales teams"},
       {"/developers", "For developers"},
       {"/start", "Get started"},
-      {"/account", "Your account"},
-      {"/privacy", "Privacy"}
+      {"/account", "Your account"}
     ])
   end
 
@@ -224,8 +223,7 @@ defmodule CsuiteFinderWeb.Layout do
       # pointed at llms.txt, and that walkthrough is /start. It belongs in
       # front of a seat holder, not only a developer.
       {"/start", "Get started"},
-      {"/account", "Your account"},
-      {"/privacy", "Privacy"}
+      {"/account", "Your account"}
     ])
   end
 
@@ -236,8 +234,7 @@ defmodule CsuiteFinderWeb.Layout do
       {"/developers#pricing", "Pricing"},
       {"/llms.txt", "llms.txt"},
       {"/csuitefinder/pricing", "pricing as JSON"},
-      {"/account", "Your account"},
-      {"/privacy", "Privacy"}
+      {"/account", "Your account"}
     ])
   end
 
@@ -283,29 +280,4 @@ defmodule CsuiteFinderWeb.Layout do
   @doc "The address behind `sales_href/0`, for anywhere that shows it as text."
   @spec sales_email() :: String.t()
   def sales_email, do: @sales_email
-
-  @doc """
-  Where a privacy request goes.
-
-  The operator's own address, because it is the one that exists. A `privacy@`
-  alias would read better and would be a mailbox nobody had created — a notice
-  that names an address which bounces is worse than one that names none, since
-  the person has then been told their request was sent when it was not.
-
-  Configurable, so it can move to a real alias the day one exists.
-  """
-  @spec privacy_contact() :: String.t()
-  def privacy_contact do
-    Application.get_env(:csuite_finder, :privacy_contact, "lbesecker195@gmail.com")
-  end
-
-  @doc """
-  The date the privacy policy last changed, in words.
-
-  Written down rather than taken from the clock: "last updated" has to mean the
-  last time the text changed, and a date from `Date.utc_today/0` would claim a
-  revision every morning.
-  """
-  @spec privacy_updated_on() :: String.t()
-  def privacy_updated_on, do: "12 September 2026"
 end
