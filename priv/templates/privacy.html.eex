@@ -158,15 +158,23 @@
 <p class="quiet">
   Whether you are a customer or a contact, you can ask us to tell you what we hold
   about you, correct it, delete it, or stop processing it. If you are a contact and
-  you want to be removed, <strong>say so and we will remove you</strong> — there is
-  no test to pass and nothing to justify.
+  you want to be removed, saying so is enough — there is nothing to justify.
 </p>
 
 <p class="quiet">
   One address for all of it:
   <a href="mailto:<%= @privacy_contact %>"><%= @privacy_contact %></a>. Include the
-  email address or name you want us to look for. We answer within thirty days, and
-  usually much sooner.
+  email address or name you want us to look for.
+</p>
+
+<p class="quiet">
+  <strong>What this is, honestly:</strong> a person reading a mailbox and running
+  the deletion by hand. There is no self-service privacy dashboard, no automated
+  request system, and no team on a rota — this is a small operation and we would
+  rather tell you that than imply a machine is handling it. It does mean a request
+  is answered when it is read, and we are not going to put a number on that here
+  that we cannot stand behind. If a legal deadline applies to you, it applies to us
+  and we will meet it.
 </p>
 
 <p class="quiet">
@@ -186,6 +194,14 @@
 <p class="quiet">
   Two measurement tools run on these marketing pages. Neither runs on your account
   page, because that page shows an API key and carries password fields.
+</p>
+
+<p class="quiet">
+  <strong>They load when the page does.</strong> There is no cookie banner on this
+  site and nothing here asks your permission first, so you should assume both have
+  already run by the time you read this. We are telling you rather than letting you
+  work it out. If you would rather they did not, a tracker blocker or Google's own
+  opt-out extension stops them; we do not currently offer a switch of our own.
 </p>
 
 <p class="quiet">

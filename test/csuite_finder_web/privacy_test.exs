@@ -32,6 +32,20 @@ defmodule CsuiteFinderWeb.PrivacyTest do
       assert html =~ "until it is deleted on request"
     end
 
+    test "claims no capability that does not exist", %{conn: conn} do
+      # The first draft promised a privacy@ alias nobody had created, a
+      # thirty-day answer nothing measured, and by omission implied that
+      # analytics waited for permission. A notice is worth less than nothing when
+      # it describes a service that is not there.
+      html = conn |> get(~p"/privacy") |> html_response(200)
+
+      refute html =~ "privacy@csuitefinder.com"
+      refute html =~ "within thirty days"
+
+      assert html =~ "no self-service privacy dashboard"
+      assert html =~ "no cookie banner on this"
+    end
+
     test "gives one address for a request", %{conn: conn} do
       html = conn |> get(~p"/privacy") |> html_response(200)
       contact = CsuiteFinderWeb.Layout.privacy_contact()

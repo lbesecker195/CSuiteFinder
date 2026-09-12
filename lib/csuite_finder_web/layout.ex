@@ -254,12 +254,16 @@ defmodule CsuiteFinderWeb.Layout do
   @doc """
   Where a privacy request goes.
 
-  One address, named once. A policy that points at three different mailboxes is a
-  policy that loses a request.
+  The operator's own address, because it is the one that exists. A `privacy@`
+  alias would read better and would be a mailbox nobody had created — a notice
+  that names an address which bounces is worse than one that names none, since
+  the person has then been told their request was sent when it was not.
+
+  Configurable, so it can move to a real alias the day one exists.
   """
   @spec privacy_contact() :: String.t()
   def privacy_contact do
-    Application.get_env(:csuite_finder, :privacy_contact, "privacy@csuitefinder.com")
+    Application.get_env(:csuite_finder, :privacy_contact, "lbesecker195@gmail.com")
   end
 
   @doc """
