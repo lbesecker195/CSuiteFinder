@@ -13,7 +13,7 @@
     licence, no sales call. You pay for answers — a lookup that finds nothing is free.
   </p>
   <div class="hero-cta">
-    <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>">Contact Sales</a>
+    <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>" aria-label="Get an API key — opens an email">Get an API key</a>
     <a class="btn btn-ghost" href="/llms.txt">llms.txt</a>
   </div>
   <p class="cta-note">
@@ -222,7 +222,7 @@
 </div>
 
 <p style="margin-top:26px">
-  <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>">Contact Sales</a>
+  <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>" aria-label="Ask for a key and start building — opens an email">Ask for a key and start building</a>
 </p>
 
 <%= CsuiteFinderWeb.Layout.footer(:developer) %>

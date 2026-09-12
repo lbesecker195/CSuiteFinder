@@ -134,8 +134,12 @@ defmodule CsuiteFinderWeb.PageTest do
       html = conn |> get(~p"/account") |> html_response(200)
 
       assert html =~ "Your account"
-      assert html =~ "Create account"
       assert html =~ "Buy credit"
+
+      # Self-registration is gone from this page — accounts are opened by us —
+      # so what has to be here is the way to ask for one.
+      assert html =~ CsuiteFinderWeb.Layout.sales_href()
+      refute html =~ "Create account"
     end
 
     test "prices the bundles from the live constants", %{conn: conn} do

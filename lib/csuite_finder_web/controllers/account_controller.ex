@@ -50,7 +50,7 @@ defmodule CsuiteFinderWeb.AccountController do
       trial_months: Pricing.trial_months(),
       min_password: CsuiteFinder.Accounts.min_password_length(),
       contact_email:
-        Application.get_env(:csuite_finder, :contact_email, "sales@csuitefinder.com"),
+        Application.get_env(:csuite_finder, :contact_email, "lbesecker195@gmail.com"),
       seat_usd: Plans.seat_usd(),
       seat_usd_label: delimit(Plans.seat_usd()),
       email_price:

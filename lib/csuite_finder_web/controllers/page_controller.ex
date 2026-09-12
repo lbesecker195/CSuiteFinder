@@ -170,7 +170,7 @@ defmodule CsuiteFinderWeb.PageController do
   end
 
   defp contact_email do
-    Application.get_env(:csuite_finder, :contact_email, "sales@csuitefinder.com")
+    Application.get_env(:csuite_finder, :contact_email, "lbesecker195@gmail.com")
   end
 
   @doc "GET /start"

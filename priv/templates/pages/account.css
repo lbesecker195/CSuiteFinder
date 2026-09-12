@@ -62,3 +62,11 @@
   footer{margin-top:44px;padding-top:22px;border-top:1px solid var(--border);
          color:var(--faint);font-size:13px}
   [hidden]{display:none !important}
+
+/* The way in, now that the register form has gone. Outside the three swapped
+   sections so it shows in every state: signed out it is how you get an account,
+   signed in it is how you get more credit. */
+.contact-cta { border-top: 1px solid var(--border); margin-top: 44px;
+  padding-top: 28px; text-align: center; }
+.contact-cta h3 { margin: 0 0 6px; font-size: 17px; }
+.contact-cta p { margin: 0 auto 18px; max-width: 52ch; }

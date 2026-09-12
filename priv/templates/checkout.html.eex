@@ -70,7 +70,7 @@
 
     <p class="quote" id="quote"></p>
 
-    <a class="btn-link big" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Contact Sales →</a>
+    <a class="btn-link big" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>" aria-label="Email us to set these seats up — opens an email">Email us to set these seats up →</a>
 
     <ul class="reassure">
       <li>Nothing is charged now — we agree terms by email first.</li>
@@ -96,7 +96,7 @@
         <li><strong>Credit expires after <%= @trial_months %> month</strong></li>
         <li>One per account, and nothing renews</li>
       </ul>
-      <a class="btn-link" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>">Contact Sales</a>
+      <a class="btn-link" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>" aria-label="Start with the trial — opens an email">Start with the trial</a>
     </div>
 
     <div class="card opt best">
@@ -111,7 +111,7 @@
         <li>Cancel any time, mid-month included</li>
         <li>Credit does not roll over — each month starts fresh</li>
       </ul>
-      <a class="btn-link primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Contact Sales</a>
+      <a class="btn-link primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>" aria-label="Take a seat — opens an email">Take a seat</a>
     </div>
   </div>
 

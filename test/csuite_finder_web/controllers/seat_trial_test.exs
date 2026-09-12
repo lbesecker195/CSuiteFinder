@@ -165,10 +165,11 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
     test "the signup card promises no credit to anyone", %{conn: conn} do
       # Telling someone they get free credit is a promise we no longer keep, and
       # they would find out at their first lookup.
+      #
+      # The card this was named for has gone with self-registration — there is
+      # nothing left on the page to make the promise. What still has to hold is
+      # everything below: the page offers nobody anything free.
       html = conn |> get(~p"/account") |> html_response(200)
-
-      assert html =~ "$29.99 trial"
-      assert html =~ "Credit you buy afterwards does not expire"
 
       # The page used to rule the free tier out in words. It no longer mentions
       # one in either direction, so what is asserted is that nothing on the page

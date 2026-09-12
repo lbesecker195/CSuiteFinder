@@ -15,36 +15,14 @@
 <!-- ── signed out ──────────────────────────────────────────────────────── -->
 <section id="signedout" hidden>
   <h1>Your account</h1>
-  <p class="lede">Get an API key, check your balance and buy credit — no headers required.</p>
+  <p class="lede">Get an API key, check your balance and buy credit.</p>
 
+  <%!-- Self-registration is gone from this page: accounts are opened by us now,
+        so the way in is the CTA at the foot rather than a form that mints a key
+        nobody can put credit on. `data-pricing-anchor` moved here with it — the
+        nav's Pricing link is a bare fragment on every page and this half of the
+        account page has to give it somewhere to land. --%>
   <div class="card" data-pricing-anchor>
-    <h3 style="margin:0 0 4px;font-size:17px">New here?</h3>
-    <p class="muted" style="margin-bottom:16px">
-      Registering is instant and gets you a key. A
-      <strong>$<%= @trial_price %> trial</strong> buys $<%= @trial_price %> of credit for
-      <%= @trial_months %> month. Credit you buy afterwards does not expire.
-    </p>
-    <div class="row">
-      <div>
-        <label for="email">Your email</label>
-        <input type="email" id="email" placeholder="you@company.com" autocomplete="email"
-               value="<%= @prefill_email %>">
-      </div>
-      <button id="register">Create account</button>
-    </div>
-    <p class="muted" style="margin:12px 0 0">
-      No password needed to start — you set one after your first payment, when
-      there is an account worth getting back into.
-    </p>
-    <p class="muted" style="margin:12px 0 0">
-      We use your email to run and bill the account, and nothing else — no
-      marketing, no sharing. Card details are entered on the payment provider's
-      own page and never reach us. <a href="/privacy">What we collect and how to
-      have it removed</a>.
-    </p>
-  </div>
-
-  <div class="card">
     <h3 style="margin:0 0 4px;font-size:17px">Already have an account?</h3>
     <p class="muted" style="margin-bottom:16px">Sign in with your email and password.</p>
     <div class="row">
@@ -64,6 +42,15 @@
       <strong>There is no email reset.</strong> We have no mail server, so nobody can send
       you a link. If you are locked out, email <a href="mailto:<%= @contact_email %>">
       <%= @contact_email %></a> and we will set a new one for you.
+    </p>
+    <%!-- The register form carried this and has gone, but the address and
+          password boxes are still on this page, so the notice still belongs
+          beside them rather than only in the footer. --%>
+    <p class="muted" style="margin:12px 0 0">
+      We use your email to run and bill the account, and nothing else — no
+      marketing, no sharing. Card details are entered on the payment provider's
+      own page and never reach us. <a href="/privacy">What we collect and how to
+      have it removed</a>.
     </p>
   </div>
 
@@ -248,6 +235,20 @@
     </p>
   </div>
 </section>
+
+<%!-- Outside the three sections, so it shows whichever one the page is in. It is
+      the only way to open an account now that the register form has gone, and it
+      is equally the thing a signed-in customer wants when the balance runs out. --%>
+<div class="contact-cta">
+  <h3>Need an account, more credit, or a hand?</h3>
+  <p class="muted">
+    Accounts are opened by us at the moment, and credit is arranged the same way.
+    Tell us what you are after and we will sort it out.
+  </p>
+  <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>"
+     aria-label="Contact Sales — opens an email to us"
+     data-cta="account_contact">Contact Sales</a>
+</div>
 
 <%= CsuiteFinderWeb.Layout.footer() %>
 
@@ -466,45 +467,9 @@
     say(msg || "", msg ? "info" : null);
   }
 
-  // ---- register -----------------------------------------------------------
-  $("register").addEventListener("click", function () {
-    var email = $("email").value.trim();
-    if (!email) { say("Enter your email first.", "err"); return; }
-    var btn = this; btn.disabled = true; say("Creating your account…", "info");
-
-    // No password is asked for here. One is asked for after a payment lands,
-    // which is the first moment it is worth anybody's time — see renderSecure.
-    var payload = { email: email, audience: audience };
-
-    api("/register", { method: "POST", body: payload }).then(function (res) {
-      btn.disabled = false;
-      if (!res.ok) {
-        var detail = res.body && res.body.details && res.body.details.email;
-        // "has already been taken" is the only failure a person can act on, and
-        // the action is signing in rather than picking another address. The old
-        // wording repeated the changeset at them and left them stuck.
-        if (detail && detail[0] && detail[0].indexOf("already") >= 0) {
-          say("That email already has an account — sign in just below.", "err");
-          var box = $("loginemail");
-          if (box) { box.value = email; box.focus(); }
-          return;
-        }
-        // Anything else is ours, not theirs. Say the status rather than a
-        // guess, so a report of it is worth something.
-        say(detail
-          ? "That email " + detail[0] + "."
-          : "Sign-up failed (" + (res.status || "no response") + "). Nothing was charged — " +
-            "try again, or email us and we will sort it out.", "err");
-        return;
-      }
-      key = res.body.api_key; save(key);
-      $("newkeyvalue").textContent = key;
-      show("newkey");
-      // No credit comes with an account any more, so the next step is the
-      // thing to say rather than a balance of zero.
-      say("Account created. Buy the trial below to start looking things up.", "ok");
-    });
-  });
+  // The register form used to live here. It is gone from the page, and its
+  // handler with it — POST /register is still a route, and an account opened
+  // that way still works, but nothing on this page mints one any more.
 
   // ---- sign in with a password --------------------------------------------
   $("signin-password").addEventListener("click", function () {
@@ -793,8 +758,11 @@
   // ---- boot ---------------------------------------------------------------
   // The server fills this field when the address came in on this page's own
   // URL. When the visitor picked it up on an earlier page, it is here instead.
-  if (!$("email").value && window.csfPrefillEmail) {
-    $("email").value = window.csfPrefillEmail();
+  // The sign-in box is the only one left that wants it — the register form it
+  // used to fill is gone.
+  var prefill = $("loginemail");
+  if (prefill && !prefill.value && window.csfPrefillEmail) {
+    prefill.value = window.csfPrefillEmail();
   }
 
   key = load();
