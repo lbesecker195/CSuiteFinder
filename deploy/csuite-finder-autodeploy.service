@@ -1,0 +1,37 @@
+# Runs deploy/autodeploy.sh once. The timer beside this file starts it every ten
+# minutes; `systemctl start csuite-finder-autodeploy` runs it on demand. Same
+# unit either way, so a manual deploy and a timed one cannot behave differently.
+#
+#   sudo cp deploy/csuite-finder-autodeploy.{service,timer} /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now csuite-finder-autodeploy.timer
+
+[Unit]
+Description=Deploy CSuiteFinder if main has moved
+# Nothing to deploy to if the network is not up yet.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# Root: it restarts the service and reads /etc/csuite-finder.env, which is
+# root-owned. The script does the privileged parts and nothing else.
+User=root
+
+WorkingDirectory=/var/www/HoneyTrap/CSuiteFInder
+ExecStart=/usr/bin/env bash /var/www/HoneyTrap/CSuiteFInder/deploy/autodeploy.sh
+
+# A build plus a restart plus ten health checks. If it has not finished in
+# fifteen minutes something is wrong and a hung deploy should not block the next
+# one forever.
+TimeoutStartSec=900
+
+# Everything the script logs goes to the journal, tagged so it is greppable:
+#   journalctl -t csuite-deploy -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=csuite-deploy
+
+[Install]
+WantedBy=multi-user.target
