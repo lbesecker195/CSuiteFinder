@@ -76,7 +76,7 @@
      page still needs somewhere for it to land. With the cost section gone the
      closing call to action is that place: the price is in the button. -->
 <p style="margin-top:22px" id="pricing">
-  <a class="btn btn-primary" href="/checkout" data-signed="out" data-cta="trial" data-cta-usd="<%= @trial_price %>">Start — $<%= @trial_price %> trial</a>
+  <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-signed="out" data-cta="trial" data-cta-usd="<%= @trial_price %>">Contact Sales</a>
   <a class="btn btn-ghost" href="/account" data-signed="in" hidden>Open your account</a>
 </p>
 

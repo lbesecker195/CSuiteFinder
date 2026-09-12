@@ -70,17 +70,17 @@
 
     <p class="quote" id="quote"></p>
 
-    <button id="go-seat" class="big" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Continue to payment →</button>
+    <a class="btn-link big" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Contact Sales →</a>
 
     <ul class="reassure">
-      <li>Nothing is charged until you confirm it at the checkout.</li>
+      <li>Nothing is charged now — we agree terms by email first.</li>
       <li>Cancel any time; the month you have paid for runs to its end.</li>
       <li>Unused credit does not roll over — each month starts at $<%= @seat_usd %>.</li>
     </ul>
   </div>
 
   <p class="alt-line">
-    Not ready to commit? <a href="/checkout" data-cta="trial" data-cta-usd="<%= @trial_price %>">Try it for $<%= @trial_price %> first →</a>
+    Smaller budget? The $<%= @trial_price %> trial is on the table too — <a href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>">say so in the same email →</a>
   </p>
 <% else %>
   <div class="options">
@@ -96,7 +96,7 @@
         <li><strong>Credit expires after <%= @trial_months %> month</strong></li>
         <li>One per account, and nothing renews</li>
       </ul>
-      <button id="go-trial" data-cta="trial" data-cta-usd="<%= @trial_price %>">Start the trial — $<%= @trial_price %></button>
+      <a class="btn-link" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>">Contact Sales</a>
     </div>
 
     <div class="card opt best">
@@ -111,12 +111,13 @@
         <li>Cancel any time, mid-month included</li>
         <li>Credit does not roll over — each month starts fresh</li>
       </ul>
-      <button id="go-seat" class="primary" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Take a seat — $<%= @seat_usd %>/month</button>
+      <a class="btn-link primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="seat_monthly" data-cta-usd="<%= String.replace(@seat_usd, ",", "") %>">Contact Sales</a>
     </div>
   </div>
 
   <p class="alt-line">
-    Nothing is charged until you confirm it at the checkout.
+    Card checkout is off at the moment. Tell us which of these you want and we
+    will take it from there.
   </p>
 <% end %>
 
@@ -270,6 +271,36 @@
     window.history.replaceState({}, "", window.location.pathname);
     say("Nothing was charged. Pick up where you left off whenever you like.", "info");
   }
+
+  // The address box used to feed the payment call. With card checkout off it
+  // would otherwise be a field that accepts typing and does nothing, so it now
+  // rides along in the mailto — the enquiry arrives with an address on it
+  // instead of needing a reply to ask for one.
+  //
+  // Rewritten on input rather than on click: a click on an <a> is not something
+  // we can reliably intercept and still have the mail client open.
+  (function () {
+    var box = $("email");
+    var links = document.querySelectorAll(".btn-link[href^='mailto:']");
+    if (!box || !links.length) return;
+
+    var base = [];
+    for (var i = 0; i < links.length; i++) base.push(links[i].getAttribute("href"));
+
+    function carry() {
+      var value = box.value.trim();
+      var suffix = value.indexOf("@") > 0
+        ? "%0D%0A%0D%0AMy%20email%3A%20" + encodeURIComponent(value)
+        : "";
+
+      for (var i = 0; i < links.length; i++) {
+        links[i].setAttribute("href", base[i] + suffix);
+      }
+    }
+
+    box.addEventListener("input", carry);
+    carry();
+  })();
 })();
 </script>
 </body>

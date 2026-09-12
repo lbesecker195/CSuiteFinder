@@ -1,23 +1,28 @@
 defmodule CsuiteFinderWeb.SeatCheckoutTest do
   @moduledoc """
-  The $999 CTA, which is one click from a marketing page to a payment page.
+  The $999 CTA, which is one click from a marketing page to whatever takes the
+  money at the time.
 
-  No account, no form, no login in between — Checkout collects the address and
-  the account is opened from it once the money has actually moved.
+  Card checkout is currently switched off and every buy control is a mailto to
+  sales, so what these assert is the shape that has to hold either way: a CTA
+  wherever a price is quoted, and never a half-migrated page where one card
+  still points at a dead processor link and the next does not.
   """
 
   use CsuiteFinderWeb.ConnCase, async: true
 
+  alias CsuiteFinderWeb.Layout
+
   describe "the seat CTA" do
-    test "points at the seat checkout, whichever gateway is live", %{conn: conn} do
-      # No processor's domain is hardcoded here any more. Three have come and
-      # gone in this codebase, and a baked-in URL outlives the account it
-      # belongs to — /checkout/seat builds a link against whatever is actually
-      # configured. Set :payment_links to a static URL to override it.
+    test "goes to sales while card checkout is off", %{conn: conn} do
       html = conn |> get(~p"/teams") |> html_response(200)
 
-      assert html =~ ~s|href="/checkout/seat"|
-      refute html =~ ~s|href="/checkout?plan=seat"|
+      assert html =~ Layout.sales_href()
+
+      # The routes behind the old buttons still exist and still work; nothing
+      # should be pointing a customer at them while payments are down.
+      refute html =~ ~s|href="/checkout/seat"|
+      refute html =~ ~s|href="/checkout"|
     end
 
     test "and there is one of those buttons everywhere a price is quoted",
@@ -25,13 +30,26 @@ defmodule CsuiteFinderWeb.SeatCheckoutTest do
       html = conn |> get(~p"/teams") |> html_response(200)
 
       count =
-        ~r|href="/checkout/seat"|
+        Layout.sales_href()
+        |> Regex.escape()
+        |> Regex.compile!()
         |> Regex.scan(html)
         |> length()
 
       assert count >= 3,
              "only #{count} seat CTAs; the hero, the rolodex and the pricing " <>
                "card should each have one"
+    end
+
+    test "the address is not pasted into the templates by hand", %{conn: conn} do
+      # Five pages carry this link. If it is typed into each of them, the day it
+      # changes is the day four of them go stale and one of them is a typo that
+      # silently sends nobody anywhere.
+      for path <- ["/", "/teams", "/developers", "/start", "/checkout"] do
+        html = conn |> get(path) |> html_response(200)
+
+        assert html =~ Layout.sales_href(), "#{path} has no sales CTA"
+      end
     end
   end
 

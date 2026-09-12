@@ -153,7 +153,9 @@ defmodule CsuiteFinderWeb.SeatTrialTest do
       [card, _] = String.split(foot, "cta-note", parts: 2)
 
       assert card =~ "$29.99"
-      assert card =~ "Start your trial"
+      # The button now goes to sales rather than to a checkout, but what it is
+      # selling at this point in the page has not changed.
+      assert card =~ CsuiteFinderWeb.Layout.sales_href()
       refute card =~ "$999"
 
       # The seat is still named, once the trial has been offered.

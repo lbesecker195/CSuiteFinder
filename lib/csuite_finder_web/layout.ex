@@ -251,6 +251,39 @@ defmodule CsuiteFinderWeb.Layout do
     })
   end
 
+  # Where a purchase enquiry goes while the card processors are switched off.
+  # Deliberately not the address on the privacy notice: that one is a statutory
+  # contact point and should not end up buried under sales mail.
+  @sales_email "GodsZealot195@gmail.com"
+  @sales_subject "Interested in Prospect DB"
+  @sales_body "I have the Bitcoin."
+
+  @doc """
+  The `href` every buy button points at for now.
+
+  Card checkout is wired and working in the code; it is the CTAs in front of it
+  that have been taken down, so putting them back is a change to this one
+  function rather than an archaeology exercise across five templates.
+
+  The subject and body are pre-filled so a reply lands sorted and the sender does
+  not have to compose anything — the whole point of a mailto over a contact form
+  is that there is nothing to fill in.
+  """
+  @spec sales_href() :: String.t()
+  def sales_href do
+    "mailto:#{@sales_email}?subject=#{escape(@sales_subject)}&body=#{escape(@sales_body)}"
+  end
+
+  # Percent-encoding, not form-encoding. `URI.encode_www_form/1` turns a space
+  # into `+`, which is right in a query string and wrong here: a mail client
+  # shows the `+` to the sender, so the subject line arrives reading
+  # "Interested+in+Prospect+DB".
+  defp escape(value), do: URI.encode(value, &URI.char_unreserved?/1)
+
+  @doc "The address behind `sales_href/0`, for anywhere that shows it as text."
+  @spec sales_email() :: String.t()
+  def sales_email, do: @sales_email
+
   @doc """
   Where a privacy request goes.
 

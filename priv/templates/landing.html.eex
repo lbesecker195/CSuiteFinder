@@ -98,7 +98,7 @@
     <%= @trial_months %> month to spend it. No subscription starts, and nothing
     renews on its own.
   </p>
-  <a class="btn btn-primary" href="/account">Start your trial</a>
+  <a class="btn btn-primary" href="<%= CsuiteFinderWeb.Layout.sales_href() %>" data-cta="trial" data-cta-usd="<%= @trial_price %>">Contact Sales</a>
 </div>
 
 <p class="cta-note" style="margin-top:16px">
