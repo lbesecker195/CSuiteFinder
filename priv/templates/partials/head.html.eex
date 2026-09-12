@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<%= CsuiteFinderWeb.Analytics.tag() %>
+<%= CsuiteFinderWeb.Analytics.tag(@nav) %>
 <title><%= @title %></title>
 <%= if @description do %><meta name="description" content="<%= @description %>">
 <% end %><%= if @robots do %><meta name="robots" content="<%= @robots %>">

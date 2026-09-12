@@ -131,6 +131,11 @@ if config_env() == :prod do
          :ga_measurement_id,
          System.get_env("GA_MEASUREMENT_ID") || "G-632F1T5SQ2"
 
+  # The SeriouslySimpleAnalytics browser tracker. Blank switches it off.
+  config :csuite_finder,
+         :ssa_site_id,
+         System.get_env("SSA_SITE_ID") || "acct_ssl8gfuynd"
+
   config :csuite_finder,
          :public_base_url,
          System.get_env("PUBLIC_BASE_URL") || "https://" <> host

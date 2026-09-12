@@ -67,3 +67,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 # No analytics from dev: this traffic is ours and would distort the numbers.
 config :csuite_finder, :ga_measurement_id, nil
+
+# No browser tracker in dev: this traffic is ours and would distort the numbers.
+config :csuite_finder, :ssa_site_id, nil

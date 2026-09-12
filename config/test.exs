@@ -74,3 +74,6 @@ config :csuite_finder, CsuiteFinder.Billing.Square,
 # No pings from the suite: a test run must never reach a third party, and a uid
 # here would send one on every settle.
 config :csuite_finder, CsuiteFinder.Ssa, uid: nil
+
+# No third-party script in the suite either: a test run must not fetch one.
+config :csuite_finder, :ssa_site_id, nil

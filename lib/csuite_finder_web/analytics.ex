@@ -15,27 +15,68 @@ defmodule CsuiteFinderWeb.Analytics do
 
   @default_id "G-632F1T5SQ2"
 
-  @doc "The `<script>` tags, or an empty string when analytics are switched off."
-  @spec tag() :: String.t()
-  def tag do
-    case measurement_id() do
-      nil ->
-        ""
+  @tracker_src "https://seriouslysimpleanalytics.com/wa.js"
+  @default_site "acct_ssl8gfuynd"
 
-      id ->
-        """
-        <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=#{id}"></script>
-        <script>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
+  # Pages the browser tracker stays off, by their own `nav` value: `:account`
+  # holds credentials, and `false` is the admin dashboard, whose traffic is ours
+  # and would be counted as a customer's.
+  @no_tracker [:account, false]
 
-          gtag('config', '#{id}');
-        </script>
-        #{click_tracking()}
-        #{engagement_tracking()}
-        """
+  @doc """
+  The `<script>` tags for a page.
+
+  Takes the page's `nav` — which every page already declares — because that is
+  what says which page this is without threading a path through the layout.
+  Google's tag is emitted wherever it is configured; the browser tracker is not,
+  see `browser_tracker/1`.
+  """
+  @spec tag(atom() | nil) :: String.t()
+  def tag(nav \\ nil) do
+    google =
+      case measurement_id() do
+        nil ->
+          ""
+
+        id ->
+          """
+          <!-- Google tag (gtag.js) -->
+          <script async src="https://www.googletagmanager.com/gtag/js?id=#{id}"></script>
+          <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', '#{id}');
+          </script>
+          #{click_tracking()}
+          #{engagement_tracking()}
+          """
+      end
+
+    google <> browser_tracker(nav)
+  end
+
+  @doc """
+  SeriouslySimpleAnalytics' browser tracker.
+
+  It captures pageviews, engaged time, scroll depth, clicks, outbound clicks,
+  forms and page-to-page flow on its own, with no tagging.
+
+  **Left off the account page deliberately.** That page shows a plaintext API
+  key once and nowhere else, and carries the password fields for registering and
+  signing in. A tracker that captures form interaction has no business on it —
+  their own documentation concedes the point in passing, noting that the server
+  "drops password-typed values on arrival", which is only worth saying about a
+  thing that can receive them. Everywhere else is marketing copy and public
+  prices, where there is nothing to leak.
+  """
+  @spec browser_tracker(atom() | nil) :: String.t()
+  def browser_tracker(nav \\ nil) do
+    cond do
+      is_nil(site_id()) -> ""
+      nav in @no_tracker -> ""
+      true -> ~s(<script src="#{@tracker_src}" data-site="#{site_id()}" defer></script>\n)
     end
   end
 
@@ -267,6 +308,20 @@ defmodule CsuiteFinderWeb.Analytics do
   @spec measurement_id() :: String.t() | nil
   def measurement_id do
     case Application.get_env(:csuite_finder, :ga_measurement_id, @default_id) do
+      value when is_binary(value) and value != "" -> value
+      _ -> nil
+    end
+  end
+
+  @doc """
+  The SeriouslySimpleAnalytics site the browser tracker reports to, or nil.
+
+  Configured the same way as the measurement id above: a default that works on
+  deploy, overridable per environment, and blank to switch it off.
+  """
+  @spec site_id() :: String.t() | nil
+  def site_id do
+    case Application.get_env(:csuite_finder, :ssa_site_id, @default_site) do
       value when is_binary(value) and value != "" -> value
       _ -> nil
     end
