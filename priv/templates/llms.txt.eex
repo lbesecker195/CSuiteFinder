@@ -136,8 +136,8 @@ another increment.
 
 ### /demo [domain]
 Twenty C-suite rows from one company, checked. What to run when someone wants to
-see what this does rather than read about it. `/demo stripe.com` — with no
-domain given, use `stripe.com`.
+see what this does rather than read about it. `/demo intuit.com` — with no
+domain given, use `intuit.com`.
 
 Works on any account. A key is a key: whether it was opened as a sales seat or
 as a developer account changes what the website shows and nothing about what the
