@@ -321,6 +321,25 @@ _build/prod/rel/csuite_finder/bin/migrate
 sudo systemctl restart csuite-finder
 ```
 
+## Running a task on a live box
+
+Release tasks need the database credentials, and the documented way to get them
+is to source the environment file. That file also carries `PHX_SERVER=true`,
+because the same file configures the service — so **unset it**, or the task
+boots a second web server, fails to bind the port the running one holds, and
+dies before it reaches the database.
+
+```bash
+cd /var/www/HoneyTrap/CSuiteFInder && set -a && . /etc/csuite-finder.env && set +a && unset PHX_SERVER && read -rsp "New password: " CSF_PW && echo && CSF_PW="$CSF_PW" _build/prod/rel/csuite_finder/bin/csuite_finder eval 'CsuiteFinder.Release.set_password("them@example.com", System.fetch_env!("CSF_PW"))'; unset CSF_PW
+```
+
+Reading the password from a prompt into a variable keeps it out of your shell
+history and out of `ps`, which an argument would not.
+
+Releases built after this was written switch the endpoint off inside the task
+itself, so the `unset` is belt and braces there — but it costs nothing and it is
+still required by anything already deployed.
+
 ## Operating it
 
 ```bash
@@ -369,4 +388,4 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 | `can't find include lib "public_key/include/public_key.hrl"` | Erlang installed without its full OTP set; install `esl-erlang`, or `erlang-dev erlang-public-key erlang-ssl erlang-crypto erlang-asn1` |
 | Lookups return `treg_configured: false` | `TREG_TOKEN` not in the environment file |
 | Enrichment never fills in a job title | `ANTHROPIC_API_KEY` unset — the fallback is skipped silently, by design |
-| A customer has forgotten their password | There is no reset email and no mail server, so this needs you: `bin/csuite_finder rpc 'CsuiteFinder.Release.set_password("them@example.com", "a new one")'`. It clears any lockout too. Mind that the password lands in your shell history |
+| A customer has forgotten their password | There is no reset email and no mail server, so this needs you — see **Running a task on a live box** below. It clears any lockout too |

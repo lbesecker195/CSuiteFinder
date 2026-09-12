@@ -128,8 +128,31 @@ defmodule CsuiteFinder.Release do
     delimited <> "." <> cents
   end
 
+  # Starting the app for a one-off task must never start the web server.
+  #
+  # Every one of these tasks is run on a live box, and the documented way to get
+  # the database credentials into the shell is `. /etc/csuite-finder.env` — which
+  # also exports `PHX_SERVER=true`, because the same file configures the service.
+  # `eval` then inherits it, boots a second endpoint, fails to bind the port the
+  # running service already holds, and takes the whole task down with it before it
+  # reaches the database. The operator sees a page of supervisor output and no
+  # hint that the task itself was fine.
+  #
+  # So the endpoint is switched off here rather than relied upon to be off.
+  # Overriding the env is the only thing that works: `PHX_SERVER=` does not,
+  # since `System.get_env/1` returns "" for it and every string is truthy.
   defp start_app do
     Application.ensure_all_started(:ssl)
+    Application.load(@app)
+
+    Application.put_env(
+      @app,
+      CsuiteFinderWeb.Endpoint,
+      @app
+      |> Application.get_env(CsuiteFinderWeb.Endpoint, [])
+      |> Keyword.put(:server, false)
+    )
+
     Application.ensure_all_started(@app)
   end
 
