@@ -109,10 +109,21 @@
   data suppliers returned about you, which can contain more than the fields listed
   here.</p>
 
-<p class="quiet"><strong>Where it came from:</strong> commercial business-contact
-  data suppliers, and the email format used by your employer — which, once known,
-  lets an address be constructed rather than looked up. We do not collect it from
-  you, and we do not scrape your employer's website ourselves.</p>
+<p class="quiet"><strong>Where it came from:</strong> three places, and the third
+  is the one worth reading twice.</p>
+
+<p class="quiet">Commercial business-contact data suppliers. The email format used
+  by your employer — which, once known, lets an address be constructed rather than
+  looked up. And <strong>addresses our customers ask us to check</strong>: when
+  someone submits an address to find out whether mail to it will arrive, and the
+  mailbox confirms that it will, we keep the address and the company it belongs
+  to. So an address can reach us because somebody you have never dealt with had
+  it in a list and wanted to know it was live.</p>
+
+<p class="quiet">We keep it only when the mailbox genuinely confirmed it. An
+  address that bounced is not kept, and neither is one at a company whose mail
+  server accepts everything, because that proves nothing. We do not collect any of
+  it from you, and we do not scrape your employer's website ourselves.</p>
 
 <p class="quiet"><strong>Why we hold it:</strong> to answer a customer's question
   of the form "what is this person's work email address, and will mail to it

@@ -307,5 +307,5 @@ defmodule CsuiteFinderWeb.Layout do
   revision every morning.
   """
   @spec privacy_updated_on() :: String.t()
-  def privacy_updated_on, do: "11 September 2026"
+  def privacy_updated_on, do: "12 September 2026"
 end

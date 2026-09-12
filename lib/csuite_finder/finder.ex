@@ -30,6 +30,7 @@ defmodule CsuiteFinder.Finder do
     Repo
   }
 
+  alias CsuiteFinder.Cache.CompanyPerson
   alias CsuiteFinder.Cache.Email
   alias CsuiteFinder.Cache.Writer
   alias CsuiteFinder.Treg.Client
@@ -660,10 +661,57 @@ defmodule CsuiteFinder.Finder do
         |> Enum.each(&apply_verdict(&1, email, verdict, status, catch_all))
     end
 
+    keep_address(email, status, catch_all)
+
     :ok
   end
 
   def record_verification(_email, _status, _catch_all), do: :ok
+
+  # Keep an address we did not previously hold.
+  #
+  # The loop above only touches rows we already have, so until now an address a
+  # customer brought us was checked, billed, answered — and forgotten. The next
+  # person to ask for that domain paid a provider to rediscover something we had
+  # already confirmed with our own SMTP check.
+  #
+  # Three conditions, each of which rules out a row that would be worse than no
+  # row at all:
+  #
+  #   * **Deliverable only.** An undeliverable address is not a contact, and
+  #     storing it would put a known bounce into the corpus the sheet is drawn
+  #     from.
+  #   * **Not catch-all.** A server that accepts everything has told us nothing
+  #     about the mailbox — the same reason `learn_pattern_outcome` refuses it.
+  #     An address "confirmed" that way is a guess wearing a tick.
+  #   * **Never over an existing row.** A roster row from a provider carries a
+  #     name, a title and a department; this one carries an address. On conflict
+  #     it does nothing rather than replacing the richer record with the poorer.
+  #
+  # The name fields stay null. We know the address is live and where it works,
+  # and we do not know whose it is — writing a guess into `full_name` to make the
+  # row look complete is how a corpus stops being trustworthy.
+  defp keep_address(email, "deliverable", catch_all) when catch_all != true do
+    case String.split(email, "@", parts: 2) do
+      [_local, domain] when byte_size(domain) > 0 ->
+        %CompanyPerson{}
+        |> CompanyPerson.changeset(%{
+          domain: domain,
+          email: email,
+          # Provenance, so these are separable from a provider's roster later —
+          # in the admin figures, and if they ever need pruning.
+          kind: "verified"
+        })
+        |> Repo.insert(on_conflict: :nothing, conflict_target: [:domain, :email])
+
+        :ok
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp keep_address(_email, _status, _catch_all), do: :ok
 
   # "unknown" is not a verdict. Recording it would mark a row as checked when
   # nothing was learned, and stop the next check from being worth making.
