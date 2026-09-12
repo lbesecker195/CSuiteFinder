@@ -72,28 +72,10 @@
   key, shows your balance and takes payment in a browser.
 </p>
 
-<h2 class="section-label" id="pricing">What it costs</h2>
-
-<p class="quiet" data-aud="sales">
-  A trial is <strong>$<%= @trial_price %>, once</strong>, and buys
-  $<%= @trial_price %> of credit for <%= @trial_months %> month — real lookups,
-  not a limited preview. After that a seat is
-  <strong>$<%= @seat_usd %> a month</strong> and carries $<%= @seat_usd %> of
-  lookup credit every month, which is about <%= @seat_emails %> work emails.
-  Deliverability checks, identity lookups and company data are included, and a
-  lookup that finds nothing uses nothing.
-</p>
-
-<p class="quiet" data-aud="developer" hidden>
-  A trial is <strong>$<%= @trial_price %>, once</strong>, and buys
-  $<%= @trial_price %> of credit for <%= @trial_months %> month — real lookups,
-  not a limited preview. After that you pay
-  <strong>$<%= @email_price %> per work email</strong>, and nothing for
-  deliverability checks, identity lookups, company data or email formats. A
-  lookup that finds nothing is free; credit you buy never expires.
-</p>
-
-<p style="margin-top:22px">
+<!-- The nav's Pricing link is a bare #pricing fragment on every page, so this
+     page still needs somewhere for it to land. With the cost section gone the
+     closing call to action is that place: the price is in the button. -->
+<p style="margin-top:22px" id="pricing">
   <a class="btn btn-primary" href="/checkout" data-signed="out" data-cta="trial" data-cta-usd="<%= @trial_price %>">Start — $<%= @trial_price %> trial</a>
   <a class="btn btn-ghost" href="/account" data-signed="in" hidden>Open your account</a>
 </p>

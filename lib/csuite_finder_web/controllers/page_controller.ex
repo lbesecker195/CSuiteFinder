@@ -171,19 +171,9 @@ defmodule CsuiteFinderWeb.PageController do
 
   @doc "GET /start"
   def start(conn, params) do
-    seat = Plans.seat()
-
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(
-      200,
-      render_start(
-        Map.merge(assigns(conn, params), %{
-          seat_usd: delimit(seat.usd_per_month),
-          seat_emails: delimit(seat.lookups.emails)
-        })
-      )
-    )
+    |> send_resp(200, render_start(assigns(conn, params)))
   end
 
   @doc """

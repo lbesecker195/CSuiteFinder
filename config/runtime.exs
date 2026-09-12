@@ -20,8 +20,17 @@ if System.get_env("PHX_SERVER") do
   config :csuite_finder, CsuiteFinderWeb.Endpoint, server: true
 end
 
+# PORT wins wherever it is set, which is how production runs. The default only
+# matters in dev, and there 4000 is the wrong number: it and 4001 belong to other
+# Phoenix apps on this machine, so the generator's default meant whichever app
+# booted second failed to bind.
 config :csuite_finder, CsuiteFinderWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+  http: [
+    port:
+      String.to_integer(
+        System.get_env("PORT", if(config_env() == :dev, do: "4003", else: "4000"))
+      )
+  ]
 
 if config_env() == :prod do
   # Two ways to reach Postgres, because "I never set a password" is a normal
