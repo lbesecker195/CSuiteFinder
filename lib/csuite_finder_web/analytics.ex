@@ -101,9 +101,21 @@ defmodule CsuiteFinderWeb.Analytics do
       "use strict";
 
       // Strip the query and fragment. Absolute or relative, same rule.
+      //
+      // A mailto is reported as "mailto:" and nothing more. `pathname` on a
+      // mailto URL is the address itself, so once the buy buttons became mailto
+      // links every CTA click was posting an email address into the analytics
+      // property — which is the exact thing the query-string rule below exists
+      // to prevent. Ours rather than a visitor's, but it does not belong there
+      // either, and the next such link might not be ours.
       function path(url) {
         if (!url) return "";
-        try { return new URL(url, window.location.origin).pathname; }
+        try {
+          var parsed = new URL(url, window.location.origin);
+          return parsed.protocol === "http:" || parsed.protocol === "https:"
+            ? parsed.pathname
+            : parsed.protocol;
+        }
         catch (e) { return ""; }
       }
 
@@ -183,12 +195,19 @@ defmodule CsuiteFinderWeb.Analytics do
   the event count. `elapsed` carries the running total alongside it for anyone
   looking at one visit rather than an aggregate.
 
-  It stops at 400 seconds. GA4 drops everything after the 500th event in a
-  session, and the events worth keeping are the ones that arrive late — a click,
-  a purchase. Stopping here leaves about a hundred for them rather than spending
-  the lot on a counter that has already said "still here" four hundred times.
-  A `dwell_capped` event marks the stop, so a visit that ran long is
-  distinguishable from one that ended at 400 seconds.
+  It stops after 300 dwell events **per session**, counted in `sessionStorage`.
+
+  GA4's cap is per session — it drops everything after the 500th event — and this
+  counter was per page, so every navigation handed the visitor a fresh budget.
+  Three pages at four minutes each is over seven hundred dwell events; GA4 keeps
+  the first five hundred and discards the rest. The discarded ones are whatever
+  arrived last, and a `cta_click` always arrives after the dwell ticks that
+  preceded it, so clicks were what went missing. It presented as clicks no longer
+  registering.
+
+  300 leaves roughly 200 for page views, scroll depth, reading marks and every
+  click across a whole visit. A `dwell_capped` event marks the stop, once per
+  session rather than once per page — otherwise the marker joins the problem.
 
   Time is only counted while the tab is actually visible, which is GA4's own
   definition of engagement. A page left open in a background tab overnight is
@@ -244,18 +263,64 @@ defmodule CsuiteFinderWeb.Analytics do
       var seconds = 0;
       var timer = null;
 
-      // Stops at 400. GA4 drops everything after the 500th event in a session,
-      // and the events worth keeping are the ones that arrive late — a click,
-      // a purchase. Spending the last hundred on a counter that has already
-      // said "this visitor is still here" four hundred times would trade the
-      // conversion signal for a number nobody reads.
-      var LIMIT = 400;
+      // The budget is per SESSION, not per page, because that is how GA4's cap
+      // works — it drops everything after the 500th event in a session.
+      //
+      // This counter used to live in the page, so every navigation handed the
+      // visitor a fresh 400. Three pages at four minutes each is over seven
+      // hundred dwell events, GA4 keeps the first five hundred, and the events
+      // that arrive late are exactly the ones worth having: a cta_click lands
+      // after the dwell ticks that preceded it, so the clicks were what got
+      // dropped. It looked like clicks had stopped registering; what had
+      // happened is that the counter ate the session.
+      //
+      // 300 leaves roughly 200 for page views, scroll depth, reading marks and
+      // every click across a whole visit.
+      var BUDGET = 300;
+      var KEY = "csf_dwell_sent";
+
+      // sessionStorage throws outright in some privacy modes. Falling back to a
+      // page-local count keeps today's behaviour rather than breaking the timer.
+      var local = 0;
+
+      function spent() {
+        try {
+          var raw = window.sessionStorage.getItem(KEY);
+          return raw ? (parseInt(raw, 10) || 0) : 0;
+        } catch (e) { return local; }
+      }
+
+      function spend(total) {
+        local = total;
+        try { window.sessionStorage.setItem(KEY, String(total)); } catch (e) {}
+      }
+
+      function stop() {
+        if (timer) { window.clearInterval(timer); timer = null; }
+      }
 
       function tick() {
         // Only while the tab is in front. GA4 counts engagement the same way,
         // and a tab left open overnight is not two hours of reading.
         if (document.visibilityState !== "visible") return;
 
+        var used = spent();
+        if (used >= BUDGET) {
+          stop();
+
+          // Once per session rather than once per page, or the marker itself
+          // becomes the thing filling the budget.
+          try {
+            if (!window.sessionStorage.getItem(KEY + "_capped")) {
+              window.sessionStorage.setItem(KEY + "_capped", "1");
+              send("dwell_capped", { seconds: used, page_path: window.location.pathname });
+            }
+          } catch (e) {}
+
+          return;
+        }
+
+        spend(used + 1);
         seconds += 1;
 
         // `seconds: 1` is the increment, not the running total, and that is
@@ -282,17 +347,6 @@ defmodule CsuiteFinderWeb.Analytics do
           reached += 1;
         }
 
-        if (seconds >= LIMIT && timer) {
-          window.clearInterval(timer);
-          timer = null;
-
-          // Said once, so a session that ran long is distinguishable in the
-          // data from one that ended at 400 seconds.
-          send("dwell_capped", {
-            seconds: seconds,
-            page_path: window.location.pathname
-          });
-        }
       }
 
       window.setTimeout(function () {

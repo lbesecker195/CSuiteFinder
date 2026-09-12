@@ -35,8 +35,15 @@ defmodule CsuiteFinderWeb.AnalyticsTest do
       js = Analytics.click_tracking()
 
       # Paths, both for the href and for the page the click happened on.
-      assert js =~ "new URL(url, window.location.origin).pathname"
+      assert js =~ "new URL(url, window.location.origin)"
       assert js =~ "window.location.pathname"
+
+      # And a mailto reports its scheme, not its address. `pathname` on a
+      # mailto URL *is* the address, so when the buy buttons became mailto
+      # links every CTA click began posting an email address into the property
+      # — the same class of leak the query-string rule above exists to stop.
+      assert js =~ ~s{parsed.protocol === "http:"}
+      assert js =~ ~s{: parsed.protocol;}
 
       # An outbound href is kept whole apart from its query, which is the one
       # place a full URL is worth having.
@@ -160,14 +167,20 @@ defmodule CsuiteFinderWeb.AnalyticsTest do
       assert js =~ "1000 - (Date.now() % 1000)"
     end
 
-    test "stops at 400 so the session has events left for a conversion" do
-      # GA4 drops everything after the 500th event in a session. The ones worth
-      # keeping arrive late — a click, a purchase — so the counter yields the
-      # last hundred rather than spending them saying "still here" again.
+    test "budgets itself across the session, not the page" do
+      # This is the bug the counter had: GA4's 500-event cap is per session and
+      # the budget was per page, so every navigation handed the visitor a fresh
+      # allowance. Three pages at four minutes each sent over seven hundred
+      # dwell events, GA4 kept the first five hundred, and what it discarded was
+      # whatever arrived last — which is always the click.
       js = Analytics.engagement_tracking()
 
-      assert js =~ "var LIMIT = 400;"
+      assert js =~ "var BUDGET = 300;"
+      assert js =~ "sessionStorage", "the budget has to outlive the page to mean anything"
       assert js =~ "clearInterval(timer)"
+
+      # The per-page counter must not come back.
+      refute js =~ "var LIMIT"
     end
 
     test "and marks the stop, so a long visit is not mistaken for a short one" do
