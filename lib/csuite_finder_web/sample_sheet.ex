@@ -50,15 +50,6 @@ defmodule CsuiteFinderWeb.SampleSheet do
       raw: :confirmed
     },
     %{
-      name: "Sasan Goodarzi",
-      company: "Intuit",
-      title: "CEO",
-      email: "sa•••_go••••••@intuit.com",
-      status: :deliverable,
-      title_source: :enrichment,
-      raw: :confirmed
-    },
-    %{
       name: "Stephen Squeri",
       title_source: :public_record,
       company: "American Express",
@@ -66,6 +57,15 @@ defmodule CsuiteFinderWeb.SampleSheet do
       email: "st•••••.sq••••@americanexpress.com",
       status: :undeliverable,
       raw: :rejected
+    },
+    %{
+      name: "Sasan Goodarzi",
+      company: "Intuit",
+      title: "CEO",
+      email: "sa•••_go••••••@intuit.com",
+      status: :deliverable,
+      title_source: :enrichment,
+      raw: :confirmed
     },
     %{
       name: "Chris Suh",

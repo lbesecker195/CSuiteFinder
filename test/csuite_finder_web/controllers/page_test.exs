@@ -342,8 +342,14 @@ defmodule CsuiteFinderWeb.PageTest do
 
       assert html =~ "Jane Doe"
       assert html =~ "jane.doe@acme.com"
-      # Third in the sheet, which is the cell the cursor sits on.
-      assert html =~ ~r/row-head">3<\/td>\s*<td>Jane Doe/
+      # Row 5, which is the cell the cursor sits on.
+      assert html =~ ~r/row-head">5<\/td>\s*<td>Jane Doe/
+
+      # And the cursor went with it. Moving the row and not the cursor leaves
+      # the reader's own address unselected and a stranger's highlighted, which
+      # is the opposite of what the slot is for.
+      assert html =~ ~s|<span class="sheet-namebox">C5</span>|
+      assert html =~ ~r/jane\.doe@acme\.com<span class="sheet-cursor"/
       assert html =~ ~r/<tr class="[^"]*\byou-row\b/
     end
 
@@ -404,11 +410,26 @@ defmodule CsuiteFinderWeb.PageTest do
       assert length(String.split(html, ~s|class="sheet-cursor"|)) == 2
     end
 
-    test "and on the third row when the link carried nothing", %{conn: conn} do
+    test "and on row 5 when the link carried nothing", %{conn: conn} do
+      # The same slot with or without a visitor, so the sheet does not rearrange
+      # its selection depending on how someone arrived.
       html = conn |> get(~p"/teams") |> html_response(200)
 
-      third = CsuiteFinderWeb.SampleSheet.rows() |> Enum.at(1)
-      assert html =~ ~r/#{Regex.escape(third.email)}<span class="sheet-cursor"/
+      fifth = CsuiteFinderWeb.SampleSheet.rows() |> Enum.at(3)
+      assert html =~ ~r/#{Regex.escape(fifth.email)}<span class="sheet-cursor"/
+      assert html =~ ~s|<span class="sheet-namebox">C5</span>|
+
+      # The formula bar names the selected cell's value, not some other row's.
+      assert html =~ ~s|<span class="sheet-formula">#{fifth.email}</span>|
+    end
+
+    test "rows 3 and 4 are Amex then Intuit", %{conn: conn} do
+      # Swapped on request: the undeliverable Amex address now sits third, so
+      # the red row shows before the reader has scrolled rather than after.
+      html = conn |> get(~p"/teams") |> html_response(200)
+
+      assert html =~ ~r/row-head">3<\/td>\s*<td>Stephen Squeri/
+      assert html =~ ~r/row-head">4<\/td>\s*<td>Sasan Goodarzi/
     end
 
     test "it cannot be mistaken for the real one", %{conn: conn} do

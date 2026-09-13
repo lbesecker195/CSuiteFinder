@@ -97,13 +97,21 @@ defmodule CsuiteFinderWeb.Layout do
   @spec base_css() :: String.t()
   def base_css, do: @base_css
 
-  # Third in the sheet, which is the cell the cursor sits on — someone arriving
-  # from an emailed link finds their own address already selected.
+  # The row the cursor rests on, as an index into the data rows. Spreadsheet row
+  # five: row 1 is the header, so index 3 is row 5.
+  #
+  # One value because five things have to agree on it — where a visitor's own row
+  # is slotted in, the name box, the formula bar, the highlighted cell and the
+  # drawn pointer. They used to be the literal `1` in four places and "C3" in a
+  # fifth, so moving the visitor would have left the cursor on a stranger's
+  # address while theirs sat unselected two rows down.
+  @cursor_index 3
+
+  # Someone arriving from an emailed link finds their own address under the
+  # cursor. `List.insert_at/3` appends when the list is shorter than the slot,
+  # so a short sheet still shows them rather than dropping the row.
   defp with_visitor(rows, nil), do: rows
-
-  defp with_visitor([first | rest], visitor), do: [first, visitor | rest]
-
-  defp with_visitor([], visitor), do: [visitor]
+  defp with_visitor(rows, visitor), do: List.insert_at(rows, @cursor_index, visitor)
 
   # One .css file per page, read at compile time. Keeping them beside the
   # templates rather than inside the controllers means a design change is a CSS
@@ -139,8 +147,13 @@ defmodule CsuiteFinderWeb.Layout do
   def sheet(opts) do
     rows_label = Keyword.fetch!(opts, :rows_label)
 
+    rows = with_visitor(Keyword.fetch!(opts, :rows), Keyword.get(opts, :visitor))
+
     render_sheet(%{
-      rows: with_visitor(Keyword.fetch!(opts, :rows), Keyword.get(opts, :visitor)),
+      rows: rows,
+      # Clamped to the rows that exist, so a sheet shorter than the cursor slot
+      # selects its last row instead of pointing the formula bar at nothing.
+      cursor: min(@cursor_index, max(length(rows) - 1, 0)),
       rows_label: rows_label,
       date: Keyword.fetch!(opts, :date),
       # What the status bar says. A seat is sold by the month, so a monthly row
