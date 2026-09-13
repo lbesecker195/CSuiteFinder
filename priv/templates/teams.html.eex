@@ -24,8 +24,6 @@
   </p>
 </header>
 
-<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
-
 <%= CsuiteFinderWeb.Layout.sheet(
       rows: @sheet,
       rows_label: @sheet_rows,
@@ -105,6 +103,14 @@
     </p>
   </div>
 </div>
+
+<%!-- Below the rolodex on this page only. Everywhere else the chat sits directly
+      above the sheet, because the two are a pair — the file the assistant hands
+      back in the conversation is the spreadsheet underneath it. Here the sheet
+      keeps the top of the page, where a sales reader meets the product, and the
+      chat answers the "how would we actually run this" question that the rolodex
+      section raises. --%>
+<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
 
 <h2 class="section-label">What a seat actually buys</h2>
 

@@ -1040,21 +1040,37 @@ defmodule CsuiteFinderWeb.PageTest do
   end
 
   describe "the sample conversation" do
-    test "runs above the sheet on every page that shows one", %{conn: conn} do
-      # The chat and the sheet are a pair: the file the assistant hands back is
-      # the sheet underneath it. Showing the sheet without the conversation
-      # leaves a table with no story, and the order is the story.
+    test "appears on every page that shows a sheet", %{conn: conn} do
       for path <- ["/", "/teams", "/developers", "/start", "/checkout?plan=seat"] do
         html = conn |> get(path) |> html_response(200)
 
         assert html =~ ~s|class="chat-app"|, "#{path} has no conversation"
         assert html =~ ~s|class="sheet-wrap"|, "#{path} has no sheet"
         assert html =~ ~s|class="composer"|, "#{path} lost the composer"
+      end
+    end
+
+    test "and runs above the sheet, except on the sales page", %{conn: conn} do
+      # The chat and the sheet are a pair: the file the assistant hands back is
+      # the sheet underneath it. Showing the sheet without the conversation
+      # leaves a table with no story, and the order is the story.
+      for path <- ["/", "/developers", "/start", "/checkout?plan=seat"] do
+        html = conn |> get(path) |> html_response(200)
 
         assert :binary.match(html, ~s|class="chat-app"|) <
                  :binary.match(html, ~s|class="sheet-wrap"|),
                "#{path} puts the sheet before the conversation"
       end
+
+      # /teams is deliberately the other way round. The sheet keeps the top of
+      # the page, where a sales reader meets the product, and the conversation
+      # sits after the rolodex section — answering "how would we actually run
+      # this" at the point that section raises it.
+      teams = conn |> get(~p"/teams") |> html_response(200)
+
+      assert :binary.match(teams, ~s|class="sheet-wrap"|) <
+               :binary.match(teams, ~s|class="chat-app"|),
+             "/teams was meant to show the sheet first"
     end
 
     test "comes from one partial, so the line cannot differ between pages",
