@@ -31,6 +31,14 @@
       visitor: @visitor
     ) %>
 
+<%!-- After the sheet on this page only. Everywhere else the chat sits directly
+      above the sheet, because the two are a pair — the file the assistant hands
+      back in the conversation is the spreadsheet underneath it. Here the sheet
+      keeps the top of the page, where a sales reader meets the product, and the
+      conversation follows straight on from it to show how that file is made,
+      before the rolodex section turns it into what a seat is worth. --%>
+<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
+
 <h2 class="section-label">Build a bigger Rolodex, today</h2>
 
 <div class="rolodex-band">
@@ -103,14 +111,6 @@
     </p>
   </div>
 </div>
-
-<%!-- Below the rolodex on this page only. Everywhere else the chat sits directly
-      above the sheet, because the two are a pair — the file the assistant hands
-      back in the conversation is the spreadsheet underneath it. Here the sheet
-      keeps the top of the page, where a sales reader meets the product, and the
-      chat answers the "how would we actually run this" question that the rolodex
-      section raises. --%>
-<%= CsuiteFinderWeb.Layout.chat(base_url: @base_url) %>
 
 <h2 class="section-label">What a seat actually buys</h2>
 

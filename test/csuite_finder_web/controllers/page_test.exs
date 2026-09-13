@@ -1063,14 +1063,17 @@ defmodule CsuiteFinderWeb.PageTest do
       end
 
       # /teams is deliberately the other way round. The sheet keeps the top of
-      # the page, where a sales reader meets the product, and the conversation
-      # sits after the rolodex section — answering "how would we actually run
-      # this" at the point that section raises it.
+      # the page, where a sales reader meets the product; the conversation
+      # follows straight on to show how that file is made; and the rolodex
+      # section comes after both, turning it into what a seat is worth.
       teams = conn |> get(~p"/teams") |> html_response(200)
 
-      assert :binary.match(teams, ~s|class="sheet-wrap"|) <
-               :binary.match(teams, ~s|class="chat-app"|),
-             "/teams was meant to show the sheet first"
+      sheet = :binary.match(teams, ~s|class="sheet-wrap"|)
+      chat = :binary.match(teams, ~s|class="chat-app"|)
+      rolodex = :binary.match(teams, "Build a bigger Rolodex")
+
+      assert sheet < chat, "/teams was meant to show the sheet first"
+      assert chat < rolodex, "/teams was meant to put the conversation before the rolodex"
     end
 
     test "comes from one partial, so the line cannot differ between pages",
